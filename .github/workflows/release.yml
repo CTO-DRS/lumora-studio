@@ -1,0 +1,173 @@
+name: Release
+
+# Builds installable binaries and publishes them to a GitHub Release.
+#  * push a tag like v1.1.0                → release "v1.1.0"
+#  * run manually (Actions → Release → Run) → release for the tag you type,
+#    or v<pubspec version> when left empty (the tag is created on this commit)
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (empty = v<version from pubspec.yaml>)"
+        required: false
+        default: ""
+      prerelease:
+        description: "Mark as pre-release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: "3.50.1"
+
+jobs:
+  meta:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: v
+        shell: bash
+        run: |
+          version=$(grep -E '^version:' pubspec.yaml | sed -E 's/version:[[:space:]]*([^+]+).*/\1/')
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            tag="${GITHUB_REF_NAME}"
+          elif [[ -n "${{ inputs.tag }}" ]]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="v${version}"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "Releasing ${tag} (pubspec ${version})"
+
+  test:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter pub get
+      - name: Code generation
+        run: dart run build_runner build
+      - run: flutter gen-l10n
+      - run: flutter analyze
+      - run: flutter test
+
+  android:
+    name: Android APKs (split per ABI)
+    needs: [meta, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter pub get
+      - run: flutter build apk --release --split-per-abi
+      - name: Name APKs after the release
+        shell: bash
+        run: |
+          mkdir -p dist
+          tag="${{ needs.meta.outputs.tag }}"
+          for f in build/app/outputs/flutter-apk/app-*-release.apk; do
+            abi=$(basename "$f" | sed -E 's/app-(.*)-release\.apk/\1/')
+            cp "$f" "dist/Lumora-${tag}-${abi}.apk"
+          done
+          (cd dist && sha256sum *.apk > SHA256SUMS-android.txt)
+          ls -la dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-android
+          path: dist/*
+          if-no-files-found: error
+
+  ios:
+    name: iOS (unsigned)
+    needs: [meta, test]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter pub get
+      - run: flutter build ios --release --no-codesign
+      - name: Package Runner.app
+        run: |
+          mkdir -p dist
+          cd build/ios/iphoneos
+          zip -qry "$GITHUB_WORKSPACE/dist/Lumora-${{ needs.meta.outputs.tag }}-ios-unsigned.zip" Runner.app
+          cd "$GITHUB_WORKSPACE/dist" && shasum -a 256 *.zip > SHA256SUMS-ios.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-ios
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: [meta, android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Release notes from CHANGELOG.md
+        shell: bash
+        run: |
+          version="${{ needs.meta.outputs.version }}"
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" {found=1; next}
+            found && /^## \[/ {exit}
+            found {print}
+          ' CHANGELOG.md > notes.md || true
+          if [[ ! -s notes.md ]]; then echo "See CHANGELOG.md" > notes.md; fi
+          {
+            echo
+            echo "### Downloads"
+            echo "* **Android**: most phones need \`arm64-v8a\`; older 32-bit phones \`armeabi-v7a\`; emulators \`x86_64\`."
+            echo "* **iOS**: unsigned \`Runner.app\` (sign it yourself, e.g. with AltStore/Sideloadly or Xcode)."
+            echo "* Checksums: \`SHA256SUMS-*.txt\`."
+          } >> notes.md
+          ls -la dist
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.meta.outputs.tag }}
+          name: Lumora Studio ${{ needs.meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          body_path: notes.md
+          generate_release_notes: true
+          prerelease: ${{ inputs.prerelease == true }}
+          fail_on_unmatched_files: true
+          files: |
+            dist/*.apk
+            dist/*.zip
+            dist/SHA256SUMS-*.txt
