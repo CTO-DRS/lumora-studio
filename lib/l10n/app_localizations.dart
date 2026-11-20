@@ -125,7 +125,7 @@ abstract class AppLocalizations {
   /// No description provided for @noProjects.
   ///
   /// In en, this message translates to:
-  /// **'No projects yet. Open a photo or video to start.'**
+  /// **'Open a photo or video to start. Your edits are saved automatically on this device.'**
   String get noProjects;
 
   /// No description provided for @aiModels.
@@ -1057,6 +1057,894 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Project {date}'**
   String projectName(String date);
+
+  /// No description provided for @catFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorites'**
+  String get catFavorites;
+
+  /// No description provided for @catEssentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Essentials'**
+  String get catEssentials;
+
+  /// No description provided for @catPortrait.
+  ///
+  /// In en, this message translates to:
+  /// **'Portrait'**
+  String get catPortrait;
+
+  /// No description provided for @catFood.
+  ///
+  /// In en, this message translates to:
+  /// **'Food'**
+  String get catFood;
+
+  /// No description provided for @catFilm.
+  ///
+  /// In en, this message translates to:
+  /// **'Film'**
+  String get catFilm;
+
+  /// No description provided for @catVintage.
+  ///
+  /// In en, this message translates to:
+  /// **'Vintage'**
+  String get catVintage;
+
+  /// No description provided for @catCinematic.
+  ///
+  /// In en, this message translates to:
+  /// **'Cinematic'**
+  String get catCinematic;
+
+  /// No description provided for @catLandscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Landscape'**
+  String get catLandscape;
+
+  /// No description provided for @catBw.
+  ///
+  /// In en, this message translates to:
+  /// **'B&W'**
+  String get catBw;
+
+  /// No description provided for @catCreative.
+  ///
+  /// In en, this message translates to:
+  /// **'Creative'**
+  String get catCreative;
+
+  /// No description provided for @catCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'My presets'**
+  String get catCustom;
+
+  /// No description provided for @savePreset.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as preset'**
+  String get savePreset;
+
+  /// No description provided for @presetDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'My look'**
+  String get presetDefaultName;
+
+  /// No description provided for @presetSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Preset “{name}” saved'**
+  String presetSaved(String name);
+
+  /// No description provided for @favorite.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to favorites'**
+  String get favorite;
+
+  /// No description provided for @unfavorite.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from favorites'**
+  String get unfavorite;
+
+  /// No description provided for @rename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get rename;
+
+  /// No description provided for @exportPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Export presets'**
+  String get exportPresets;
+
+  /// No description provided for @importPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Import presets'**
+  String get importPresets;
+
+  /// No description provided for @presetsImported.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} presets imported'**
+  String presetsImported(int count);
+
+  /// No description provided for @importFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {error}'**
+  String importFailed(String error);
+
+  /// No description provided for @noFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press any look to add it here'**
+  String get noFavorites;
+
+  /// No description provided for @copyEdits.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy edits'**
+  String get copyEdits;
+
+  /// No description provided for @pasteEdits.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste edits'**
+  String get pasteEdits;
+
+  /// No description provided for @editsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Edits copied'**
+  String get editsCopied;
+
+  /// No description provided for @editsPasted.
+  ///
+  /// In en, this message translates to:
+  /// **'Edits pasted'**
+  String get editsPasted;
+
+  /// No description provided for @pasteWhat.
+  ///
+  /// In en, this message translates to:
+  /// **'What to paste'**
+  String get pasteWhat;
+
+  /// No description provided for @pasteAdjustments.
+  ///
+  /// In en, this message translates to:
+  /// **'Light, color & look'**
+  String get pasteAdjustments;
+
+  /// No description provided for @pasteGeometry.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop & rotation'**
+  String get pasteGeometry;
+
+  /// No description provided for @pasteMasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Masks'**
+  String get pasteMasks;
+
+  /// No description provided for @pasteOverlays.
+  ///
+  /// In en, this message translates to:
+  /// **'Text & stickers'**
+  String get pasteOverlays;
+
+  /// No description provided for @pasteFinishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Frame & watermark'**
+  String get pasteFinishing;
+
+  /// No description provided for @resetAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset all edits'**
+  String get resetAll;
+
+  /// No description provided for @more.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get more;
+
+  /// No description provided for @photoPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo preview'**
+  String get photoPreview;
+
+  /// No description provided for @pickColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a color in the photo'**
+  String get pickColor;
+
+  /// No description provided for @pickColorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a color in the photo, then drag up or down on it to adjust'**
+  String get pickColorHint;
+
+  /// No description provided for @hideMask.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide mask'**
+  String get hideMask;
+
+  /// No description provided for @showMask.
+  ///
+  /// In en, this message translates to:
+  /// **'Show mask'**
+  String get showMask;
+
+  /// No description provided for @frameBorder.
+  ///
+  /// In en, this message translates to:
+  /// **'Border'**
+  String get frameBorder;
+
+  /// No description provided for @framePolaroid.
+  ///
+  /// In en, this message translates to:
+  /// **'Polaroid'**
+  String get framePolaroid;
+
+  /// No description provided for @frameColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Color'**
+  String get frameColor;
+
+  /// No description provided for @frameBlur.
+  ///
+  /// In en, this message translates to:
+  /// **'Blurred photo'**
+  String get frameBlur;
+
+  /// No description provided for @frameWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Border width'**
+  String get frameWidth;
+
+  /// No description provided for @cornerRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Rounded corners'**
+  String get cornerRadius;
+
+  /// No description provided for @watermarkText.
+  ///
+  /// In en, this message translates to:
+  /// **'Watermark text'**
+  String get watermarkText;
+
+  /// No description provided for @watermarkLogo.
+  ///
+  /// In en, this message translates to:
+  /// **'Logo'**
+  String get watermarkLogo;
+
+  /// No description provided for @remove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get remove;
+
+  /// No description provided for @margin.
+  ///
+  /// In en, this message translates to:
+  /// **'Margin'**
+  String get margin;
+
+  /// No description provided for @healMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Heal'**
+  String get healMode;
+
+  /// No description provided for @cloneMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Clone'**
+  String get cloneMode;
+
+  /// No description provided for @healHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint over blemishes, dust or small objects, then tap Apply'**
+  String get healHint;
+
+  /// No description provided for @cloneSetSourceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the photo to choose the area to copy from'**
+  String get cloneSetSourceHint;
+
+  /// No description provided for @clonePaintHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint where the source should be copied, then tap Apply'**
+  String get clonePaintHint;
+
+  /// No description provided for @setSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Set source'**
+  String get setSource;
+
+  /// No description provided for @clear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clear;
+
+  /// No description provided for @histogram.
+  ///
+  /// In en, this message translates to:
+  /// **'Histogram'**
+  String get histogram;
+
+  /// No description provided for @clippingWarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipping warnings'**
+  String get clippingWarnings;
+
+  /// No description provided for @shadowClipping.
+  ///
+  /// In en, this message translates to:
+  /// **'Crushed shadows'**
+  String get shadowClipping;
+
+  /// No description provided for @highlightClipping.
+  ///
+  /// In en, this message translates to:
+  /// **'Blown highlights'**
+  String get highlightClipping;
+
+  /// No description provided for @histOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get histOriginal;
+
+  /// No description provided for @histLayers.
+  ///
+  /// In en, this message translates to:
+  /// **'Text & stickers'**
+  String get histLayers;
+
+  /// No description provided for @histPixels.
+  ///
+  /// In en, this message translates to:
+  /// **'Retouch / AI'**
+  String get histPixels;
+
+  /// No description provided for @histOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get histOther;
+
+  /// No description provided for @toolFrame.
+  ///
+  /// In en, this message translates to:
+  /// **'Frame'**
+  String get toolFrame;
+
+  /// No description provided for @toolWatermark.
+  ///
+  /// In en, this message translates to:
+  /// **'Watermark'**
+  String get toolWatermark;
+
+  /// No description provided for @toolHeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Heal'**
+  String get toolHeal;
+
+  /// No description provided for @history.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get history;
+
+  /// No description provided for @exportSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Size'**
+  String get exportSize;
+
+  /// No description provided for @sizeOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get sizeOriginal;
+
+  /// No description provided for @sizeStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Story'**
+  String get sizeStory;
+
+  /// No description provided for @fitPad.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit (add border)'**
+  String get fitPad;
+
+  /// No description provided for @fitCrop.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill (crop)'**
+  String get fitCrop;
+
+  /// No description provided for @saveToGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to gallery'**
+  String get saveToGallery;
+
+  /// No description provided for @photoProjectName.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo · {date}'**
+  String photoProjectName(String date);
+
+  /// No description provided for @videoProjectName.
+  ///
+  /// In en, this message translates to:
+  /// **'Video · {date}'**
+  String videoProjectName(String date);
+
+  /// No description provided for @copyOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (copy)'**
+  String copyOf(String name);
+
+  /// No description provided for @quickTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick tools'**
+  String get quickTools;
+
+  /// No description provided for @scanDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan document'**
+  String get scanDocument;
+
+  /// No description provided for @collage.
+  ///
+  /// In en, this message translates to:
+  /// **'Collage'**
+  String get collage;
+
+  /// No description provided for @batchEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch edit'**
+  String get batchEdit;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get filterAll;
+
+  /// No description provided for @noProjectsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet'**
+  String get noProjectsTitle;
+
+  /// No description provided for @open.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get open;
+
+  /// No description provided for @skip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get skip;
+
+  /// No description provided for @next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get next;
+
+  /// No description provided for @getStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get getStarted;
+
+  /// No description provided for @tipPrivateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'100% on your device'**
+  String get tipPrivateTitle;
+
+  /// No description provided for @tipPrivateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every photo and video is processed on your phone. No cloud, no account, no tracking.'**
+  String get tipPrivateBody;
+
+  /// No description provided for @tipLooksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Looks made from your photo'**
+  String get tipLooksTitle;
+
+  /// No description provided for @tipLooksBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview 45 looks live on your own photo, star your favorites and save your own presets.'**
+  String get tipLooksBody;
+
+  /// No description provided for @tipAiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI that stays offline'**
+  String get tipAiTitle;
+
+  /// No description provided for @tipAiBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove backgrounds, erase objects, heal blemishes and upscale 4× — models download once and run on the device.'**
+  String get tipAiBody;
+
+  /// No description provided for @tipToolsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan, collage, batch'**
+  String get tipToolsTitle;
+
+  /// No description provided for @tipToolsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan paper documents to PDF, build collages, and apply one look to many photos at once.'**
+  String get tipToolsBody;
+
+  /// No description provided for @appearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get appearance;
+
+  /// No description provided for @haptics.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptic feedback'**
+  String get haptics;
+
+  /// No description provided for @exportDefaults.
+  ///
+  /// In en, this message translates to:
+  /// **'Export defaults'**
+  String get exportDefaults;
+
+  /// No description provided for @exportMaxSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum size'**
+  String get exportMaxSize;
+
+  /// No description provided for @storage.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage'**
+  String get storage;
+
+  /// No description provided for @clearCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear temporary files'**
+  String get clearCache;
+
+  /// No description provided for @cacheCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} freed'**
+  String cacheCleared(String size);
+
+  /// No description provided for @showTips.
+  ///
+  /// In en, this message translates to:
+  /// **'Show tips again'**
+  String get showTips;
+
+  /// No description provided for @scanOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get scanOriginal;
+
+  /// No description provided for @scanMagic.
+  ///
+  /// In en, this message translates to:
+  /// **'Magic color'**
+  String get scanMagic;
+
+  /// No description provided for @scanNoShadow.
+  ///
+  /// In en, this message translates to:
+  /// **'No shadows'**
+  String get scanNoShadow;
+
+  /// No description provided for @scanGray.
+  ///
+  /// In en, this message translates to:
+  /// **'Grayscale'**
+  String get scanGray;
+
+  /// No description provided for @scanBw.
+  ///
+  /// In en, this message translates to:
+  /// **'B&W'**
+  String get scanBw;
+
+  /// No description provided for @scanFitPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit page to image'**
+  String get scanFitPage;
+
+  /// No description provided for @scanSaveImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Save pages as images'**
+  String get scanSaveImages;
+
+  /// No description provided for @scanIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Photograph a paper document. Edges are detected automatically, the page is flattened and cleaned up, then exported as a PDF — all on your device.'**
+  String get scanIntro;
+
+  /// No description provided for @scanCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo'**
+  String get scanCamera;
+
+  /// No description provided for @scanGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from gallery'**
+  String get scanGallery;
+
+  /// No description provided for @scanCorners.
+  ///
+  /// In en, this message translates to:
+  /// **'Corners'**
+  String get scanCorners;
+
+  /// No description provided for @scanResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Result'**
+  String get scanResult;
+
+  /// No description provided for @scanAdjustHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Edges were hard to find — drag the corners onto the page.'**
+  String get scanAdjustHint;
+
+  /// No description provided for @scanAutoDetect.
+  ///
+  /// In en, this message translates to:
+  /// **'Detect edges'**
+  String get scanAutoDetect;
+
+  /// No description provided for @scanFullFrame.
+  ///
+  /// In en, this message translates to:
+  /// **'Use whole photo'**
+  String get scanFullFrame;
+
+  /// No description provided for @scanAddPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Add page'**
+  String get scanAddPage;
+
+  /// No description provided for @cornerTopLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Top-left corner'**
+  String get cornerTopLeft;
+
+  /// No description provided for @cornerTopRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Top-right corner'**
+  String get cornerTopRight;
+
+  /// No description provided for @cornerBottomRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottom-right corner'**
+  String get cornerBottomRight;
+
+  /// No description provided for @cornerBottomLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottom-left corner'**
+  String get cornerBottomLeft;
+
+  /// No description provided for @batchDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total} photos exported'**
+  String batchDone(int done, int total);
+
+  /// No description provided for @batchStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Export {count}'**
+  String batchStart(int count);
+
+  /// No description provided for @batchLook.
+  ///
+  /// In en, this message translates to:
+  /// **'Look to apply'**
+  String get batchLook;
+
+  /// No description provided for @batchUseCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Use copied edits'**
+  String get batchUseCopied;
+
+  /// No description provided for @batchNoCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy edits in the photo editor first'**
+  String get batchNoCopied;
+
+  /// No description provided for @batchPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} photos'**
+  String batchPhotos(int count);
+
+  /// No description provided for @batchAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add photos'**
+  String get batchAdd;
+
+  /// No description provided for @batchIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick photos, choose a look or your copied edits, and export them all at full resolution.'**
+  String get batchIntro;
+
+  /// No description provided for @collageIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick up to 9 photos to arrange them in a layout with borders and a background.'**
+  String get collageIntro;
+
+  /// No description provided for @collagePick.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose photos'**
+  String get collagePick;
+
+  /// No description provided for @collageLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Layout'**
+  String get collageLayout;
+
+  /// No description provided for @collageBorder.
+  ///
+  /// In en, this message translates to:
+  /// **'Borders'**
+  String get collageBorder;
+
+  /// No description provided for @collageSpacing.
+  ///
+  /// In en, this message translates to:
+  /// **'Spacing'**
+  String get collageSpacing;
+
+  /// No description provided for @frameSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Frame saved to your gallery'**
+  String get frameSaved;
+
+  /// No description provided for @saveFrame.
+  ///
+  /// In en, this message translates to:
+  /// **'Save frame as photo'**
+  String get saveFrame;
+
+  /// No description provided for @stabilize.
+  ///
+  /// In en, this message translates to:
+  /// **'Stabilize'**
+  String get stabilize;
+
+  /// No description provided for @stabilizeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Smooths shaky footage at export (two passes)'**
+  String get stabilizeHint;
+
+  /// No description provided for @lookStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter strength'**
+  String get lookStrength;
+
+  /// No description provided for @keyframe.
+  ///
+  /// In en, this message translates to:
+  /// **'Keyframe at playhead'**
+  String get keyframe;
+
+  /// No description provided for @clearKeyframes.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear keyframes'**
+  String get clearKeyframes;
+
+  /// No description provided for @keyframesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} keyframes · move the playhead and change the strength to animate the filter'**
+  String keyframesHint(int count);
+
+  /// No description provided for @exportGif.
+  ///
+  /// In en, this message translates to:
+  /// **'Animated GIF'**
+  String get exportGif;
+
+  /// No description provided for @exportGifHint.
+  ///
+  /// In en, this message translates to:
+  /// **'480 px, 12 fps, first 30 s'**
+  String get exportGifHint;
+
+  /// No description provided for @play.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get play;
+
+  /// No description provided for @pause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get pause;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

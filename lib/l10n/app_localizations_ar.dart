@@ -24,7 +24,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get recentProjects => 'المشاريع الأخيرة';
 
   @override
-  String get noProjects => 'لا توجد مشاريع بعد. افتح صورة أو فيديو للبدء.';
+  String get noProjects => 'افتح صورة أو فيديو للبدء. تُحفظ تعديلاتك تلقائياً على جهازك.';
 
   @override
   String get aiModels => 'نماذج الذكاء الاصطناعي';
@@ -501,4 +501,472 @@ class AppLocalizationsAr extends AppLocalizations {
   String projectName(String date) {
     return 'مشروع $date';
   }
+
+  @override
+  String get catFavorites => 'المفضلة';
+
+  @override
+  String get catEssentials => 'أساسي';
+
+  @override
+  String get catPortrait => 'بورتريه';
+
+  @override
+  String get catFood => 'طعام';
+
+  @override
+  String get catFilm => 'أفلام';
+
+  @override
+  String get catVintage => 'عتيق';
+
+  @override
+  String get catCinematic => 'سينمائي';
+
+  @override
+  String get catLandscape => 'طبيعة';
+
+  @override
+  String get catBw => 'أبيض وأسود';
+
+  @override
+  String get catCreative => 'إبداعي';
+
+  @override
+  String get catCustom => 'أنماطي';
+
+  @override
+  String get savePreset => 'حفظ كنمط';
+
+  @override
+  String get presetDefaultName => 'نمطي';
+
+  @override
+  String presetSaved(String name) {
+    return 'تم حفظ النمط «$name»';
+  }
+
+  @override
+  String get favorite => 'إضافة إلى المفضلة';
+
+  @override
+  String get unfavorite => 'إزالة من المفضلة';
+
+  @override
+  String get rename => 'إعادة تسمية';
+
+  @override
+  String get exportPresets => 'تصدير الأنماط';
+
+  @override
+  String get importPresets => 'استيراد أنماط';
+
+  @override
+  String presetsImported(int count) {
+    return 'تم استيراد $count من الأنماط';
+  }
+
+  @override
+  String importFailed(String error) {
+    return 'فشل الاستيراد: $error';
+  }
+
+  @override
+  String get noFavorites => 'اضغط مطولاً على أي نمط لإضافته هنا';
+
+  @override
+  String get copyEdits => 'نسخ التعديلات';
+
+  @override
+  String get pasteEdits => 'لصق التعديلات';
+
+  @override
+  String get editsCopied => 'تم نسخ التعديلات';
+
+  @override
+  String get editsPasted => 'تم لصق التعديلات';
+
+  @override
+  String get pasteWhat => 'ما الذي تريد لصقه';
+
+  @override
+  String get pasteAdjustments => 'الإضاءة والألوان والنمط';
+
+  @override
+  String get pasteGeometry => 'القص والتدوير';
+
+  @override
+  String get pasteMasks => 'الأقنعة';
+
+  @override
+  String get pasteOverlays => 'النصوص والملصقات';
+
+  @override
+  String get pasteFinishing => 'الإطار والعلامة المائية';
+
+  @override
+  String get resetAll => 'إعادة ضبط كل التعديلات';
+
+  @override
+  String get more => 'المزيد';
+
+  @override
+  String get photoPreview => 'معاينة الصورة';
+
+  @override
+  String get pickColor => 'اختر لوناً من الصورة';
+
+  @override
+  String get pickColorHint => 'اضغط على لون في الصورة ثم اسحب لأعلى أو لأسفل لتعديله';
+
+  @override
+  String get hideMask => 'إخفاء القناع';
+
+  @override
+  String get showMask => 'إظهار القناع';
+
+  @override
+  String get frameBorder => 'حدود';
+
+  @override
+  String get framePolaroid => 'بولارويد';
+
+  @override
+  String get frameColor => 'لون';
+
+  @override
+  String get frameBlur => 'صورة ضبابية';
+
+  @override
+  String get frameWidth => 'عرض الحدود';
+
+  @override
+  String get cornerRadius => 'زوايا دائرية';
+
+  @override
+  String get watermarkText => 'نص العلامة المائية';
+
+  @override
+  String get watermarkLogo => 'شعار';
+
+  @override
+  String get remove => 'إزالة';
+
+  @override
+  String get margin => 'الهامش';
+
+  @override
+  String get healMode => 'معالجة';
+
+  @override
+  String get cloneMode => 'استنساخ';
+
+  @override
+  String get healHint => 'لوّن فوق العيوب أو الغبار أو العناصر الصغيرة ثم اضغط تطبيق';
+
+  @override
+  String get cloneSetSourceHint => 'اضغط على الصورة لاختيار المنطقة التي سيُنسخ منها';
+
+  @override
+  String get clonePaintHint => 'لوّن المكان الذي تريد النسخ إليه ثم اضغط تطبيق';
+
+  @override
+  String get setSource => 'تحديد المصدر';
+
+  @override
+  String get clear => 'مسح';
+
+  @override
+  String get histogram => 'المدرج التكراري';
+
+  @override
+  String get clippingWarnings => 'تحذيرات القص اللوني';
+
+  @override
+  String get shadowClipping => 'ظلال مقصوصة';
+
+  @override
+  String get highlightClipping => 'إضاءات محترقة';
+
+  @override
+  String get histOriginal => 'الأصل';
+
+  @override
+  String get histLayers => 'النصوص والملصقات';
+
+  @override
+  String get histPixels => 'تنقيح / ذكاء اصطناعي';
+
+  @override
+  String get histOther => 'تعديل';
+
+  @override
+  String get toolFrame => 'إطار';
+
+  @override
+  String get toolWatermark => 'علامة مائية';
+
+  @override
+  String get toolHeal => 'معالجة';
+
+  @override
+  String get history => 'السجل';
+
+  @override
+  String get exportSize => 'المقاس';
+
+  @override
+  String get sizeOriginal => 'الأصلي';
+
+  @override
+  String get sizeStory => 'قصة';
+
+  @override
+  String get fitPad => 'احتواء (إضافة حدود)';
+
+  @override
+  String get fitCrop => 'ملء (قص)';
+
+  @override
+  String get saveToGallery => 'حفظ في المعرض';
+
+  @override
+  String photoProjectName(String date) {
+    return 'صورة · $date';
+  }
+
+  @override
+  String videoProjectName(String date) {
+    return 'فيديو · $date';
+  }
+
+  @override
+  String copyOf(String name) {
+    return '$name (نسخة)';
+  }
+
+  @override
+  String get quickTools => 'أدوات سريعة';
+
+  @override
+  String get scanDocument => 'مسح مستند';
+
+  @override
+  String get collage => 'تجميعة صور';
+
+  @override
+  String get batchEdit => 'تعديل دفعة';
+
+  @override
+  String get filterAll => 'الكل';
+
+  @override
+  String get noProjectsTitle => 'لا توجد مشاريع بعد';
+
+  @override
+  String get open => 'فتح';
+
+  @override
+  String get skip => 'تخطي';
+
+  @override
+  String get next => 'التالي';
+
+  @override
+  String get getStarted => 'ابدأ الآن';
+
+  @override
+  String get tipPrivateTitle => '١٠٠٪ على جهازك';
+
+  @override
+  String get tipPrivateBody => 'تُعالج كل الصور والفيديوهات على هاتفك. بدون سحابة وبدون حساب وبدون تتبّع.';
+
+  @override
+  String get tipLooksTitle => 'أنماط تُعرض على صورتك';
+
+  @override
+  String get tipLooksBody => 'شاهد ٤٥ نمطاً مباشرة على صورتك، وأضف ما يعجبك للمفضلة واحفظ أنماطك الخاصة.';
+
+  @override
+  String get tipAiTitle => 'ذكاء اصطناعي بدون إنترنت';
+
+  @override
+  String get tipAiBody =>
+      'أزل الخلفيات وامسح العناصر وعالج العيوب وكبّر الصور ٤ مرات — تُنزّل النماذج مرة واحدة وتعمل على الجهاز.';
+
+  @override
+  String get tipToolsTitle => 'مسح ضوئي وتجميعات وتعديل دفعات';
+
+  @override
+  String get tipToolsBody => 'امسح الأوراق إلى PDF وأنشئ تجميعات الصور وطبّق نمطاً واحداً على صور كثيرة دفعة واحدة.';
+
+  @override
+  String get appearance => 'المظهر';
+
+  @override
+  String get haptics => 'الاهتزاز عند اللمس';
+
+  @override
+  String get exportDefaults => 'إعدادات التصدير الافتراضية';
+
+  @override
+  String get exportMaxSize => 'أقصى مقاس';
+
+  @override
+  String get storage => 'التخزين';
+
+  @override
+  String get clearCache => 'مسح الملفات المؤقتة';
+
+  @override
+  String cacheCleared(String size) {
+    return 'تم تحرير $size';
+  }
+
+  @override
+  String get showTips => 'عرض النصائح مرة أخرى';
+
+  @override
+  String get scanOriginal => 'الأصلي';
+
+  @override
+  String get scanMagic => 'ألوان سحرية';
+
+  @override
+  String get scanNoShadow => 'بدون ظلال';
+
+  @override
+  String get scanGray => 'تدرج رمادي';
+
+  @override
+  String get scanBw => 'أبيض وأسود';
+
+  @override
+  String get scanFitPage => 'الصفحة بحجم الصورة';
+
+  @override
+  String get scanSaveImages => 'حفظ الصفحات كصور';
+
+  @override
+  String get scanIntro =>
+      'صوّر مستنداً ورقياً. تُكتشف الحواف تلقائياً، وتُسوّى الصفحة وتُنظّف، ثم تُصدّر كملف PDF — كل ذلك على جهازك.';
+
+  @override
+  String get scanCamera => 'التقاط صورة';
+
+  @override
+  String get scanGallery => 'اختيار من المعرض';
+
+  @override
+  String get scanCorners => 'الزوايا';
+
+  @override
+  String get scanResult => 'النتيجة';
+
+  @override
+  String get scanAdjustHint => 'صعب اكتشاف الحواف — اسحب الزوايا إلى أطراف الصفحة.';
+
+  @override
+  String get scanAutoDetect => 'اكتشاف الحواف';
+
+  @override
+  String get scanFullFrame => 'استخدام الصورة كاملة';
+
+  @override
+  String get scanAddPage => 'إضافة صفحة';
+
+  @override
+  String get cornerTopLeft => 'الزاوية العلوية اليسرى';
+
+  @override
+  String get cornerTopRight => 'الزاوية العلوية اليمنى';
+
+  @override
+  String get cornerBottomRight => 'الزاوية السفلية اليمنى';
+
+  @override
+  String get cornerBottomLeft => 'الزاوية السفلية اليسرى';
+
+  @override
+  String batchDone(int done, int total) {
+    return 'تم تصدير $done من $total صورة';
+  }
+
+  @override
+  String batchStart(int count) {
+    return 'تصدير $count';
+  }
+
+  @override
+  String get batchLook => 'النمط المطلوب تطبيقه';
+
+  @override
+  String get batchUseCopied => 'استخدام التعديلات المنسوخة';
+
+  @override
+  String get batchNoCopied => 'انسخ التعديلات من محرر الصور أولاً';
+
+  @override
+  String batchPhotos(int count) {
+    return '$count صورة';
+  }
+
+  @override
+  String get batchAdd => 'إضافة صور';
+
+  @override
+  String get batchIntro => 'اختر الصور، ثم نمطاً أو تعديلاتك المنسوخة، وصدّرها كلها بالدقة الكاملة.';
+
+  @override
+  String get collageIntro => 'اختر حتى ٩ صور لترتيبها في تصميم مع حدود وخلفية.';
+
+  @override
+  String get collagePick => 'اختيار الصور';
+
+  @override
+  String get collageLayout => 'التصميم';
+
+  @override
+  String get collageBorder => 'الحدود';
+
+  @override
+  String get collageSpacing => 'المسافة بين الصور';
+
+  @override
+  String get frameSaved => 'تم حفظ الإطار في المعرض';
+
+  @override
+  String get saveFrame => 'حفظ الإطار كصورة';
+
+  @override
+  String get stabilize => 'تثبيت الاهتزاز';
+
+  @override
+  String get stabilizeHint => 'يُنعّم اللقطات المهتزة عند التصدير (مرحلتان)';
+
+  @override
+  String get lookStrength => 'قوة الفلتر';
+
+  @override
+  String get keyframe => 'إطار مفتاحي عند المؤشر';
+
+  @override
+  String get clearKeyframes => 'مسح الإطارات المفتاحية';
+
+  @override
+  String keyframesHint(int count) {
+    return '$count إطارات مفتاحية · حرّك المؤشر وغيّر القوة لتحريك الفلتر';
+  }
+
+  @override
+  String get exportGif => 'صورة GIF متحركة';
+
+  @override
+  String get exportGifHint => '‏480 بكسل، 12 إطاراً/ث، أول 30 ثانية';
+
+  @override
+  String get play => 'تشغيل';
+
+  @override
+  String get pause => 'إيقاف مؤقت';
 }

@@ -2,23 +2,30 @@ import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lumora/core/router/app_router.dart';
+import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/core/widgets/labeled_slider.dart';
+import 'package:lumora/features/photo_editor/data/preset_store.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
 import 'package:lumora/features/photo_editor/domain/presets.dart';
 import 'package:lumora/features/photo_editor/presentation/widgets/tool_panels.dart' show paramLabel, promptText;
+import 'package:lumora/features/video_editor/domain/look_keyframes.dart';
 import 'package:lumora/features/video_editor/domain/timeline_ops.dart';
 import 'package:lumora/features/video_editor/domain/video_project.dart';
 import 'package:lumora/features/video_editor/engine/video_engine.dart';
 import 'package:lumora/features/video_editor/presentation/video_editor_controller.dart';
 import 'package:lumora/features/video_editor/presentation/widgets/timeline_view.dart';
+import 'package:lumora/features/video_editor/presentation/widgets/video_crop_sheet.dart';
 import 'package:lumora/features/video_editor/presentation/widgets/video_preview.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
 
 enum _VideoTool { clip, look, text, audio, format }
+
+enum _ExportKind { fast, studio, gif }
 
 class VideoEditorPage extends ConsumerStatefulWidget {
   const VideoEditorPage({required this.args, super.key});
@@ -75,58 +82,84 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
             ),
           ],
         ),
-        body: Column(
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(child: VideoPreview(key: _preview)),
-                  if (s.busy && s.progress != null)
-                    Positioned.fill(
-                      child: ColoredBox(
-                        color: Colors.black54,
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircularProgressIndicator(value: s.progress),
-                              const SizedBox(height: 12),
-                              Text('${l.exporting} ${((s.progress ?? 0) * 100).round()}%'),
-                              TextButton(onPressed: ctrl.cancelExport, child: Text(l.cancel)),
-                            ],
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 840;
+            final main = <Widget>[
+              Expanded(
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: VideoPreview(key: _preview)),
+                    if (s.busy && s.progress != null)
+                      Positioned.fill(
+                        child: ColoredBox(
+                          color: Colors.black54,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(value: s.progress),
+                                const SizedBox(height: 12),
+                                Text('${l.exporting} ${((s.progress ?? 0) * 100).round()}%'),
+                                TextButton(onPressed: ctrl.cancelExport, child: Text(l.cancel)),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  IconButton(
+                    tooltip: _preview.currentState?.playing ?? false ? l.pause : l.play,
+                    icon: Icon(_preview.currentState?.playing ?? false ? Icons.pause : Icons.play_arrow),
+                    onPressed: () async {
+                      await _preview.currentState?.togglePlay();
+                      setState(() {});
+                    },
+                  ),
+                  Text('${_fmt(s.playheadMs)} / ${_fmt(s.project.totalDurationMs)}'),
+                  const Spacer(),
+                  IconButton(tooltip: l.split, icon: const Icon(Icons.content_cut), onPressed: ctrl.splitAtPlayhead),
+                  IconButton(
+                    tooltip: l.addClip,
+                    icon: const Icon(Icons.add_box_outlined),
+                    onPressed: () async {
+                      final files = await ImagePicker().pickMultiVideo();
+                      if (files.isNotEmpty) await ctrl.addClips([for (final f in files) f.path]);
+                    },
+                  ),
                 ],
               ),
-            ),
-            Row(
+              SizedBox(height: 130, child: TimelineView(onScrub: (ms) => _preview.currentState?.scrubTo(ms))),
+            ];
+            if (wide) {
+              return Row(
+                children: [
+                  Expanded(child: Column(children: main)),
+                  const VerticalDivider(width: 1),
+                  SizedBox(
+                    width: 360,
+                    child: Column(
+                      children: [
+                        Expanded(child: _panel(context, s)),
+                        _toolBar(context),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }
+            return Column(
               children: [
-                IconButton(
-                  icon: Icon(_preview.currentState?.playing ?? false ? Icons.pause : Icons.play_arrow),
-                  onPressed: () async {
-                    await _preview.currentState?.togglePlay();
-                    setState(() {});
-                  },
-                ),
-                Text('${_fmt(s.playheadMs)} / ${_fmt(s.project.totalDurationMs)}'),
-                const Spacer(),
-                IconButton(tooltip: l.split, icon: const Icon(Icons.content_cut), onPressed: ctrl.splitAtPlayhead),
-                IconButton(
-                  tooltip: l.addClip,
-                  icon: const Icon(Icons.add_box_outlined),
-                  onPressed: () async {
-                    final files = await ImagePicker().pickMultiVideo();
-                    if (files.isNotEmpty) await ctrl.addClips([for (final f in files) f.path]);
-                  },
-                ),
+                ...main,
+                SizedBox(height: 190, child: _panel(context, s)),
+                _toolBar(context),
               ],
-            ),
-            SizedBox(height: 130, child: TimelineView(onScrub: (ms) => _preview.currentState?.scrubTo(ms))),
-            SizedBox(height: 190, child: _panel(context, s)),
-            _toolBar(context),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -207,7 +240,8 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
                   selected: clip.reversed,
                 ),
                 _act(Icons.rotate_90_degrees_cw_outlined, l.rotate, () => ctrl.update((p) => p.rotateClip(clip.id))),
-                _act(Icons.crop, l.toolCrop, () => _cropDialog(context, clip)),
+                _act(Icons.crop, l.toolCrop, () => _cropDialog(context, clip), selected: clip.isCropped),
+                _act(Icons.add_photo_alternate_outlined, l.saveFrame, () => _saveFrame(context)),
                 _act(
                   Icons.copy,
                   l.duplicate,
@@ -228,6 +262,22 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
                 }),
               ],
             ),
+            SwitchListTile(
+              dense: true,
+              secondary: const Icon(Icons.video_stable),
+              title: Text(l.stabilize),
+              subtitle: Text(l.stabilizeHint),
+              value: clip.stabilize,
+              onChanged: (v) => ctrl.setStabilize(clip.id, enabled: v),
+            ),
+            if (clip.stabilize)
+              LabeledSlider(
+                label: l.intensity,
+                value: clip.stabilizeStrength,
+                min: 0,
+                max: 1,
+                onChanged: (v) => ctrl.setStabilize(clip.id, enabled: true, strength: v),
+              ),
             LabeledSlider(
               label: l.volume,
               value: clip.volume,
@@ -274,7 +324,7 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
                     selected: s.project.presetId == null,
                     onSelected: (_) => ctrl.applyPreset(null),
                   ),
-                  for (final p in kBuiltInPresets)
+                  for (final p in [...kBuiltInPresets, ...ref.watch(presetLibraryControllerProvider).custom])
                     Padding(
                       padding: const EdgeInsetsDirectional.only(start: 6),
                       child: ChoiceChip(
@@ -286,6 +336,44 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
                 ],
               ),
             ),
+            Row(
+              children: [
+                Expanded(
+                  child: LabeledSlider(
+                    label: s.project.lookKeyframes.isEmpty ? l.lookStrength : '${l.lookStrength} ◆',
+                    value: s.project.lookIntensityAt(s.playheadMs),
+                    min: 0,
+                    max: 1,
+                    onChanged: (v) => ctrl.setLookIntensity(v, live: true),
+                    onChangeEnd: (_) => ctrl.commit(),
+                  ),
+                ),
+                IconButton(
+                  tooltip: l.keyframe,
+                  isSelected: s.project.keyframeNear(s.playheadMs) != null,
+                  icon: const Icon(Icons.diamond_outlined),
+                  selectedIcon: const Icon(Icons.diamond),
+                  onPressed: () {
+                    Haptics.selection();
+                    ctrl.toggleKeyframeAtPlayhead();
+                  },
+                ),
+                if (s.project.lookKeyframes.isNotEmpty)
+                  IconButton(
+                    tooltip: l.clearKeyframes,
+                    icon: const Icon(Icons.layers_clear_outlined),
+                    onPressed: ctrl.clearKeyframes,
+                  ),
+              ],
+            ),
+            if (s.project.lookKeyframes.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  l.keyframesHint(s.project.lookKeyframes.length),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
             for (final param in const [
               AdjustmentParam.exposure,
               AdjustmentParam.contrast,
@@ -464,38 +552,41 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
   );
 
   Future<void> _cropDialog(BuildContext context, VideoClip clip) async {
-    final presets = <(String, List<double>)>[
-      ('Full', [0, 0, 1, 1]),
-      ('Center 80%', [0.1, 0.1, 0.9, 0.9]),
-      ('Center square', _squareCrop(clip)),
-      ('Top half', [0, 0, 1, 0.5]),
-      ('Bottom half', [0, 0.5, 1, 1]),
-    ];
+    final s = ref.read(videoEditorControllerProvider);
+    final thumbs = s.thumbnails[clip.path];
+    final frameAspect = clip.sourceWidth > 0 && clip.sourceHeight > 0 ? clip.sourceWidth / clip.sourceHeight : 16 / 9;
     final pick = await showModalBottomSheet<List<double>>(
       context: context,
-      builder: (c) => ListView(
-        shrinkWrap: true,
-        children: [
-          for (final (name, rect) in presets) ListTile(title: Text(name), onTap: () => Navigator.pop(c, rect)),
-        ],
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (c) => VideoCropSheet(
+        initial: clip.crop,
+        frameAspect: frameAspect,
+        framePath: thumbs == null || thumbs.isEmpty ? null : thumbs[thumbs.length ~/ 2],
       ),
     );
     if (pick != null) ref.read(videoEditorControllerProvider.notifier).update((p) => p.cropClip(clip.id, pick));
   }
 
-  List<double> _squareCrop(VideoClip c) {
-    if (c.sourceWidth == 0 || c.sourceHeight == 0) return [0, 0, 1, 1];
-    if (c.sourceWidth > c.sourceHeight) {
-      final w = c.sourceHeight / c.sourceWidth;
-      return [(1 - w) / 2, 0, (1 + w) / 2, 1];
-    }
-    final h = c.sourceWidth / c.sourceHeight;
-    return [0, (1 - h) / 2, 1, (1 + h) / 2];
+  Future<void> _saveFrame(BuildContext context) async {
+    final l = context.l10n;
+    final path = await ref.read(videoEditorControllerProvider.notifier).extractFrame();
+    if (path == null || !context.mounted) return;
+    Haptics.medium();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l.frameSaved),
+        action: SnackBarAction(
+          label: l.editPhoto,
+          onPressed: () => context.push('/photo', extra: PhotoEditorArgs(sourcePath: path)),
+        ),
+      ),
+    );
   }
 
   Future<void> _export(BuildContext context) async {
     final l = context.l10n;
-    final quality = await showModalBottomSheet<VideoExportQuality>(
+    final kind = await showModalBottomSheet<_ExportKind>(
       context: context,
       builder: (c) => SafeArea(
         child: Column(
@@ -504,20 +595,32 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
             ListTile(
               leading: const Icon(Icons.bolt),
               title: Text(l.exportFast),
-              onTap: () => Navigator.pop(c, VideoExportQuality.fast),
+              onTap: () => Navigator.pop(c, _ExportKind.fast),
             ),
             ListTile(
               leading: const Icon(Icons.auto_awesome),
               title: Text(l.exportStudio),
-              onTap: () => Navigator.pop(c, VideoExportQuality.studio),
+              onTap: () => Navigator.pop(c, _ExportKind.studio),
+            ),
+            ListTile(
+              leading: const Icon(Icons.gif_box_outlined),
+              title: Text(l.exportGif),
+              subtitle: Text(l.exportGifHint),
+              onTap: () => Navigator.pop(c, _ExportKind.gif),
             ),
           ],
         ),
       ),
     );
-    if (quality == null) return;
-    final out = await ref.read(videoEditorControllerProvider.notifier).export(quality);
+    if (kind == null) return;
+    final ctrl = ref.read(videoEditorControllerProvider.notifier);
+    final out = switch (kind) {
+      _ExportKind.fast => await ctrl.export(VideoExportQuality.fast),
+      _ExportKind.studio => await ctrl.export(VideoExportQuality.studio),
+      _ExportKind.gif => await ctrl.exportGif(),
+    };
     if (out == null || !context.mounted) return;
+    Haptics.medium();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(l.videoExported),

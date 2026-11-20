@@ -45,7 +45,7 @@ final class SettingsControllerProvider
 }
 
 String _$settingsControllerHash() =>
-    r'a8cdc2b7001df0de0464c082702f27a64242915f';
+    r'c617fd13a8b3d601429fe547ae0e231023184ef1';
 
 /// Persisted user preferences (SharedPreferences).
 

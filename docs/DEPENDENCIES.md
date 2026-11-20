@@ -22,8 +22,12 @@
 | share_plus | ^13.3.1 | 2026-10-01 | share exports |
 | path_provider / path / shared_preferences / uuid / crypto / http / intl | latest | | infrastructure |
 
+**v1.1 adds no new packages.** The document scanner (edge detection, perspective, filters), the PDF writer, healing, frames, histogram, collage and batch editing are implemented in plain Dart (pure functions on isolates, unit tested) and Flutter's GPU canvas/shaders. Video stabilisation uses the `vid.stab` library already bundled in `ffmpeg_kit_flutter_new_min_gpl` (pub.dev lists it among the min-gpl external libraries). The release workflow uses `softprops/action-gh-release@v3` (Node 24) and `actions/download-artifact@v8`.
+
 Rejected or avoided:
 * `google_mlkit_*`: requires Google Play services, which this project forbids.
 * `ffmpeg_kit_flutter_*` (arthenica): discontinued, binaries removed.
 * `tflite_flutter` 0.12.1 (2025-10): kept as a future `InferenceEngine` backend. ONNX gives direct access to the Hugging Face model zoo.
 * `pro_image_editor`: a complete editor UI, but it would replace our own GPU pipeline and edit model.
+* `pdf` / `printing`: a 150-line PDF writer embedding the page JPEGs as-is (no re-compression) is enough for scans.
+* `opencv_dart` / `google_mlkit_document_scanner`: large native binaries / Google Play services; classic CV in Dart is fast on a 360 px proxy.

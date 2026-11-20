@@ -44,6 +44,23 @@ class ModelManager {
 
   Future<File> fileFor(ModelSpec spec) async => File(p.join((await modelsDir()).path, spec.fileName));
 
+  /// Bytes used by downloaded models (including partial downloads).
+  Future<int> installedBytes() async {
+    final dir = await modelsDir();
+    if (!dir.existsSync()) return 0;
+    var total = 0;
+    await for (final e in dir.list()) {
+      if (e is File) total += await e.length();
+    }
+    return total;
+  }
+
+  /// Deletes every downloaded model.
+  Future<void> deleteAll() async {
+    final dir = await modelsDir();
+    if (dir.existsSync()) await dir.delete(recursive: true);
+  }
+
   Future<bool> isInstalled(ModelSpec spec) async {
     final f = await fileFor(spec);
     return f.existsSync() && f.lengthSync() == spec.sizeBytes;

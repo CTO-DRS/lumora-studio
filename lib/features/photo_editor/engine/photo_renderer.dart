@@ -92,9 +92,14 @@ class PhotoRenderer {
     }
   }
 
+  /// Frees every GPU texture. The renderer stays usable: the next
+  /// [prepare] recreates what it needs.
   void dispose() {
     _dummy?.dispose();
     _curves?.dispose();
+    _dummy = null;
+    _curves = null;
+    _curvesKey = null;
     for (final v in _lutAtlases.values) {
       v.$1.dispose();
     }
@@ -185,6 +190,22 @@ class PhotoRenderer {
       pic.dispose();
     }
     return current;
+  }
+
+  /// Clipping warning overlay for [image]: red where any channel reaches
+  /// [highlight], blue where every channel is at or below [shadow].
+  ui.Image clippingOverlay(
+    ui.Image image, {
+    double highlight = 254 / 255,
+    double shadow = 1 / 255,
+    bool highlights = true,
+    bool shadows = true,
+  }) {
+    final s = shaders.clipping.fragmentShader();
+    s.getUniformVec2('uSize').set(image.width.toDouble(), image.height.toDouble());
+    s.getUniformVec4('uThreshold').set(highlight, shadow, highlights ? 1 : 0, shadows ? 1 : 0);
+    s.setImageSampler(0, image, filterQuality: FilterQuality.low);
+    return _run(image.width, image.height, s);
   }
 
   ui.Image _replace(ui.Image old, ui.Image next) {

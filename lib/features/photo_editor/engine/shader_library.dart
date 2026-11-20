@@ -11,6 +11,7 @@ class ShaderLibrary {
     required this.maskBlend,
     required this.warp,
     required this.videoFilter,
+    required this.clipping,
   });
 
   final ui.FragmentProgram develop;
@@ -20,6 +21,7 @@ class ShaderLibrary {
   final ui.FragmentProgram maskBlend;
   final ui.FragmentProgram warp;
   final ui.FragmentProgram videoFilter;
+  final ui.FragmentProgram clipping;
 
   static Future<ShaderLibrary>? _instance;
 
@@ -34,6 +36,7 @@ class ShaderLibrary {
       ui.FragmentProgram.fromAsset('shaders/mask_blend.frag'),
       ui.FragmentProgram.fromAsset('shaders/warp.frag'),
       ui.FragmentProgram.fromAsset('shaders/video_filter.frag'),
+      ui.FragmentProgram.fromAsset('shaders/clipping.frag'),
     ]);
     return ShaderLibrary._(
       develop: programs[0],
@@ -43,6 +46,7 @@ class ShaderLibrary {
       maskBlend: programs[4],
       warp: programs[5],
       videoFilter: programs[6],
+      clipping: programs[7],
     );
   }
 }

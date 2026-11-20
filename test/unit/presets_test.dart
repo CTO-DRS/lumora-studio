@@ -9,8 +9,8 @@ import 'package:lumora/features/photo_editor/domain/presets.dart';
 
 void main() {
   group('Presets', () {
-    test('ship at least 25 looks with unique ids and both languages', () {
-      expect(kBuiltInPresets.length, greaterThanOrEqualTo(25));
+    test('ship at least 45 looks with unique ids and both languages', () {
+      expect(kBuiltInPresets.length, greaterThanOrEqualTo(45));
       final ids = kBuiltInPresets.map((p) => p.id).toSet();
       expect(ids.length, kBuiltInPresets.length);
       for (final p in kBuiltInPresets) {
@@ -18,7 +18,9 @@ void main() {
         expect(p.nameAr, isNotEmpty);
         expect(p.adjustments.isNeutral, isFalse, reason: p.id);
       }
-      expect(PresetCategory.values.every((c) => kBuiltInPresets.any((p) => p.category == c)), isTrue);
+      final builtInCategories = PresetCategory.values.where((c) => c != PresetCategory.custom);
+      expect(builtInCategories.every((c) => kBuiltInPresets.any((p) => p.category == c)), isTrue);
+      expect(kBuiltInPresets.any((p) => p.isCustom), isFalse);
     });
 
     test('every scalar stays within its slider range', () {

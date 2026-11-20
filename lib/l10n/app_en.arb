@@ -5,7 +5,7 @@
   "editPhoto": "Edit photo",
   "editVideo": "Edit video",
   "recentProjects": "Recent projects",
-  "noProjects": "No projects yet. Open a photo or video to start.",
+  "noProjects": "Open a photo or video to start. Your edits are saved automatically on this device.",
   "aiModels": "AI models",
   "settings": "Settings",
   "delete": "Delete",
@@ -198,5 +198,233 @@
         "type": "String"
       }
     }
-  }
+  },
+  "catFavorites": "Favorites",
+  "catEssentials": "Essentials",
+  "catPortrait": "Portrait",
+  "catFood": "Food",
+  "catFilm": "Film",
+  "catVintage": "Vintage",
+  "catCinematic": "Cinematic",
+  "catLandscape": "Landscape",
+  "catBw": "B&W",
+  "catCreative": "Creative",
+  "catCustom": "My presets",
+  "savePreset": "Save as preset",
+  "presetDefaultName": "My look",
+  "presetSaved": "Preset “{name}” saved",
+  "@presetSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "favorite": "Add to favorites",
+  "unfavorite": "Remove from favorites",
+  "rename": "Rename",
+  "exportPresets": "Export presets",
+  "importPresets": "Import presets",
+  "presetsImported": "{count} presets imported",
+  "@presetsImported": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importFailed": "Import failed: {error}",
+  "@importFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noFavorites": "Long-press any look to add it here",
+  "copyEdits": "Copy edits",
+  "pasteEdits": "Paste edits",
+  "editsCopied": "Edits copied",
+  "editsPasted": "Edits pasted",
+  "pasteWhat": "What to paste",
+  "pasteAdjustments": "Light, color & look",
+  "pasteGeometry": "Crop & rotation",
+  "pasteMasks": "Masks",
+  "pasteOverlays": "Text & stickers",
+  "pasteFinishing": "Frame & watermark",
+  "resetAll": "Reset all edits",
+  "more": "More",
+  "photoPreview": "Photo preview",
+  "pickColor": "Pick a color in the photo",
+  "pickColorHint": "Tap a color in the photo, then drag up or down on it to adjust",
+  "hideMask": "Hide mask",
+  "showMask": "Show mask",
+  "frameBorder": "Border",
+  "framePolaroid": "Polaroid",
+  "frameColor": "Color",
+  "frameBlur": "Blurred photo",
+  "frameWidth": "Border width",
+  "cornerRadius": "Rounded corners",
+  "watermarkText": "Watermark text",
+  "watermarkLogo": "Logo",
+  "remove": "Remove",
+  "margin": "Margin",
+  "healMode": "Heal",
+  "cloneMode": "Clone",
+  "healHint": "Paint over blemishes, dust or small objects, then tap Apply",
+  "cloneSetSourceHint": "Tap the photo to choose the area to copy from",
+  "clonePaintHint": "Paint where the source should be copied, then tap Apply",
+  "setSource": "Set source",
+  "clear": "Clear",
+  "histogram": "Histogram",
+  "clippingWarnings": "Clipping warnings",
+  "shadowClipping": "Crushed shadows",
+  "highlightClipping": "Blown highlights",
+  "histOriginal": "Original",
+  "histLayers": "Text & stickers",
+  "histPixels": "Retouch / AI",
+  "histOther": "Edit",
+  "toolFrame": "Frame",
+  "toolWatermark": "Watermark",
+  "toolHeal": "Heal",
+  "history": "History",
+  "exportSize": "Size",
+  "sizeOriginal": "Original",
+  "sizeStory": "Story",
+  "fitPad": "Fit (add border)",
+  "fitCrop": "Fill (crop)",
+  "saveToGallery": "Save to gallery",
+  "photoProjectName": "Photo · {date}",
+  "@photoProjectName": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "videoProjectName": "Video · {date}",
+  "@videoProjectName": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "copyOf": "{name} (copy)",
+  "@copyOf": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "quickTools": "Quick tools",
+  "scanDocument": "Scan document",
+  "collage": "Collage",
+  "batchEdit": "Batch edit",
+  "filterAll": "All",
+  "noProjectsTitle": "Nothing here yet",
+  "open": "Open",
+  "skip": "Skip",
+  "next": "Next",
+  "getStarted": "Get started",
+  "tipPrivateTitle": "100% on your device",
+  "tipPrivateBody": "Every photo and video is processed on your phone. No cloud, no account, no tracking.",
+  "tipLooksTitle": "Looks made from your photo",
+  "tipLooksBody": "Preview 45 looks live on your own photo, star your favorites and save your own presets.",
+  "tipAiTitle": "AI that stays offline",
+  "tipAiBody": "Remove backgrounds, erase objects, heal blemishes and upscale 4× — models download once and run on the device.",
+  "tipToolsTitle": "Scan, collage, batch",
+  "tipToolsBody": "Scan paper documents to PDF, build collages, and apply one look to many photos at once.",
+  "appearance": "Appearance",
+  "haptics": "Haptic feedback",
+  "exportDefaults": "Export defaults",
+  "exportMaxSize": "Maximum size",
+  "storage": "Storage",
+  "clearCache": "Clear temporary files",
+  "cacheCleared": "{size} freed",
+  "@cacheCleared": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "showTips": "Show tips again",
+  "scanOriginal": "Original",
+  "scanMagic": "Magic color",
+  "scanNoShadow": "No shadows",
+  "scanGray": "Grayscale",
+  "scanBw": "B&W",
+  "scanFitPage": "Fit page to image",
+  "scanSaveImages": "Save pages as images",
+  "scanIntro": "Photograph a paper document. Edges are detected automatically, the page is flattened and cleaned up, then exported as a PDF — all on your device.",
+  "scanCamera": "Take a photo",
+  "scanGallery": "Choose from gallery",
+  "scanCorners": "Corners",
+  "scanResult": "Result",
+  "scanAdjustHint": "Edges were hard to find — drag the corners onto the page.",
+  "scanAutoDetect": "Detect edges",
+  "scanFullFrame": "Use whole photo",
+  "scanAddPage": "Add page",
+  "cornerTopLeft": "Top-left corner",
+  "cornerTopRight": "Top-right corner",
+  "cornerBottomRight": "Bottom-right corner",
+  "cornerBottomLeft": "Bottom-left corner",
+  "batchDone": "{done} of {total} photos exported",
+  "@batchDone": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "batchStart": "Export {count}",
+  "@batchStart": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchLook": "Look to apply",
+  "batchUseCopied": "Use copied edits",
+  "batchNoCopied": "Copy edits in the photo editor first",
+  "batchPhotos": "{count} photos",
+  "@batchPhotos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchAdd": "Add photos",
+  "batchIntro": "Pick photos, choose a look or your copied edits, and export them all at full resolution.",
+  "collageIntro": "Pick up to 9 photos to arrange them in a layout with borders and a background.",
+  "collagePick": "Choose photos",
+  "collageLayout": "Layout",
+  "collageBorder": "Borders",
+  "collageSpacing": "Spacing",
+  "frameSaved": "Frame saved to your gallery",
+  "saveFrame": "Save frame as photo",
+  "stabilize": "Stabilize",
+  "stabilizeHint": "Smooths shaky footage at export (two passes)",
+  "lookStrength": "Filter strength",
+  "keyframe": "Keyframe at playhead",
+  "clearKeyframes": "Clear keyframes",
+  "keyframesHint": "{count} keyframes · move the playhead and change the strength to animate the filter",
+  "@keyframesHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportGif": "Animated GIF",
+  "exportGifHint": "480 px, 12 fps, first 30 s",
+  "play": "Play",
+  "pause": "Pause"
 }

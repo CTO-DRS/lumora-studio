@@ -30,7 +30,18 @@ LutRepository lutRepository(Ref ref) => LutRepository();
 @Riverpod(keepAlive: true)
 Future<ShaderLibrary> shaderLibrary(Ref ref) => ShaderLibrary.load();
 
-/// A fresh renderer per consumer (each owns its GPU textures).
+/// Creates a renderer owned by the caller, who must `dispose()` it.
+///
+/// Prefer this over reading [photoRendererProvider] from a notifier or a
+/// callback: an auto-dispose provider that is only `read` is disposed as
+/// soon as its future completes, which would free the renderer's GPU
+/// textures while it is still in use.
+/// Pass `ref.read` (works with both `Ref` and `WidgetRef`).
+Future<PhotoRenderer> createPhotoRenderer(T Function<T>(ProviderListenable<T>) read) async =>
+    PhotoRenderer(await read(shaderLibraryProvider.future), read(lutRepositoryProvider));
+
+/// A fresh renderer per consumer (each owns its GPU textures). Only for
+/// widgets that `watch` it; see [createPhotoRenderer].
 @riverpod
 Future<PhotoRenderer> photoRenderer(Ref ref) async {
   final shaders = await ref.watch(shaderLibraryProvider.future);

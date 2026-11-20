@@ -9,6 +9,7 @@ import 'package:ffmpeg_kit_flutter_new_min_gpl/return_code.dart';
 import 'package:flutter/services.dart';
 import 'package:lumora/features/photo_editor/domain/edit_state.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
+import 'package:lumora/features/video_editor/domain/look_keyframes.dart';
 import 'package:lumora/features/video_editor/domain/timeline_ops.dart';
 import 'package:lumora/features/video_editor/domain/video_project.dart';
 import 'package:lumora/features/video_editor/engine/ffmpeg_command_builder.dart';
@@ -123,11 +124,12 @@ class VideoEngine {
     VideoExportQuality quality = VideoExportQuality.fast,
     PhotoRenderer? renderer,
     void Function(double progress)? onProgress,
+    String? outputPath,
   }) async {
     final dir = await _work('export');
     final outDir = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'exports'));
     if (!outDir.existsSync()) await outDir.create(recursive: true);
-    final output = p.join(outDir.path, 'Lumora_${DateTime.now().millisecondsSinceEpoch}.mp4');
+    final output = outputPath ?? p.join(outDir.path, 'Lumora_${DateTime.now().millisecondsSinceEpoch}.mp4');
     final (w, h) = FfmpegCommandBuilder.outputSize(project);
     final total = project.totalDurationMs;
 
@@ -138,33 +140,58 @@ class VideoEngine {
     final luts = <String, String>{};
     final lutId = project.look.lutId;
     if (lutId != null) luts[lutId] = await _materializeLut(lutId, dir);
-    final assets = ExportAssets(textOverlayPngs: texts, lutFiles: luts);
+    // vid.stab pass 1 for every stabilised clip.
+    final stab = <String, String>{};
+    final toStabilize = project.clips.where((c) => c.stabilize).toList();
+    for (var i = 0; i < toStabilize.length; i++) {
+      final c = toStabilize[i];
+      final trf = p.join(dir.path, 'stab_${c.id.hashCode.abs()}.trf');
+      try {
+        await _run(
+          FfmpegCommandBuilder.stabilizeDetectArgs(c, trf),
+          c.outMs - c.inMs,
+          (v) => onProgress?.call(0.2 * (i + v) / toStabilize.length),
+        );
+      } on VideoExportException catch (e) {
+        throw VideoExportException('Stabilisation is not available in this FFmpeg build: ${e.message}', e.log);
+      }
+      stab[c.id] = trf;
+    }
+    final assets = ExportAssets(textOverlayPngs: texts, lutFiles: luts, stabilizeFiles: stab);
+    final base0 = toStabilize.isEmpty ? 0.0 : 0.2;
+    void progress(double v) => onProgress?.call(base0 + (1 - base0) * v);
 
     if (quality == VideoExportQuality.fast || renderer == null) {
       final args = builder.build(project, output, assets: assets);
-      await _run(args, total, onProgress);
+      await _run(args, total, progress);
       return output;
     }
 
     // ---- Studio: base cut → frames → GPU look → encode.
     final base = p.join(dir.path, 'base.mp4');
-    await _run(
-      builder.build(project, base, assets: assets, includeLook: false),
-      total,
-      (v) => onProgress?.call(v * 0.25),
-    );
+    await _run(builder.build(project, base, assets: assets, includeLook: false), total, (v) => progress(v * 0.25));
     final framesDir = Directory(p.join(dir.path, 'frames'));
     if (framesDir.existsSync()) await framesDir.delete(recursive: true);
     await framesDir.create();
     await _run(
       ['-y', '-i', base, '-vsync', '0', p.join(framesDir.path, 'f%06d.png')],
       total,
-      (v) => onProgress?.call(0.25 + v * 0.15),
+      (v) => progress(0.25 + v * 0.15),
     );
     final frames = framesDir.listSync().whereType<File>().toList()..sort((a, b) => a.path.compareTo(b.path));
-    final state = EditState(adjustments: project.look);
+    final animated = project.lookKeyframes.isNotEmpty || project.lookIntensity < 0.999;
+    var state = EditState(adjustments: project.look);
     await renderer.prepare(state);
     for (var i = 0; i < frames.length; i++) {
+      if (animated) {
+        // Frame i is shown at i / fps seconds on the timeline.
+        final k = project.lookIntensityAt((i * 1000 / project.fps).round());
+        final next = EditState(adjustments: scaleLook(project.look, k));
+        if (next != state) {
+          state = next;
+          await renderer.prepare(state);
+        }
+      }
       final bytes = await frames[i].readAsBytes();
       final codec = await ui.instantiateImageCodec(bytes);
       final src = (await codec.getNextFrame()).image;
@@ -173,7 +200,7 @@ class VideoEngine {
       await frames[i].writeAsBytes(png!.buffer.asUint8List());
       src.dispose();
       out.dispose();
-      onProgress?.call(0.4 + 0.45 * (i + 1) / frames.length);
+      progress(0.4 + 0.45 * (i + 1) / frames.length);
     }
     await _run(
       [
@@ -200,13 +227,50 @@ class VideoEngine {
         output,
       ],
       total,
-      (v) => onProgress?.call(0.85 + v * 0.15),
+      (v) => progress(0.85 + v * 0.15),
     );
     await framesDir.delete(recursive: true);
     return output;
   }
 
   Future<void> cancel() => FFmpegKit.cancel();
+
+  /// Saves the frame shown [localMs] into [clip] as a JPEG and returns it.
+  Future<String> extractFrame(VideoClip clip, int localMs) async {
+    final outDir = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'exports'));
+    if (!outDir.existsSync()) await outDir.create(recursive: true);
+    final out = p.join(outDir.path, 'Lumora_frame_${DateTime.now().millisecondsSinceEpoch}.jpg');
+    await _run(FfmpegCommandBuilder.frameArgs(clip.path, sourceTimeAt(clip, localMs), out), 0, null);
+    if (!File(out).existsSync()) throw VideoExportException('Frame extraction failed');
+    return out;
+  }
+
+  /// Renders the project (fast mode, small size) and converts it to an
+  /// animated GIF with an optimised palette.
+  Future<String> exportGif(
+    VideoProject project, {
+    int width = 480,
+    int fps = 12,
+    int? maxMs,
+    void Function(double progress)? onProgress,
+  }) async {
+    final dir = await _work('gif');
+    final mp4 = p.join(dir.path, 'gif_source.mp4');
+    await export(
+      project.copyWith(resolution: VideoResolution.p480, music: null),
+      outputPath: mp4,
+      onProgress: (v) => onProgress?.call(v * 0.7),
+    );
+    final outDir = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'exports'));
+    if (!outDir.existsSync()) await outDir.create(recursive: true);
+    final gif = p.join(outDir.path, 'Lumora_${DateTime.now().millisecondsSinceEpoch}.gif');
+    await _run(
+      FfmpegCommandBuilder.gifArgs(mp4, gif, width: width, fps: fps, maxMs: maxMs),
+      maxMs ?? project.totalDurationMs,
+      (v) => onProgress?.call(0.7 + v * 0.3),
+    );
+    return gif;
+  }
 
   Future<void> _run(List<String> args, int totalMs, void Function(double)? onProgress) async {
     final done = Completer<void>();

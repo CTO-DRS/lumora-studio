@@ -1,18 +1,20 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumora/core/providers.dart';
+import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/core/widgets/labeled_slider.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
 import 'package:lumora/features/photo_editor/domain/geometry.dart';
 import 'package:lumora/features/photo_editor/domain/layers.dart';
-import 'package:lumora/features/photo_editor/domain/presets.dart';
 import 'package:lumora/features/photo_editor/engine/lut/lut_repository.dart';
 import 'package:lumora/features/photo_editor/presentation/photo_editor_controller.dart';
 import 'package:lumora/features/photo_editor/presentation/widgets/curves_editor.dart';
 import 'package:lumora/features/photo_editor/presentation/widgets/editor_canvas.dart';
 import 'package:lumora/l10n/app_localizations.dart';
 import 'package:material_ui/material_ui.dart';
+
+export 'presets_panel.dart';
 
 String paramLabel(AppLocalizations l, AdjustmentParam p) => switch (p) {
   AdjustmentParam.exposure => l.exposure,
@@ -79,96 +81,6 @@ class ParamSliders extends ConsumerWidget {
           ),
       ],
     );
-  }
-}
-
-// ------------------------------------------------------------------ presets
-
-class PresetsPanel extends ConsumerWidget {
-  const PresetsPanel({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final s = ref.watch(photoEditorControllerProvider);
-    final ctrl = ref.read(photoEditorControllerProvider.notifier);
-    final lang = Localizations.localeOf(context).languageCode;
-    final theme = Theme.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (s.edit.presetId != null)
-          LabeledSlider(
-            label: context.l10n.intensity,
-            value: s.edit.presetIntensity,
-            min: 0,
-            max: 1,
-            onChanged: (v) => ctrl.applyPreset(s.edit.presetId, intensity: v),
-          ),
-        SizedBox(
-          height: 96,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: kBuiltInPresets.length + 1,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
-            itemBuilder: (context, i) {
-              final preset = i == 0 ? null : kBuiltInPresets[i - 1];
-              final selected = s.edit.presetId == preset?.id;
-              return GestureDetector(
-                onTap: () => ctrl.applyPreset(preset?.id),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 76,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: selected ? theme.colorScheme.primary : Colors.transparent, width: 2),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: _swatch(preset),
-                    ),
-                  ),
-                  alignment: Alignment.bottomCenter,
-                  padding: const EdgeInsets.all(6),
-                  child: Text(
-                    preset?.name(lang) ?? context.l10n.none,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      shadows: const [Shadow(blurRadius: 4)],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// A cheap visual signature of the look (avoids rendering 30 thumbnails).
-  static List<Color> _swatch(Preset? p) {
-    if (p == null) return const [Color(0xFF2A2A33), Color(0xFF3A3A45)];
-    final a = p.adjustments;
-    if (a.duotone.strength > 0) return [Color(a.duotone.shadowColor), Color(a.duotone.highlightColor)];
-    if (a.saturation <= -0.9) return const [Color(0xFF111111), Color(0xFFBBBBBB)];
-    final warm = a.temperature;
-    final base = HSLColor.fromAHSL(
-      1,
-      warm >= 0 ? 32 : 205,
-      (0.4 + a.vibrance).clamp(0.1, 0.9),
-      0.35 + a.exposure * 0.1,
-    );
-    final tint = HSLColor.fromAHSL(
-      1,
-      (a.splitTone.shadowHue * 360) % 360,
-      (0.3 + a.splitTone.shadowSaturation).clamp(0, 1),
-      0.25,
-    );
-    return [tint.toColor(), base.toColor()];
   }
 }
 
@@ -359,15 +271,8 @@ class _ToningPanel extends ConsumerWidget {
 
 // ---------------------------------------------------------------------- HSL
 
-class HslPanel extends ConsumerStatefulWidget {
+class HslPanel extends ConsumerWidget {
   const HslPanel({super.key});
-
-  @override
-  ConsumerState<HslPanel> createState() => _HslPanelState();
-}
-
-class _HslPanelState extends ConsumerState<HslPanel> {
-  int _band = 0;
 
   static const bandColors = [
     Color(0xFFE53935),
@@ -381,8 +286,11 @@ class _HslPanelState extends ConsumerState<HslPanel> {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final hsl = ref.watch(photoEditorControllerProvider.select((s) => s.edit.adjustments.hsl));
+    final band = ref.watch(photoEditorControllerProvider.select((s) => s.hslBand));
+    final picking = ref.watch(photoEditorControllerProvider.select((s) => s.hslPicking));
+    final component = ref.watch(photoEditorControllerProvider.select((s) => s.hslComponent));
     final ctrl = ref.read(photoEditorControllerProvider.notifier);
     final l = context.l10n;
     final names = [
@@ -396,14 +304,14 @@ class _HslPanelState extends ConsumerState<HslPanel> {
       l.bandMagenta,
     ];
 
-    void set(int kind, double v) {
+    void set(HslComponent kind, double v) {
       ctrl.updateAdjustments((a) {
-        List<double> upd(List<double> list) => [...list]..[_band] = v;
+        List<double> upd(List<double> list) => [...list]..[band] = v;
         return a.copyWith(
           hsl: switch (kind) {
-            0 => a.hsl.copyWith(hue: upd(a.hsl.hue)),
-            1 => a.hsl.copyWith(saturation: upd(a.hsl.saturation)),
-            _ => a.hsl.copyWith(luminance: upd(a.hsl.luminance)),
+            HslComponent.hue => a.hsl.copyWith(hue: upd(a.hsl.hue)),
+            HslComponent.saturation => a.hsl.copyWith(saturation: upd(a.hsl.saturation)),
+            HslComponent.luminance => a.hsl.copyWith(luminance: upd(a.hsl.luminance)),
           },
         );
       }, live: true);
@@ -417,20 +325,35 @@ class _HslPanelState extends ConsumerState<HslPanel> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                Tooltip(
+                  message: l.pickColor,
+                  child: IconButton.filledTonal(
+                    isSelected: picking,
+                    icon: const Icon(Icons.colorize_outlined),
+                    selectedIcon: const Icon(Icons.colorize),
+                    onPressed: () => ctrl.setHslPicking(value: !picking),
+                  ),
+                ),
+                const SizedBox(width: 6),
                 for (var i = 0; i < 8; i++)
-                  Tooltip(
-                    message: names[i],
+                  Semantics(
+                    button: true,
+                    selected: band == i,
+                    label: names[i],
                     child: GestureDetector(
-                      onTap: () => setState(() => _band = i),
+                      onTap: () {
+                        Haptics.selection();
+                        ctrl.selectHslBand(i);
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 150),
-                        margin: const EdgeInsets.symmetric(horizontal: 5),
-                        width: _band == i ? 32 : 24,
-                        height: _band == i ? 32 : 24,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: band == i ? 30 : 22,
+                        height: band == i ? 30 : 22,
                         decoration: BoxDecoration(
                           color: bandColors[i],
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: _band == i ? 2 : 0),
+                          border: Border.all(color: Colors.white, width: band == i ? 2 : 0),
                         ),
                       ),
                     ),
@@ -438,14 +361,33 @@ class _HslPanelState extends ConsumerState<HslPanel> {
               ],
             ),
           ),
+          if (picking)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+              child: Column(
+                children: [
+                  Text(l.pickColorHint, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: 6),
+                  SegmentedButton<HslComponent>(
+                    segments: [
+                      ButtonSegment(value: HslComponent.hue, label: Text(l.hue)),
+                      ButtonSegment(value: HslComponent.saturation, label: Text(l.saturation)),
+                      ButtonSegment(value: HslComponent.luminance, label: Text(l.luminance)),
+                    ],
+                    selected: {component},
+                    onSelectionChanged: (v) => ctrl.setHslComponent(v.first),
+                  ),
+                ],
+              ),
+            ),
           for (final (kind, label, values) in [
-            (0, l.hue, hsl.hue),
-            (1, l.saturation, hsl.saturation),
-            (2, l.luminance, hsl.luminance),
+            (HslComponent.hue, l.hue, hsl.hue),
+            (HslComponent.saturation, l.saturation, hsl.saturation),
+            (HslComponent.luminance, l.luminance, hsl.luminance),
           ])
             LabeledSlider(
-              label: '${names[_band]} · $label',
-              value: values[_band],
+              label: '${names[band]} · $label',
+              value: values[band],
               min: -1,
               max: 1,
               onChanged: (v) => set(kind, v),
@@ -1053,7 +995,21 @@ class MasksPanel extends ConsumerWidget {
                   onSelected: (v) => ctrl.updateMask(selected.id, (m) => m.copyWith(invert: v)),
                 ),
                 const Spacer(),
-                IconButton(icon: const Icon(Icons.delete_outline), onPressed: () => ctrl.removeMask(selected.id)),
+                IconButton(
+                  tooltip: selected.enabled ? l.hideMask : l.showMask,
+                  icon: Icon(selected.enabled ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                  onPressed: () => ctrl.updateMask(selected.id, (m) => m.copyWith(enabled: !m.enabled)),
+                ),
+                IconButton(
+                  tooltip: l.duplicate,
+                  icon: const Icon(Icons.copy_all_outlined),
+                  onPressed: () => ctrl.duplicateMask(selected.id),
+                ),
+                IconButton(
+                  tooltip: l.delete,
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () => ctrl.removeMask(selected.id),
+                ),
               ],
             ),
             if (selected.kind == MaskKind.brush) const DrawPanel(showColors: false),
@@ -1082,10 +1038,15 @@ class MasksPanel extends ConsumerWidget {
                 AdjustmentParam.contrast,
                 AdjustmentParam.highlights,
                 AdjustmentParam.shadows,
+                AdjustmentParam.whites,
+                AdjustmentParam.blacks,
                 AdjustmentParam.temperature,
                 AdjustmentParam.tint,
+                AdjustmentParam.vibrance,
                 AdjustmentParam.saturation,
+                AdjustmentParam.sharpen,
                 AdjustmentParam.clarity,
+                AdjustmentParam.structure,
                 AdjustmentParam.dehaze,
                 AdjustmentParam.blur,
               ],

@@ -15,8 +15,9 @@ class ProjectSummary {
     required this.kind,
     required this.sourcePath,
     required this.updatedAt,
+    DateTime? createdAt,
     this.thumbnailPath,
-  });
+  }) : createdAt = createdAt ?? updatedAt;
 
   final String id;
   final String name;
@@ -24,6 +25,18 @@ class ProjectSummary {
   final String sourcePath;
   final String? thumbnailPath;
   final DateTime updatedAt;
+  final DateTime createdAt;
+
+  /// Whether the user gave this project a real name. Older versions named
+  /// projects after the picked file (e.g. "38624"), which is treated as
+  /// unnamed so the UI can show a friendly, dated title instead.
+  bool get hasCustomName {
+    final n = name.trim();
+    if (n.isEmpty) return false;
+    final base = sourcePath.split(RegExp(r'[\\/]')).last;
+    final stem = base.contains('.') ? base.substring(0, base.lastIndexOf('.')) : base;
+    return n != stem;
+  }
 }
 
 /// Saves and restores photo/video projects.
@@ -45,39 +58,38 @@ class ProjectRepository {
           sourcePath: r.sourcePath,
           thumbnailPath: r.thumbnailPath,
           updatedAt: r.updatedAt,
+          createdAt: r.createdAt,
         ),
     ],
   );
 
+  /// Saves a photo project. The name is only written for new projects (or
+  /// when given), so a rename is never overwritten by an autosave.
   Future<void> savePhoto({
     required String id,
-    required String name,
     required String sourcePath,
     required EditState state,
+    String? name,
     String? thumbnailPath,
   }) => _save(id, name, ProjectKind.photo, sourcePath, jsonEncode(state.toJson()), thumbnailPath);
 
-  Future<void> saveVideo({
-    required String id,
-    required String name,
-    required VideoProject project,
-    String? thumbnailPath,
-  }) => _save(
-    id,
-    name,
-    ProjectKind.video,
-    project.clips.isEmpty ? '' : project.clips.first.path,
-    jsonEncode(project.toJson()),
-    thumbnailPath,
-  );
+  Future<void> saveVideo({required String id, required VideoProject project, String? name, String? thumbnailPath}) =>
+      _save(
+        id,
+        name,
+        ProjectKind.video,
+        project.clips.isEmpty ? '' : project.clips.first.path,
+        jsonEncode(project.toJson()),
+        thumbnailPath,
+      );
 
-  Future<void> _save(String id, String name, ProjectKind kind, String source, String json, String? thumb) async {
+  Future<void> _save(String id, String? name, ProjectKind kind, String source, String json, String? thumb) async {
     final existing = await _db.byId(id);
     final now = DateTime.now();
     await _db.upsert(
       ProjectsCompanion(
         id: Value(id),
-        name: Value(name),
+        name: Value(name ?? existing?.name ?? ''),
         kind: Value(kind.name),
         sourcePath: Value(source),
         thumbnailPath: Value(thumb ?? existing?.thumbnailPath),
@@ -101,4 +113,30 @@ class ProjectRepository {
   }
 
   Future<void> delete(String id) => _db.deleteById(id);
+
+  Future<void> rename(String id, String name) => _db.rename(id, name.trim());
+
+  /// Copies project [id] (same media, same edits) and returns the new id.
+  Future<String?> duplicate(String id, {required String name}) async {
+    final row = await _db.byId(id);
+    if (row == null) return null;
+    final copyId = newId();
+    final now = DateTime.now();
+    await _db.upsert(
+      ProjectsCompanion(
+        id: Value(copyId),
+        name: Value(name),
+        kind: Value(row.kind),
+        sourcePath: Value(row.sourcePath),
+        thumbnailPath: Value(row.thumbnailPath),
+        editJson: Value(row.editJson),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+      ),
+    );
+    return copyId;
+  }
+
+  /// Edit recipe of a photo project, e.g. to copy its look.
+  Future<EditState?> photoEdit(String id) async => (await loadPhoto(id))?.$2;
 }

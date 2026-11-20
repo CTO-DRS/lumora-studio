@@ -41,5 +41,8 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> upsert(ProjectsCompanion row) => into(projects).insertOnConflictUpdate(row);
 
+  Future<int> rename(String id, String name) =>
+      (update(projects)..where((t) => t.id.equals(id))).write(ProjectsCompanion(name: Value(name)));
+
   Future<int> deleteById(String id) => (delete(projects)..where((t) => t.id.equals(id))).go();
 }

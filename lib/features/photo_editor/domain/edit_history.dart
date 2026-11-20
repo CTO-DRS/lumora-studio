@@ -66,6 +66,23 @@ class EditHistory<T> {
     return EditHistory._([...h._past, h.present], h._future.first, h._future.sublist(1), maxDepth, null);
   }
 
+  /// Every recorded state, oldest first: undo steps, the present, then the
+  /// redo branch. [currentIndex] points at the present.
+  List<T> get timeline {
+    final h = commit();
+    return List.unmodifiable([...h._past, h.present, ...h._future]);
+  }
+
+  int get currentIndex => commit()._past.length;
+
+  /// Moves the present to entry [index] of [timeline] without losing any
+  /// step: everything after it stays redoable.
+  EditHistory<T> jumpTo(int index) {
+    final all = timeline;
+    if (index < 0 || index >= all.length) return commit();
+    return EditHistory._(all.sublist(0, index), all[index], all.sublist(index + 1), maxDepth, null);
+  }
+
   /// Jumps back to the very first state while keeping everything redoable.
   EditHistory<T> resetTo(T value) => push(value);
 }
