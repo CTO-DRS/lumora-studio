@@ -159,7 +159,7 @@ flutter build apk --release --split-per-abi
 flutter build ios --release --no-codesign
 ```
 
-Requirements: Android 8.0+ (API 26; HEIC export needs API 28+) and iOS 15+. Shader effects need Impeller, which is the default on both platforms.
+Requirements: Android 8.0+ (API 26; HEIC export needs API 28+) and iOS 16+. Shader effects need Impeller, which is the default on both platforms.
 
 CI (`.github/workflows/ci.yml`) runs code generation, format, analyze and tests, then builds split-per-ABI Android APKs and an unsigned iOS app. Dependabot keeps pub, Gradle and Actions dependencies up to date.
 
@@ -230,7 +230,7 @@ flutter run
 
 <div dir="rtl">
 
-يتطلب Android 8.0 أو أحدث، وiOS 15 أو أحدث. تفاصيل البنية في `docs/ARCHITECTURE.md`، وخارطة الطريق في `ROADMAP.md`، ونرحب بمساهماتكم (راجع `CONTRIBUTING.md`).
+يتطلب Android 8.0 أو أحدث، وiOS 16 أو أحدث. تفاصيل البنية في `docs/ARCHITECTURE.md`، وخارطة الطريق في `ROADMAP.md`، ونرحب بمساهماتكم (راجع `CONTRIBUTING.md`).
 
 **الترخيص:** الكود المصدري مرخّص بـ MIT. انتبه إلى أن حزمة FFmpeg الافتراضية تتضمن x264 المرخّص بـ GPL، لذا تخضع النسخ التنفيذية الموزعة لـ GPL-3.0. يمكنك التبديل إلى نسخة LGPL كما هو موضح في القسم الإنجليزي.
 
