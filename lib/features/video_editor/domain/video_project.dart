@@ -44,6 +44,12 @@ abstract class VideoClip with _$VideoClip {
     @Default(0) int quarterTurns,
     @Default(TransitionKind.none) TransitionKind transitionOut,
     @Default(500) int transitionMs,
+
+    /// Two-pass FFmpeg vid.stab stabilisation at export.
+    @Default(false) bool stabilize,
+
+    /// Stabilisation strength 0..1 (maps to vidstab smoothing 5..40).
+    @Default(0.5) double stabilizeStrength,
   }) = _VideoClip;
 
   const VideoClip._();
@@ -114,6 +120,14 @@ enum VideoAspect {
   final int h;
 }
 
+/// Strength of the look at a point on the timeline (filter keyframe).
+@freezed
+abstract class LookKeyframe with _$LookKeyframe {
+  const factory LookKeyframe({required int timeMs, @Default(1) double intensity}) = _LookKeyframe;
+
+  factory LookKeyframe.fromJson(Map<String, dynamic> json) => _$LookKeyframeFromJson(json);
+}
+
 @freezed
 abstract class VideoProject with _$VideoProject {
   const factory VideoProject({
@@ -125,6 +139,12 @@ abstract class VideoProject with _$VideoProject {
     /// Look applied to every frame (same engine as photos).
     @Default(Adjustments()) Adjustments look,
     String? presetId,
+
+    /// Overall strength of [look] (0..1) when there are no keyframes.
+    @Default(1) double lookIntensity,
+
+    /// Look strength over time; linear between keyframes.
+    @Default(<LookKeyframe>[]) List<LookKeyframe> lookKeyframes,
     @Default(VideoAspect.landscape) VideoAspect aspect,
     @Default(VideoResolution.p1080) VideoResolution resolution,
     @Default(30) int fps,

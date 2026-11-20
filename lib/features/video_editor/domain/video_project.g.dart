@@ -28,6 +28,8 @@ _VideoClip _$VideoClipFromJson(Map<String, dynamic> json) => _VideoClip(
       $enumDecodeNullable(_$TransitionKindEnumMap, json['transitionOut']) ??
       TransitionKind.none,
   transitionMs: (json['transitionMs'] as num?)?.toInt() ?? 500,
+  stabilize: json['stabilize'] as bool? ?? false,
+  stabilizeStrength: (json['stabilizeStrength'] as num?)?.toDouble() ?? 0.5,
 );
 
 Map<String, dynamic> _$VideoClipToJson(_VideoClip instance) =>
@@ -47,6 +49,8 @@ Map<String, dynamic> _$VideoClipToJson(_VideoClip instance) =>
       'quarterTurns': instance.quarterTurns,
       'transitionOut': _$TransitionKindEnumMap[instance.transitionOut]!,
       'transitionMs': instance.transitionMs,
+      'stabilize': instance.stabilize,
+      'stabilizeStrength': instance.stabilizeStrength,
     };
 
 const _$TransitionKindEnumMap = {
@@ -108,6 +112,18 @@ Map<String, dynamic> _$AudioTrackToJson(_AudioTrack instance) =>
       'loop': instance.loop,
     };
 
+_LookKeyframe _$LookKeyframeFromJson(Map<String, dynamic> json) =>
+    _LookKeyframe(
+      timeMs: (json['timeMs'] as num).toInt(),
+      intensity: (json['intensity'] as num?)?.toDouble() ?? 1,
+    );
+
+Map<String, dynamic> _$LookKeyframeToJson(_LookKeyframe instance) =>
+    <String, dynamic>{
+      'timeMs': instance.timeMs,
+      'intensity': instance.intensity,
+    };
+
 _VideoProject _$VideoProjectFromJson(Map<String, dynamic> json) =>
     _VideoProject(
       clips:
@@ -128,6 +144,12 @@ _VideoProject _$VideoProjectFromJson(Map<String, dynamic> json) =>
           ? const Adjustments()
           : Adjustments.fromJson(json['look'] as Map<String, dynamic>),
       presetId: json['presetId'] as String?,
+      lookIntensity: (json['lookIntensity'] as num?)?.toDouble() ?? 1,
+      lookKeyframes:
+          (json['lookKeyframes'] as List<dynamic>?)
+              ?.map((e) => LookKeyframe.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <LookKeyframe>[],
       aspect:
           $enumDecodeNullable(_$VideoAspectEnumMap, json['aspect']) ??
           VideoAspect.landscape,
@@ -145,6 +167,8 @@ Map<String, dynamic> _$VideoProjectToJson(_VideoProject instance) =>
       'originalVolume': instance.originalVolume,
       'look': instance.look.toJson(),
       'presetId': instance.presetId,
+      'lookIntensity': instance.lookIntensity,
+      'lookKeyframes': instance.lookKeyframes.map((e) => e.toJson()).toList(),
       'aspect': _$VideoAspectEnumMap[instance.aspect]!,
       'resolution': _$VideoResolutionEnumMap[instance.resolution]!,
       'fps': instance.fps,

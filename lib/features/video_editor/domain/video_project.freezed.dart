@@ -17,7 +17,9 @@ T _$identity<T>(T value) => value;
 mixin _$VideoClip {
 
  String get id; String get path; int get sourceDurationMs; int get outMs; int get inMs; double get speed; bool get reversed; double get volume; bool get hasAudio; int get sourceWidth; int get sourceHeight;/// Crop rect normalized to the source frame (l, t, r, b).
- List<double> get crop; int get quarterTurns; TransitionKind get transitionOut; int get transitionMs;
+ List<double> get crop; int get quarterTurns; TransitionKind get transitionOut; int get transitionMs;/// Two-pass FFmpeg vid.stab stabilisation at export.
+ bool get stabilize;/// Stabilisation strength 0..1 (maps to vidstab smoothing 5..40).
+ double get stabilizeStrength;
 /// Create a copy of VideoClip
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -31,20 +33,20 @@ $VideoClipCopyWith<VideoClip> get copyWith => _$VideoClipCopyWithImpl<VideoClip>
 @override
 bool operator ==(Object other) {
   final _this = this as VideoClip;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is VideoClip&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.path, _this.path) || other.path == _this.path)&&(identical(other.sourceDurationMs, _this.sourceDurationMs) || other.sourceDurationMs == _this.sourceDurationMs)&&(identical(other.outMs, _this.outMs) || other.outMs == _this.outMs)&&(identical(other.inMs, _this.inMs) || other.inMs == _this.inMs)&&(identical(other.speed, _this.speed) || other.speed == _this.speed)&&(identical(other.reversed, _this.reversed) || other.reversed == _this.reversed)&&(identical(other.volume, _this.volume) || other.volume == _this.volume)&&(identical(other.hasAudio, _this.hasAudio) || other.hasAudio == _this.hasAudio)&&(identical(other.sourceWidth, _this.sourceWidth) || other.sourceWidth == _this.sourceWidth)&&(identical(other.sourceHeight, _this.sourceHeight) || other.sourceHeight == _this.sourceHeight)&&const DeepCollectionEquality().equals(other.crop, _this.crop)&&(identical(other.quarterTurns, _this.quarterTurns) || other.quarterTurns == _this.quarterTurns)&&(identical(other.transitionOut, _this.transitionOut) || other.transitionOut == _this.transitionOut)&&(identical(other.transitionMs, _this.transitionMs) || other.transitionMs == _this.transitionMs));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is VideoClip&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.path, _this.path) || other.path == _this.path)&&(identical(other.sourceDurationMs, _this.sourceDurationMs) || other.sourceDurationMs == _this.sourceDurationMs)&&(identical(other.outMs, _this.outMs) || other.outMs == _this.outMs)&&(identical(other.inMs, _this.inMs) || other.inMs == _this.inMs)&&(identical(other.speed, _this.speed) || other.speed == _this.speed)&&(identical(other.reversed, _this.reversed) || other.reversed == _this.reversed)&&(identical(other.volume, _this.volume) || other.volume == _this.volume)&&(identical(other.hasAudio, _this.hasAudio) || other.hasAudio == _this.hasAudio)&&(identical(other.sourceWidth, _this.sourceWidth) || other.sourceWidth == _this.sourceWidth)&&(identical(other.sourceHeight, _this.sourceHeight) || other.sourceHeight == _this.sourceHeight)&&const DeepCollectionEquality().equals(other.crop, _this.crop)&&(identical(other.quarterTurns, _this.quarterTurns) || other.quarterTurns == _this.quarterTurns)&&(identical(other.transitionOut, _this.transitionOut) || other.transitionOut == _this.transitionOut)&&(identical(other.transitionMs, _this.transitionMs) || other.transitionMs == _this.transitionMs)&&(identical(other.stabilize, _this.stabilize) || other.stabilize == _this.stabilize)&&(identical(other.stabilizeStrength, _this.stabilizeStrength) || other.stabilizeStrength == _this.stabilizeStrength));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as VideoClip;
-  return Object.hash(runtimeType,_this.id,_this.path,_this.sourceDurationMs,_this.outMs,_this.inMs,_this.speed,_this.reversed,_this.volume,_this.hasAudio,_this.sourceWidth,_this.sourceHeight,const DeepCollectionEquality().hash(_this.crop),_this.quarterTurns,_this.transitionOut,_this.transitionMs);
+  return Object.hash(runtimeType,_this.id,_this.path,_this.sourceDurationMs,_this.outMs,_this.inMs,_this.speed,_this.reversed,_this.volume,_this.hasAudio,_this.sourceWidth,_this.sourceHeight,const DeepCollectionEquality().hash(_this.crop),_this.quarterTurns,_this.transitionOut,_this.transitionMs,_this.stabilize,_this.stabilizeStrength);
 }
 
 @override
 String toString() {
   final _this = this as VideoClip;
-  return 'VideoClip(id: ${_this.id}, path: ${_this.path}, sourceDurationMs: ${_this.sourceDurationMs}, outMs: ${_this.outMs}, inMs: ${_this.inMs}, speed: ${_this.speed}, reversed: ${_this.reversed}, volume: ${_this.volume}, hasAudio: ${_this.hasAudio}, sourceWidth: ${_this.sourceWidth}, sourceHeight: ${_this.sourceHeight}, crop: ${_this.crop}, quarterTurns: ${_this.quarterTurns}, transitionOut: ${_this.transitionOut}, transitionMs: ${_this.transitionMs})';
+  return 'VideoClip(id: ${_this.id}, path: ${_this.path}, sourceDurationMs: ${_this.sourceDurationMs}, outMs: ${_this.outMs}, inMs: ${_this.inMs}, speed: ${_this.speed}, reversed: ${_this.reversed}, volume: ${_this.volume}, hasAudio: ${_this.hasAudio}, sourceWidth: ${_this.sourceWidth}, sourceHeight: ${_this.sourceHeight}, crop: ${_this.crop}, quarterTurns: ${_this.quarterTurns}, transitionOut: ${_this.transitionOut}, transitionMs: ${_this.transitionMs}, stabilize: ${_this.stabilize}, stabilizeStrength: ${_this.stabilizeStrength})';
 }
 
 
@@ -55,7 +57,7 @@ abstract mixin class $VideoClipCopyWith<$Res>  {
   factory $VideoClipCopyWith(VideoClip value, $Res Function(VideoClip) _then) = _$VideoClipCopyWithImpl;
 @useResult
 $Res call({
- String id, String path, int sourceDurationMs, int outMs, int inMs, double speed, bool reversed, double volume, bool hasAudio, int sourceWidth, int sourceHeight, List<double> crop, int quarterTurns, TransitionKind transitionOut, int transitionMs
+ String id, String path, int sourceDurationMs, int outMs, int inMs, double speed, bool reversed, double volume, bool hasAudio, int sourceWidth, int sourceHeight, List<double> crop, int quarterTurns, TransitionKind transitionOut, int transitionMs, bool stabilize, double stabilizeStrength
 });
 
 
@@ -72,7 +74,7 @@ class _$VideoClipCopyWithImpl<$Res>
 
 /// Create a copy of VideoClip
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? path = null,Object? sourceDurationMs = null,Object? outMs = null,Object? inMs = null,Object? speed = null,Object? reversed = null,Object? volume = null,Object? hasAudio = null,Object? sourceWidth = null,Object? sourceHeight = null,Object? crop = null,Object? quarterTurns = null,Object? transitionOut = null,Object? transitionMs = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? path = null,Object? sourceDurationMs = null,Object? outMs = null,Object? inMs = null,Object? speed = null,Object? reversed = null,Object? volume = null,Object? hasAudio = null,Object? sourceWidth = null,Object? sourceHeight = null,Object? crop = null,Object? quarterTurns = null,Object? transitionOut = null,Object? transitionMs = null,Object? stabilize = null,Object? stabilizeStrength = null,}) {
   return _then(VideoClip(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,path: null == path ? _self.path : path // ignore: cast_nullable_to_non_nullable
@@ -89,7 +91,9 @@ as int,crop: null == crop ? _self.crop : crop // ignore: cast_nullable_to_non_nu
 as List<double>,quarterTurns: null == quarterTurns ? _self.quarterTurns : quarterTurns // ignore: cast_nullable_to_non_nullable
 as int,transitionOut: null == transitionOut ? _self.transitionOut : transitionOut // ignore: cast_nullable_to_non_nullable
 as TransitionKind,transitionMs: null == transitionMs ? _self.transitionMs : transitionMs // ignore: cast_nullable_to_non_nullable
-as int,
+as int,stabilize: null == stabilize ? _self.stabilize : stabilize // ignore: cast_nullable_to_non_nullable
+as bool,stabilizeStrength: null == stabilizeStrength ? _self.stabilizeStrength : stabilizeStrength // ignore: cast_nullable_to_non_nullable
+as double,
   ));
 }
 
@@ -174,10 +178,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String path,  int sourceDurationMs,  int outMs,  int inMs,  double speed,  bool reversed,  double volume,  bool hasAudio,  int sourceWidth,  int sourceHeight,  List<double> crop,  int quarterTurns,  TransitionKind transitionOut,  int transitionMs)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String path,  int sourceDurationMs,  int outMs,  int inMs,  double speed,  bool reversed,  double volume,  bool hasAudio,  int sourceWidth,  int sourceHeight,  List<double> crop,  int quarterTurns,  TransitionKind transitionOut,  int transitionMs,  bool stabilize,  double stabilizeStrength)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _VideoClip() when $default != null:
-return $default(_that.id,_that.path,_that.sourceDurationMs,_that.outMs,_that.inMs,_that.speed,_that.reversed,_that.volume,_that.hasAudio,_that.sourceWidth,_that.sourceHeight,_that.crop,_that.quarterTurns,_that.transitionOut,_that.transitionMs);case _:
+return $default(_that.id,_that.path,_that.sourceDurationMs,_that.outMs,_that.inMs,_that.speed,_that.reversed,_that.volume,_that.hasAudio,_that.sourceWidth,_that.sourceHeight,_that.crop,_that.quarterTurns,_that.transitionOut,_that.transitionMs,_that.stabilize,_that.stabilizeStrength);case _:
   return orElse();
 
 }
@@ -195,10 +199,10 @@ return $default(_that.id,_that.path,_that.sourceDurationMs,_that.outMs,_that.inM
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String path,  int sourceDurationMs,  int outMs,  int inMs,  double speed,  bool reversed,  double volume,  bool hasAudio,  int sourceWidth,  int sourceHeight,  List<double> crop,  int quarterTurns,  TransitionKind transitionOut,  int transitionMs)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String path,  int sourceDurationMs,  int outMs,  int inMs,  double speed,  bool reversed,  double volume,  bool hasAudio,  int sourceWidth,  int sourceHeight,  List<double> crop,  int quarterTurns,  TransitionKind transitionOut,  int transitionMs,  bool stabilize,  double stabilizeStrength)  $default,) {final _that = this;
 switch (_that) {
 case _VideoClip():
-return $default(_that.id,_that.path,_that.sourceDurationMs,_that.outMs,_that.inMs,_that.speed,_that.reversed,_that.volume,_that.hasAudio,_that.sourceWidth,_that.sourceHeight,_that.crop,_that.quarterTurns,_that.transitionOut,_that.transitionMs);case _:
+return $default(_that.id,_that.path,_that.sourceDurationMs,_that.outMs,_that.inMs,_that.speed,_that.reversed,_that.volume,_that.hasAudio,_that.sourceWidth,_that.sourceHeight,_that.crop,_that.quarterTurns,_that.transitionOut,_that.transitionMs,_that.stabilize,_that.stabilizeStrength);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -215,10 +219,10 @@ return $default(_that.id,_that.path,_that.sourceDurationMs,_that.outMs,_that.inM
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String path,  int sourceDurationMs,  int outMs,  int inMs,  double speed,  bool reversed,  double volume,  bool hasAudio,  int sourceWidth,  int sourceHeight,  List<double> crop,  int quarterTurns,  TransitionKind transitionOut,  int transitionMs)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String path,  int sourceDurationMs,  int outMs,  int inMs,  double speed,  bool reversed,  double volume,  bool hasAudio,  int sourceWidth,  int sourceHeight,  List<double> crop,  int quarterTurns,  TransitionKind transitionOut,  int transitionMs,  bool stabilize,  double stabilizeStrength)?  $default,) {final _that = this;
 switch (_that) {
 case _VideoClip() when $default != null:
-return $default(_that.id,_that.path,_that.sourceDurationMs,_that.outMs,_that.inMs,_that.speed,_that.reversed,_that.volume,_that.hasAudio,_that.sourceWidth,_that.sourceHeight,_that.crop,_that.quarterTurns,_that.transitionOut,_that.transitionMs);case _:
+return $default(_that.id,_that.path,_that.sourceDurationMs,_that.outMs,_that.inMs,_that.speed,_that.reversed,_that.volume,_that.hasAudio,_that.sourceWidth,_that.sourceHeight,_that.crop,_that.quarterTurns,_that.transitionOut,_that.transitionMs,_that.stabilize,_that.stabilizeStrength);case _:
   return null;
 
 }
@@ -230,7 +234,7 @@ return $default(_that.id,_that.path,_that.sourceDurationMs,_that.outMs,_that.inM
 @JsonSerializable()
 
 class _VideoClip extends VideoClip {
-  const _VideoClip({required this.id, required this.path, required this.sourceDurationMs, required this.outMs, this.inMs = 0, this.speed = 1, this.reversed = false, this.volume = 1, this.hasAudio = true, this.sourceWidth = 0, this.sourceHeight = 0,  List<double> crop = const [0, 0, 1, 1], this.quarterTurns = 0, this.transitionOut = TransitionKind.none, this.transitionMs = 500}): _crop = crop,super._();
+  const _VideoClip({required this.id, required this.path, required this.sourceDurationMs, required this.outMs, this.inMs = 0, this.speed = 1, this.reversed = false, this.volume = 1, this.hasAudio = true, this.sourceWidth = 0, this.sourceHeight = 0,  List<double> crop = const [0, 0, 1, 1], this.quarterTurns = 0, this.transitionOut = TransitionKind.none, this.transitionMs = 500, this.stabilize = false, this.stabilizeStrength = 0.5}): _crop = crop,super._();
   factory _VideoClip.fromJson(Map<String, dynamic> json) => _$VideoClipFromJson(json);
 
 @override final  String id;
@@ -256,6 +260,10 @@ class _VideoClip extends VideoClip {
 @override@JsonKey() final  int quarterTurns;
 @override@JsonKey() final  TransitionKind transitionOut;
 @override@JsonKey() final  int transitionMs;
+/// Two-pass FFmpeg vid.stab stabilisation at export.
+@override@JsonKey() final  bool stabilize;
+/// Stabilisation strength 0..1 (maps to vidstab smoothing 5..40).
+@override@JsonKey() final  double stabilizeStrength;
 
 /// Create a copy of VideoClip
 /// with the given fields replaced by the non-null parameter values.
@@ -270,18 +278,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _VideoClip&&(identical(other.id, id) || other.id == id)&&(identical(other.path, path) || other.path == path)&&(identical(other.sourceDurationMs, sourceDurationMs) || other.sourceDurationMs == sourceDurationMs)&&(identical(other.outMs, outMs) || other.outMs == outMs)&&(identical(other.inMs, inMs) || other.inMs == inMs)&&(identical(other.speed, speed) || other.speed == speed)&&(identical(other.reversed, reversed) || other.reversed == reversed)&&(identical(other.volume, volume) || other.volume == volume)&&(identical(other.hasAudio, hasAudio) || other.hasAudio == hasAudio)&&(identical(other.sourceWidth, sourceWidth) || other.sourceWidth == sourceWidth)&&(identical(other.sourceHeight, sourceHeight) || other.sourceHeight == sourceHeight)&&const DeepCollectionEquality().equals(other.crop, _crop)&&(identical(other.quarterTurns, quarterTurns) || other.quarterTurns == quarterTurns)&&(identical(other.transitionOut, transitionOut) || other.transitionOut == transitionOut)&&(identical(other.transitionMs, transitionMs) || other.transitionMs == transitionMs));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _VideoClip&&(identical(other.id, id) || other.id == id)&&(identical(other.path, path) || other.path == path)&&(identical(other.sourceDurationMs, sourceDurationMs) || other.sourceDurationMs == sourceDurationMs)&&(identical(other.outMs, outMs) || other.outMs == outMs)&&(identical(other.inMs, inMs) || other.inMs == inMs)&&(identical(other.speed, speed) || other.speed == speed)&&(identical(other.reversed, reversed) || other.reversed == reversed)&&(identical(other.volume, volume) || other.volume == volume)&&(identical(other.hasAudio, hasAudio) || other.hasAudio == hasAudio)&&(identical(other.sourceWidth, sourceWidth) || other.sourceWidth == sourceWidth)&&(identical(other.sourceHeight, sourceHeight) || other.sourceHeight == sourceHeight)&&const DeepCollectionEquality().equals(other.crop, _crop)&&(identical(other.quarterTurns, quarterTurns) || other.quarterTurns == quarterTurns)&&(identical(other.transitionOut, transitionOut) || other.transitionOut == transitionOut)&&(identical(other.transitionMs, transitionMs) || other.transitionMs == transitionMs)&&(identical(other.stabilize, stabilize) || other.stabilize == stabilize)&&(identical(other.stabilizeStrength, stabilizeStrength) || other.stabilizeStrength == stabilizeStrength));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,path,sourceDurationMs,outMs,inMs,speed,reversed,volume,hasAudio,sourceWidth,sourceHeight,const DeepCollectionEquality().hash(_crop),quarterTurns,transitionOut,transitionMs);
+    return Object.hash(runtimeType,id,path,sourceDurationMs,outMs,inMs,speed,reversed,volume,hasAudio,sourceWidth,sourceHeight,const DeepCollectionEquality().hash(_crop),quarterTurns,transitionOut,transitionMs,stabilize,stabilizeStrength);
 }
 
 @override
 String toString() {
-    return 'VideoClip(id: $id, path: $path, sourceDurationMs: $sourceDurationMs, outMs: $outMs, inMs: $inMs, speed: $speed, reversed: $reversed, volume: $volume, hasAudio: $hasAudio, sourceWidth: $sourceWidth, sourceHeight: $sourceHeight, crop: $crop, quarterTurns: $quarterTurns, transitionOut: $transitionOut, transitionMs: $transitionMs)';
+    return 'VideoClip(id: $id, path: $path, sourceDurationMs: $sourceDurationMs, outMs: $outMs, inMs: $inMs, speed: $speed, reversed: $reversed, volume: $volume, hasAudio: $hasAudio, sourceWidth: $sourceWidth, sourceHeight: $sourceHeight, crop: $crop, quarterTurns: $quarterTurns, transitionOut: $transitionOut, transitionMs: $transitionMs, stabilize: $stabilize, stabilizeStrength: $stabilizeStrength)';
 }
 
 
@@ -292,7 +300,7 @@ abstract mixin class _$VideoClipCopyWith<$Res> implements $VideoClipCopyWith<$Re
   factory _$VideoClipCopyWith(_VideoClip value, $Res Function(_VideoClip) _then) = __$VideoClipCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String path, int sourceDurationMs, int outMs, int inMs, double speed, bool reversed, double volume, bool hasAudio, int sourceWidth, int sourceHeight, List<double> crop, int quarterTurns, TransitionKind transitionOut, int transitionMs
+ String id, String path, int sourceDurationMs, int outMs, int inMs, double speed, bool reversed, double volume, bool hasAudio, int sourceWidth, int sourceHeight, List<double> crop, int quarterTurns, TransitionKind transitionOut, int transitionMs, bool stabilize, double stabilizeStrength
 });
 
 
@@ -309,7 +317,7 @@ class __$VideoClipCopyWithImpl<$Res>
 
 /// Create a copy of VideoClip
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? path = null,Object? sourceDurationMs = null,Object? outMs = null,Object? inMs = null,Object? speed = null,Object? reversed = null,Object? volume = null,Object? hasAudio = null,Object? sourceWidth = null,Object? sourceHeight = null,Object? crop = null,Object? quarterTurns = null,Object? transitionOut = null,Object? transitionMs = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? path = null,Object? sourceDurationMs = null,Object? outMs = null,Object? inMs = null,Object? speed = null,Object? reversed = null,Object? volume = null,Object? hasAudio = null,Object? sourceWidth = null,Object? sourceHeight = null,Object? crop = null,Object? quarterTurns = null,Object? transitionOut = null,Object? transitionMs = null,Object? stabilize = null,Object? stabilizeStrength = null,}) {
   return _then(_VideoClip(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,path: null == path ? _self.path : path // ignore: cast_nullable_to_non_nullable
@@ -326,7 +334,9 @@ as int,crop: null == crop ? _self._crop : crop // ignore: cast_nullable_to_non_n
 as List<double>,quarterTurns: null == quarterTurns ? _self.quarterTurns : quarterTurns // ignore: cast_nullable_to_non_nullable
 as int,transitionOut: null == transitionOut ? _self.transitionOut : transitionOut // ignore: cast_nullable_to_non_nullable
 as TransitionKind,transitionMs: null == transitionMs ? _self.transitionMs : transitionMs // ignore: cast_nullable_to_non_nullable
-as int,
+as int,stabilize: null == stabilize ? _self.stabilize : stabilize // ignore: cast_nullable_to_non_nullable
+as bool,stabilizeStrength: null == stabilizeStrength ? _self.stabilizeStrength : stabilizeStrength // ignore: cast_nullable_to_non_nullable
+as double,
   ));
 }
 
@@ -917,10 +927,285 @@ as bool,
 
 
 /// @nodoc
+mixin _$LookKeyframe {
+
+ int get timeMs; double get intensity;
+/// Create a copy of LookKeyframe
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$LookKeyframeCopyWith<LookKeyframe> get copyWith => _$LookKeyframeCopyWithImpl<LookKeyframe>(this as LookKeyframe, _$identity);
+
+  /// Serializes this LookKeyframe to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as LookKeyframe;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LookKeyframe&&(identical(other.timeMs, _this.timeMs) || other.timeMs == _this.timeMs)&&(identical(other.intensity, _this.intensity) || other.intensity == _this.intensity));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as LookKeyframe;
+  return Object.hash(runtimeType,_this.timeMs,_this.intensity);
+}
+
+@override
+String toString() {
+  final _this = this as LookKeyframe;
+  return 'LookKeyframe(timeMs: ${_this.timeMs}, intensity: ${_this.intensity})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $LookKeyframeCopyWith<$Res>  {
+  factory $LookKeyframeCopyWith(LookKeyframe value, $Res Function(LookKeyframe) _then) = _$LookKeyframeCopyWithImpl;
+@useResult
+$Res call({
+ int timeMs, double intensity
+});
+
+
+
+
+}
+/// @nodoc
+class _$LookKeyframeCopyWithImpl<$Res>
+    implements $LookKeyframeCopyWith<$Res> {
+  _$LookKeyframeCopyWithImpl(this._self, this._then);
+
+  final LookKeyframe _self;
+  final $Res Function(LookKeyframe) _then;
+
+/// Create a copy of LookKeyframe
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? timeMs = null,Object? intensity = null,}) {
+  return _then(LookKeyframe(
+timeMs: null == timeMs ? _self.timeMs : timeMs // ignore: cast_nullable_to_non_nullable
+as int,intensity: null == intensity ? _self.intensity : intensity // ignore: cast_nullable_to_non_nullable
+as double,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [LookKeyframe].
+extension LookKeyframePatterns on LookKeyframe {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _LookKeyframe value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _LookKeyframe() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _LookKeyframe value)  $default,){
+final _that = this;
+switch (_that) {
+case _LookKeyframe():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _LookKeyframe value)?  $default,){
+final _that = this;
+switch (_that) {
+case _LookKeyframe() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int timeMs,  double intensity)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _LookKeyframe() when $default != null:
+return $default(_that.timeMs,_that.intensity);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int timeMs,  double intensity)  $default,) {final _that = this;
+switch (_that) {
+case _LookKeyframe():
+return $default(_that.timeMs,_that.intensity);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int timeMs,  double intensity)?  $default,) {final _that = this;
+switch (_that) {
+case _LookKeyframe() when $default != null:
+return $default(_that.timeMs,_that.intensity);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _LookKeyframe implements LookKeyframe {
+  const _LookKeyframe({required this.timeMs, this.intensity = 1});
+  factory _LookKeyframe.fromJson(Map<String, dynamic> json) => _$LookKeyframeFromJson(json);
+
+@override final  int timeMs;
+@override@JsonKey() final  double intensity;
+
+/// Create a copy of LookKeyframe
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$LookKeyframeCopyWith<_LookKeyframe> get copyWith => __$LookKeyframeCopyWithImpl<_LookKeyframe>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$LookKeyframeToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _LookKeyframe&&(identical(other.timeMs, timeMs) || other.timeMs == timeMs)&&(identical(other.intensity, intensity) || other.intensity == intensity));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,timeMs,intensity);
+}
+
+@override
+String toString() {
+    return 'LookKeyframe(timeMs: $timeMs, intensity: $intensity)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$LookKeyframeCopyWith<$Res> implements $LookKeyframeCopyWith<$Res> {
+  factory _$LookKeyframeCopyWith(_LookKeyframe value, $Res Function(_LookKeyframe) _then) = __$LookKeyframeCopyWithImpl;
+@override @useResult
+$Res call({
+ int timeMs, double intensity
+});
+
+
+
+
+}
+/// @nodoc
+class __$LookKeyframeCopyWithImpl<$Res>
+    implements _$LookKeyframeCopyWith<$Res> {
+  __$LookKeyframeCopyWithImpl(this._self, this._then);
+
+  final _LookKeyframe _self;
+  final $Res Function(_LookKeyframe) _then;
+
+/// Create a copy of LookKeyframe
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? timeMs = null,Object? intensity = null,}) {
+  return _then(_LookKeyframe(
+timeMs: null == timeMs ? _self.timeMs : timeMs // ignore: cast_nullable_to_non_nullable
+as int,intensity: null == intensity ? _self.intensity : intensity // ignore: cast_nullable_to_non_nullable
+as double,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$VideoProject {
 
  List<VideoClip> get clips; List<VideoText> get texts; AudioTrack? get music; double get originalVolume;/// Look applied to every frame (same engine as photos).
- Adjustments get look; String? get presetId; VideoAspect get aspect; VideoResolution get resolution; int get fps;
+ Adjustments get look; String? get presetId;/// Overall strength of [look] (0..1) when there are no keyframes.
+ double get lookIntensity;/// Look strength over time; linear between keyframes.
+ List<LookKeyframe> get lookKeyframes; VideoAspect get aspect; VideoResolution get resolution; int get fps;
 /// Create a copy of VideoProject
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -934,20 +1219,20 @@ $VideoProjectCopyWith<VideoProject> get copyWith => _$VideoProjectCopyWithImpl<V
 @override
 bool operator ==(Object other) {
   final _this = this as VideoProject;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is VideoProject&&const DeepCollectionEquality().equals(other.clips, _this.clips)&&const DeepCollectionEquality().equals(other.texts, _this.texts)&&(identical(other.music, _this.music) || other.music == _this.music)&&(identical(other.originalVolume, _this.originalVolume) || other.originalVolume == _this.originalVolume)&&(identical(other.look, _this.look) || other.look == _this.look)&&(identical(other.presetId, _this.presetId) || other.presetId == _this.presetId)&&(identical(other.aspect, _this.aspect) || other.aspect == _this.aspect)&&(identical(other.resolution, _this.resolution) || other.resolution == _this.resolution)&&(identical(other.fps, _this.fps) || other.fps == _this.fps));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is VideoProject&&const DeepCollectionEquality().equals(other.clips, _this.clips)&&const DeepCollectionEquality().equals(other.texts, _this.texts)&&(identical(other.music, _this.music) || other.music == _this.music)&&(identical(other.originalVolume, _this.originalVolume) || other.originalVolume == _this.originalVolume)&&(identical(other.look, _this.look) || other.look == _this.look)&&(identical(other.presetId, _this.presetId) || other.presetId == _this.presetId)&&(identical(other.lookIntensity, _this.lookIntensity) || other.lookIntensity == _this.lookIntensity)&&const DeepCollectionEquality().equals(other.lookKeyframes, _this.lookKeyframes)&&(identical(other.aspect, _this.aspect) || other.aspect == _this.aspect)&&(identical(other.resolution, _this.resolution) || other.resolution == _this.resolution)&&(identical(other.fps, _this.fps) || other.fps == _this.fps));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as VideoProject;
-  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.clips),const DeepCollectionEquality().hash(_this.texts),_this.music,_this.originalVolume,_this.look,_this.presetId,_this.aspect,_this.resolution,_this.fps);
+  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.clips),const DeepCollectionEquality().hash(_this.texts),_this.music,_this.originalVolume,_this.look,_this.presetId,_this.lookIntensity,const DeepCollectionEquality().hash(_this.lookKeyframes),_this.aspect,_this.resolution,_this.fps);
 }
 
 @override
 String toString() {
   final _this = this as VideoProject;
-  return 'VideoProject(clips: ${_this.clips}, texts: ${_this.texts}, music: ${_this.music}, originalVolume: ${_this.originalVolume}, look: ${_this.look}, presetId: ${_this.presetId}, aspect: ${_this.aspect}, resolution: ${_this.resolution}, fps: ${_this.fps})';
+  return 'VideoProject(clips: ${_this.clips}, texts: ${_this.texts}, music: ${_this.music}, originalVolume: ${_this.originalVolume}, look: ${_this.look}, presetId: ${_this.presetId}, lookIntensity: ${_this.lookIntensity}, lookKeyframes: ${_this.lookKeyframes}, aspect: ${_this.aspect}, resolution: ${_this.resolution}, fps: ${_this.fps})';
 }
 
 
@@ -958,7 +1243,7 @@ abstract mixin class $VideoProjectCopyWith<$Res>  {
   factory $VideoProjectCopyWith(VideoProject value, $Res Function(VideoProject) _then) = _$VideoProjectCopyWithImpl;
 @useResult
 $Res call({
- List<VideoClip> clips, List<VideoText> texts, AudioTrack? music, double originalVolume, Adjustments look, String? presetId, VideoAspect aspect, VideoResolution resolution, int fps
+ List<VideoClip> clips, List<VideoText> texts, AudioTrack? music, double originalVolume, Adjustments look, String? presetId, double lookIntensity, List<LookKeyframe> lookKeyframes, VideoAspect aspect, VideoResolution resolution, int fps
 });
 
 
@@ -975,7 +1260,7 @@ class _$VideoProjectCopyWithImpl<$Res>
 
 /// Create a copy of VideoProject
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? clips = null,Object? texts = null,Object? music = freezed,Object? originalVolume = null,Object? look = null,Object? presetId = freezed,Object? aspect = null,Object? resolution = null,Object? fps = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? clips = null,Object? texts = null,Object? music = freezed,Object? originalVolume = null,Object? look = null,Object? presetId = freezed,Object? lookIntensity = null,Object? lookKeyframes = null,Object? aspect = null,Object? resolution = null,Object? fps = null,}) {
   return _then(VideoProject(
 clips: null == clips ? _self.clips : clips // ignore: cast_nullable_to_non_nullable
 as List<VideoClip>,texts: null == texts ? _self.texts : texts // ignore: cast_nullable_to_non_nullable
@@ -983,7 +1268,9 @@ as List<VideoText>,music: freezed == music ? _self.music : music // ignore: cast
 as AudioTrack?,originalVolume: null == originalVolume ? _self.originalVolume : originalVolume // ignore: cast_nullable_to_non_nullable
 as double,look: null == look ? _self.look : look // ignore: cast_nullable_to_non_nullable
 as Adjustments,presetId: freezed == presetId ? _self.presetId : presetId // ignore: cast_nullable_to_non_nullable
-as String?,aspect: null == aspect ? _self.aspect : aspect // ignore: cast_nullable_to_non_nullable
+as String?,lookIntensity: null == lookIntensity ? _self.lookIntensity : lookIntensity // ignore: cast_nullable_to_non_nullable
+as double,lookKeyframes: null == lookKeyframes ? _self.lookKeyframes : lookKeyframes // ignore: cast_nullable_to_non_nullable
+as List<LookKeyframe>,aspect: null == aspect ? _self.aspect : aspect // ignore: cast_nullable_to_non_nullable
 as VideoAspect,resolution: null == resolution ? _self.resolution : resolution // ignore: cast_nullable_to_non_nullable
 as VideoResolution,fps: null == fps ? _self.fps : fps // ignore: cast_nullable_to_non_nullable
 as int,
@@ -1092,10 +1379,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<VideoClip> clips,  List<VideoText> texts,  AudioTrack? music,  double originalVolume,  Adjustments look,  String? presetId,  VideoAspect aspect,  VideoResolution resolution,  int fps)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<VideoClip> clips,  List<VideoText> texts,  AudioTrack? music,  double originalVolume,  Adjustments look,  String? presetId,  double lookIntensity,  List<LookKeyframe> lookKeyframes,  VideoAspect aspect,  VideoResolution resolution,  int fps)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _VideoProject() when $default != null:
-return $default(_that.clips,_that.texts,_that.music,_that.originalVolume,_that.look,_that.presetId,_that.aspect,_that.resolution,_that.fps);case _:
+return $default(_that.clips,_that.texts,_that.music,_that.originalVolume,_that.look,_that.presetId,_that.lookIntensity,_that.lookKeyframes,_that.aspect,_that.resolution,_that.fps);case _:
   return orElse();
 
 }
@@ -1113,10 +1400,10 @@ return $default(_that.clips,_that.texts,_that.music,_that.originalVolume,_that.l
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<VideoClip> clips,  List<VideoText> texts,  AudioTrack? music,  double originalVolume,  Adjustments look,  String? presetId,  VideoAspect aspect,  VideoResolution resolution,  int fps)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<VideoClip> clips,  List<VideoText> texts,  AudioTrack? music,  double originalVolume,  Adjustments look,  String? presetId,  double lookIntensity,  List<LookKeyframe> lookKeyframes,  VideoAspect aspect,  VideoResolution resolution,  int fps)  $default,) {final _that = this;
 switch (_that) {
 case _VideoProject():
-return $default(_that.clips,_that.texts,_that.music,_that.originalVolume,_that.look,_that.presetId,_that.aspect,_that.resolution,_that.fps);case _:
+return $default(_that.clips,_that.texts,_that.music,_that.originalVolume,_that.look,_that.presetId,_that.lookIntensity,_that.lookKeyframes,_that.aspect,_that.resolution,_that.fps);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1133,10 +1420,10 @@ return $default(_that.clips,_that.texts,_that.music,_that.originalVolume,_that.l
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<VideoClip> clips,  List<VideoText> texts,  AudioTrack? music,  double originalVolume,  Adjustments look,  String? presetId,  VideoAspect aspect,  VideoResolution resolution,  int fps)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<VideoClip> clips,  List<VideoText> texts,  AudioTrack? music,  double originalVolume,  Adjustments look,  String? presetId,  double lookIntensity,  List<LookKeyframe> lookKeyframes,  VideoAspect aspect,  VideoResolution resolution,  int fps)?  $default,) {final _that = this;
 switch (_that) {
 case _VideoProject() when $default != null:
-return $default(_that.clips,_that.texts,_that.music,_that.originalVolume,_that.look,_that.presetId,_that.aspect,_that.resolution,_that.fps);case _:
+return $default(_that.clips,_that.texts,_that.music,_that.originalVolume,_that.look,_that.presetId,_that.lookIntensity,_that.lookKeyframes,_that.aspect,_that.resolution,_that.fps);case _:
   return null;
 
 }
@@ -1148,7 +1435,7 @@ return $default(_that.clips,_that.texts,_that.music,_that.originalVolume,_that.l
 @JsonSerializable()
 
 class _VideoProject implements VideoProject {
-  const _VideoProject({ List<VideoClip> clips = const <VideoClip>[],  List<VideoText> texts = const <VideoText>[], this.music, this.originalVolume = 1, this.look = const Adjustments(), this.presetId, this.aspect = VideoAspect.landscape, this.resolution = VideoResolution.p1080, this.fps = 30}): _clips = clips,_texts = texts;
+  const _VideoProject({ List<VideoClip> clips = const <VideoClip>[],  List<VideoText> texts = const <VideoText>[], this.music, this.originalVolume = 1, this.look = const Adjustments(), this.presetId, this.lookIntensity = 1,  List<LookKeyframe> lookKeyframes = const <LookKeyframe>[], this.aspect = VideoAspect.landscape, this.resolution = VideoResolution.p1080, this.fps = 30}): _clips = clips,_texts = texts,_lookKeyframes = lookKeyframes;
   factory _VideoProject.fromJson(Map<String, dynamic> json) => _$VideoProjectFromJson(json);
 
  final  List<VideoClip> _clips;
@@ -1170,6 +1457,17 @@ class _VideoProject implements VideoProject {
 /// Look applied to every frame (same engine as photos).
 @override@JsonKey() final  Adjustments look;
 @override final  String? presetId;
+/// Overall strength of [look] (0..1) when there are no keyframes.
+@override@JsonKey() final  double lookIntensity;
+/// Look strength over time; linear between keyframes.
+ final  List<LookKeyframe> _lookKeyframes;
+/// Look strength over time; linear between keyframes.
+@override@JsonKey() List<LookKeyframe> get lookKeyframes {
+  if (_lookKeyframes is EqualUnmodifiableListView) return _lookKeyframes;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_lookKeyframes);
+}
+
 @override@JsonKey() final  VideoAspect aspect;
 @override@JsonKey() final  VideoResolution resolution;
 @override@JsonKey() final  int fps;
@@ -1187,18 +1485,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _VideoProject&&const DeepCollectionEquality().equals(other.clips, _clips)&&const DeepCollectionEquality().equals(other.texts, _texts)&&(identical(other.music, music) || other.music == music)&&(identical(other.originalVolume, originalVolume) || other.originalVolume == originalVolume)&&(identical(other.look, look) || other.look == look)&&(identical(other.presetId, presetId) || other.presetId == presetId)&&(identical(other.aspect, aspect) || other.aspect == aspect)&&(identical(other.resolution, resolution) || other.resolution == resolution)&&(identical(other.fps, fps) || other.fps == fps));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _VideoProject&&const DeepCollectionEquality().equals(other.clips, _clips)&&const DeepCollectionEquality().equals(other.texts, _texts)&&(identical(other.music, music) || other.music == music)&&(identical(other.originalVolume, originalVolume) || other.originalVolume == originalVolume)&&(identical(other.look, look) || other.look == look)&&(identical(other.presetId, presetId) || other.presetId == presetId)&&(identical(other.lookIntensity, lookIntensity) || other.lookIntensity == lookIntensity)&&const DeepCollectionEquality().equals(other.lookKeyframes, _lookKeyframes)&&(identical(other.aspect, aspect) || other.aspect == aspect)&&(identical(other.resolution, resolution) || other.resolution == resolution)&&(identical(other.fps, fps) || other.fps == fps));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_clips),const DeepCollectionEquality().hash(_texts),music,originalVolume,look,presetId,aspect,resolution,fps);
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_clips),const DeepCollectionEquality().hash(_texts),music,originalVolume,look,presetId,lookIntensity,const DeepCollectionEquality().hash(_lookKeyframes),aspect,resolution,fps);
 }
 
 @override
 String toString() {
-    return 'VideoProject(clips: $clips, texts: $texts, music: $music, originalVolume: $originalVolume, look: $look, presetId: $presetId, aspect: $aspect, resolution: $resolution, fps: $fps)';
+    return 'VideoProject(clips: $clips, texts: $texts, music: $music, originalVolume: $originalVolume, look: $look, presetId: $presetId, lookIntensity: $lookIntensity, lookKeyframes: $lookKeyframes, aspect: $aspect, resolution: $resolution, fps: $fps)';
 }
 
 
@@ -1209,7 +1507,7 @@ abstract mixin class _$VideoProjectCopyWith<$Res> implements $VideoProjectCopyWi
   factory _$VideoProjectCopyWith(_VideoProject value, $Res Function(_VideoProject) _then) = __$VideoProjectCopyWithImpl;
 @override @useResult
 $Res call({
- List<VideoClip> clips, List<VideoText> texts, AudioTrack? music, double originalVolume, Adjustments look, String? presetId, VideoAspect aspect, VideoResolution resolution, int fps
+ List<VideoClip> clips, List<VideoText> texts, AudioTrack? music, double originalVolume, Adjustments look, String? presetId, double lookIntensity, List<LookKeyframe> lookKeyframes, VideoAspect aspect, VideoResolution resolution, int fps
 });
 
 
@@ -1226,7 +1524,7 @@ class __$VideoProjectCopyWithImpl<$Res>
 
 /// Create a copy of VideoProject
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? clips = null,Object? texts = null,Object? music = freezed,Object? originalVolume = null,Object? look = null,Object? presetId = freezed,Object? aspect = null,Object? resolution = null,Object? fps = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? clips = null,Object? texts = null,Object? music = freezed,Object? originalVolume = null,Object? look = null,Object? presetId = freezed,Object? lookIntensity = null,Object? lookKeyframes = null,Object? aspect = null,Object? resolution = null,Object? fps = null,}) {
   return _then(_VideoProject(
 clips: null == clips ? _self._clips : clips // ignore: cast_nullable_to_non_nullable
 as List<VideoClip>,texts: null == texts ? _self._texts : texts // ignore: cast_nullable_to_non_nullable
@@ -1234,7 +1532,9 @@ as List<VideoText>,music: freezed == music ? _self.music : music // ignore: cast
 as AudioTrack?,originalVolume: null == originalVolume ? _self.originalVolume : originalVolume // ignore: cast_nullable_to_non_nullable
 as double,look: null == look ? _self.look : look // ignore: cast_nullable_to_non_nullable
 as Adjustments,presetId: freezed == presetId ? _self.presetId : presetId // ignore: cast_nullable_to_non_nullable
-as String?,aspect: null == aspect ? _self.aspect : aspect // ignore: cast_nullable_to_non_nullable
+as String?,lookIntensity: null == lookIntensity ? _self.lookIntensity : lookIntensity // ignore: cast_nullable_to_non_nullable
+as double,lookKeyframes: null == lookKeyframes ? _self._lookKeyframes : lookKeyframes // ignore: cast_nullable_to_non_nullable
+as List<LookKeyframe>,aspect: null == aspect ? _self.aspect : aspect // ignore: cast_nullable_to_non_nullable
 as VideoAspect,resolution: null == resolution ? _self.resolution : resolution // ignore: cast_nullable_to_non_nullable
 as VideoResolution,fps: null == fps ? _self.fps : fps // ignore: cast_nullable_to_non_nullable
 as int,

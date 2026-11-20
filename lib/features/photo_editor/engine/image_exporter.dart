@@ -8,7 +8,9 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image/image.dart' as img;
 import 'package:lumora/features/photo_editor/domain/edit_state.dart';
 import 'package:lumora/features/photo_editor/domain/geometry.dart';
+import 'package:lumora/features/photo_editor/engine/finishing_renderer.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
+import 'package:lumora/features/photo_editor/engine/pixel_ops.dart';
 import 'package:lumora/features/photo_editor/engine/tiling.dart';
 import 'package:native_exif/native_exif.dart';
 import 'package:path/path.dart' as p;
@@ -25,7 +27,17 @@ enum ExportFormat {
 }
 
 class ExportOptions {
-  const ExportOptions({this.format = ExportFormat.jpeg, this.quality = 95, this.keepExif = true, this.maxDimension});
+  const ExportOptions({
+    this.format = ExportFormat.jpeg,
+    this.quality = 95,
+    this.keepExif = true,
+    this.maxDimension,
+    this.social = SocialSize.original,
+    this.socialFit = SocialFit.pad,
+    this.padColor = 0xFFFFFFFF,
+    this.padBlur = true,
+    this.saveToGallery = true,
+  });
 
   final ExportFormat format;
   final int quality;
@@ -33,6 +45,15 @@ class ExportOptions {
 
   /// Optional downscale (long edge) – null exports at full resolution.
   final int? maxDimension;
+
+  /// Social network size preset (crop or pad to its aspect, then resize).
+  final SocialSize social;
+  final SocialFit socialFit;
+  final int padColor;
+  final bool padBlur;
+
+  /// Also copy the file into the gallery (album "Lumora").
+  final bool saveToGallery;
 }
 
 class RenderedPixels {
@@ -126,6 +147,25 @@ class ImageExporter {
       onProgress?.call((i + 1) / tiles.length);
     }
     return RenderedPixels(out, ow, oh);
+  }
+
+  /// Applies frame, watermark and the social size preset of [options].
+  Future<RenderedPixels> finish(
+    RenderedPixels pixels,
+    EditState state,
+    ExportOptions options,
+    FinishingRenderer finishing,
+  ) async {
+    var out = await finishing.finish(Rgba(pixels.width, pixels.height, pixels.rgba), state);
+    final social = options.social;
+    if (social != SocialSize.original) {
+      final src = out;
+      final fit = options.socialFit;
+      final pad = options.padColor;
+      final blur = options.padBlur;
+      out = await Isolate.run(() => fitSocial(src, social, fit: fit, padColor: pad, blur: blur));
+    }
+    return RenderedPixels(out.data, out.width, out.height);
   }
 
   /// Encodes [pixels] and writes them to the app's export directory.

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumora/core/providers.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
+import 'package:lumora/features/video_editor/domain/look_keyframes.dart';
 import 'package:lumora/features/video_editor/domain/timeline_ops.dart';
 import 'package:lumora/features/video_editor/domain/video_project.dart';
 import 'package:lumora/features/video_editor/presentation/video_editor_controller.dart';
@@ -143,8 +144,13 @@ class VideoPreviewState extends ConsumerState<VideoPreview> {
           )
         : const Center(child: CircularProgressIndicator());
 
-    if (shaders != null && ui.ImageFilter.isShaderFilterSupported && _dummy != null && !project.look.isNeutral) {
-      final a = project.look;
+    final strength = project.lookIntensityAt(s.playheadMs);
+    if (shaders != null &&
+        ui.ImageFilter.isShaderFilterSupported &&
+        _dummy != null &&
+        !project.look.isNeutral &&
+        strength > 0.001) {
+      final a = scaleLook(project.look, strength);
       final shader = shaders.videoFilter.fragmentShader()
         ..getUniformVec4('uTone').set(a.exposure, a.contrast, a.highlights, a.shadows)
         ..getUniformVec4('uColor').set(a.temperature, a.tint, a.vibrance, a.saturation)

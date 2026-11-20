@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -7,17 +8,26 @@ import 'package:flutter/foundation.dart';
 import 'package:gal/gal.dart';
 import 'package:image/image.dart' as img;
 import 'package:lumora/core/providers.dart';
+import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
 import 'package:lumora/features/ai/pipelines/tensor_utils.dart';
+import 'package:lumora/features/photo_editor/data/preset_store.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
 import 'package:lumora/features/photo_editor/domain/auto_enhance.dart' as enhance;
+import 'package:lumora/features/photo_editor/domain/color_bands.dart';
+import 'package:lumora/features/photo_editor/domain/edit_clipboard.dart';
 import 'package:lumora/features/photo_editor/domain/edit_history.dart';
 import 'package:lumora/features/photo_editor/domain/edit_state.dart';
 import 'package:lumora/features/photo_editor/domain/geometry.dart';
+import 'package:lumora/features/photo_editor/domain/histogram.dart';
 import 'package:lumora/features/photo_editor/domain/layers.dart';
 import 'package:lumora/features/photo_editor/domain/presets.dart';
+import 'package:lumora/features/photo_editor/engine/finishing_renderer.dart';
+import 'package:lumora/features/photo_editor/engine/healing.dart';
 import 'package:lumora/features/photo_editor/engine/image_exporter.dart';
 import 'package:lumora/features/photo_editor/engine/overlay_painter.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
+import 'package:lumora/features/photo_editor/engine/pixel_ops.dart';
+import 'package:lumora/features/photo_editor/engine/preset_thumbnails.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -26,7 +36,20 @@ import 'package:uuid/uuid.dart';
 
 part 'photo_editor_controller.g.dart';
 
-enum EditorTool { presets, adjust, hsl, curves, lut, crop, text, stickers, draw, masks, ai }
+enum EditorTool { presets, adjust, hsl, curves, lut, crop, masks, heal, ai, text, stickers, draw, frame, watermark }
+
+/// Tools whose on-canvas gestures work in un-framed image coordinates.
+const Set<EditorTool> _interactiveTools = {
+  EditorTool.crop,
+  EditorTool.text,
+  EditorTool.stickers,
+  EditorTool.draw,
+  EditorTool.masks,
+  EditorTool.heal,
+};
+
+/// HSL component targeted by the on-image colour picker.
+enum HslComponent { hue, saturation, luminance }
 
 /// Brush settings shared by the draw, mask brush and eraser tools.
 class BrushSettings {
@@ -69,6 +92,16 @@ class PhotoEditorState {
     this.selectedMaskId,
     this.eraserMode = false,
     this.error,
+    this.histogram,
+    this.showHistogram = false,
+    this.showClipping = false,
+    this.clippingOverlay,
+    this.hslBand = 0,
+    this.hslPicking = false,
+    this.hslComponent = HslComponent.saturation,
+    this.healClone = false,
+    this.healSource,
+    this.healSettingSource = false,
   });
 
   final EditHistory<EditState> history;
@@ -91,7 +124,35 @@ class PhotoEditorState {
   final bool eraserMode;
   final String? error;
 
+  /// Histogram of the latest render (when [showHistogram]).
+  final Histogram? histogram;
+  final bool showHistogram;
+  final bool showClipping;
+
+  /// Red/blue clipping warning image matching [rendered].
+  final ui.Image? clippingOverlay;
+
+  /// HSL band (0..7) selected in the HSL panel or picked on the photo.
+  final int hslBand;
+
+  /// Tap/drag on the photo picks a colour band and adjusts it.
+  final bool hslPicking;
+  final HslComponent hslComponent;
+
+  /// Heal tool: clone stamp mode (otherwise healing).
+  final bool healClone;
+
+  /// Clone source point, normalised to the output image.
+  final Offset? healSource;
+
+  /// The next tap on the photo sets [healSource].
+  final bool healSettingSource;
+
   EditState get edit => history.present;
+
+  /// Whether the canvas currently shows the un-framed image (so on-canvas
+  /// gestures map 1:1 to image coordinates).
+  bool get interactive => _interactiveTools.contains(tool) || eraserMode || hslPicking;
 
   PhotoEditorState copyWith({
     EditHistory<EditState>? history,
@@ -107,6 +168,16 @@ class PhotoEditorState {
     String? Function()? selectedMaskId,
     bool? eraserMode,
     String? Function()? error,
+    Histogram? Function()? histogram,
+    bool? showHistogram,
+    bool? showClipping,
+    ui.Image? Function()? clippingOverlay,
+    int? hslBand,
+    bool? hslPicking,
+    HslComponent? hslComponent,
+    bool? healClone,
+    Offset? Function()? healSource,
+    bool? healSettingSource,
   }) => PhotoEditorState(
     history: history ?? this.history,
     projectId: projectId ?? this.projectId,
@@ -121,6 +192,16 @@ class PhotoEditorState {
     selectedMaskId: selectedMaskId != null ? selectedMaskId() : this.selectedMaskId,
     eraserMode: eraserMode ?? this.eraserMode,
     error: error != null ? error() : this.error,
+    histogram: histogram != null ? histogram() : this.histogram,
+    showHistogram: showHistogram ?? this.showHistogram,
+    showClipping: showClipping ?? this.showClipping,
+    clippingOverlay: clippingOverlay != null ? clippingOverlay() : this.clippingOverlay,
+    hslBand: hslBand ?? this.hslBand,
+    hslPicking: hslPicking ?? this.hslPicking,
+    hslComponent: hslComponent ?? this.hslComponent,
+    healClone: healClone ?? this.healClone,
+    healSource: healSource != null ? healSource() : this.healSource,
+    healSettingSource: healSettingSource ?? this.healSettingSource,
   );
 }
 
@@ -135,14 +216,22 @@ class PhotoEditorController extends _$PhotoEditorController {
   bool _dirty = false;
   ui.Image? _lastPreview;
   ui.Image? _lastRendered;
+  ui.Image? _lastClipping;
+  final FinishingRenderer _finishing = FinishingRenderer();
+  Timer? _histogramTimer;
 
   @override
   PhotoEditorState build() {
     // `state` may not be read inside life-cycle callbacks, so GPU images
     // are tracked in fields as well.
     ref.onDispose(() {
+      _histogramTimer?.cancel();
+      _renderer?.dispose();
+      _renderer = null;
       _lastPreview?.dispose();
       _lastRendered?.dispose();
+      _lastClipping?.dispose();
+      _finishing.dispose();
     });
     return PhotoEditorState(history: EditHistory(EditState.initial));
   }
@@ -192,9 +281,90 @@ class PhotoEditorController extends _$PhotoEditorController {
   }
 
   void setTool(EditorTool tool) {
-    state = state.copyWith(tool: tool, eraserMode: false);
+    if (tool == state.tool) return;
+    state = state.copyWith(tool: tool, eraserMode: false, hslPicking: false, healSettingSource: false);
     unawaited(_render());
   }
+
+  // --------------------------------------------------- view & analysis
+
+  void toggleHistogram() {
+    state = state.copyWith(showHistogram: !state.showHistogram);
+    _scheduleHistogram();
+  }
+
+  void toggleClipping() {
+    state = state.copyWith(showClipping: !state.showClipping);
+    unawaited(_render());
+  }
+
+  // ------------------------------------------------- selective colour
+
+  void selectHslBand(int band) => state = state.copyWith(hslBand: band.clamp(0, 7));
+
+  void setHslComponent(HslComponent c) => state = state.copyWith(hslComponent: c);
+
+  void setHslPicking({required bool value}) {
+    state = state.copyWith(hslPicking: value);
+    unawaited(_render());
+  }
+
+  /// Picks the colour band under [normalized] (0..1 in the displayed
+  /// image) and selects it. Returns the sampled colour.
+  Future<Color?> pickHslBandAt(Offset normalized) async {
+    final img = state.rendered;
+    if (img == null) return null;
+    final data = await img.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+    if (data == null) return null;
+    final x = (normalized.dx * img.width).floor().clamp(0, img.width - 1);
+    final y = (normalized.dy * img.height).floor().clamp(0, img.height - 1);
+    // Average a 5x5 neighbourhood to avoid picking noise.
+    var r = 0;
+    var g = 0;
+    var b = 0;
+    var n = 0;
+    for (var dy = -2; dy <= 2; dy++) {
+      for (var dx = -2; dx <= 2; dx++) {
+        final xx = (x + dx).clamp(0, img.width - 1);
+        final yy = (y + dy).clamp(0, img.height - 1);
+        final o = (yy * img.width + xx) * 4;
+        r += data.getUint8(o);
+        g += data.getUint8(o + 1);
+        b += data.getUint8(o + 2);
+        n++;
+      }
+    }
+    final color = Color.fromARGB(255, r ~/ n, g ~/ n, b ~/ n);
+    selectHslBand(hslBandForRgb(r / n, g / n, b / n));
+    return color;
+  }
+
+  /// Targeted adjustment: changes the picked band's selected component by
+  /// [delta] (from a vertical drag on the photo). Live until [commit].
+  void nudgeHsl(double delta) {
+    final band = state.hslBand;
+    final comp = state.hslComponent;
+    updateAdjustments((a) {
+      List<double> upd(List<double> list) => [...list]..[band] = (list[band] + delta).clamp(-1.0, 1.0);
+      return a.copyWith(
+        hsl: switch (comp) {
+          HslComponent.hue => a.hsl.copyWith(hue: upd(a.hsl.hue)),
+          HslComponent.saturation => a.hsl.copyWith(saturation: upd(a.hsl.saturation)),
+          HslComponent.luminance => a.hsl.copyWith(luminance: upd(a.hsl.luminance)),
+        },
+      );
+    }, live: true);
+  }
+
+  // ------------------------------------------------------- heal / clone
+
+  void setHealClone({required bool value}) =>
+      state = state.copyWith(healClone: value, healSettingSource: value && state.healSource == null);
+
+  void startSettingHealSource() => state = state.copyWith(healSettingSource: true);
+
+  void setHealSource(Offset normalized) =>
+      state = state.copyWith(healSource: () => normalized, healSettingSource: false);
 
   void setComparing({required bool value}) => state = state.copyWith(comparing: value);
 
@@ -204,39 +374,57 @@ class PhotoEditorController extends _$PhotoEditorController {
 
   void setEraserMode({required bool value}) => state = state.copyWith(eraserMode: value);
 
-  void applyPreset(String? id, {double intensity = 1}) {
+  Preset? _resolvePreset(String? id) => ref.read(presetLibraryControllerProvider).byId(id);
+
+  void applyPreset(String? id, {double intensity = 1, bool live = false}) {
     update((s) {
-      final preset = presetById(id);
+      final preset = _resolvePreset(id);
       // Presets are applied on top of the user's adjustments recorded
       // before any preset was chosen.
-      final base = _withoutPreset(s);
+      final base = adjustmentsWithoutPreset(s);
       return s.copyWith(
-        presetId: id,
+        presetId: preset == null ? null : id,
         presetIntensity: intensity,
         adjustments: preset == null ? base : preset.apply(base, intensity: intensity),
       );
-    });
+    }, live: live);
   }
 
-  Adjustments _withoutPreset(EditState s) {
-    final preset = presetById(s.presetId);
+  /// The user's own adjustments with the active preset taken out.
+  Adjustments adjustmentsWithoutPreset(EditState s) {
+    final preset = _resolvePreset(s.presetId);
     if (preset == null) return s.adjustments;
-    // Reverse the scalar deltas of the previous preset.
-    var a = s.adjustments;
-    for (final param in AdjustmentParam.values) {
-      if (param == AdjustmentParam.lutIntensity) continue;
-      final target = param.read(preset.adjustments);
-      if (target == param.neutral) continue;
-      a = param.write(a, param.read(a) - (target - param.neutral) * s.presetIntensity);
-    }
-    return a.copyWith(
-      lutId: preset.adjustments.lutId != null ? null : a.lutId,
-      curves: preset.adjustments.curves.isIdentity ? a.curves : const CurveSet(),
-      splitTone: preset.adjustments.splitTone == const SplitTone() ? a.splitTone : const SplitTone(),
-      duotone: preset.adjustments.duotone.strength > 0 ? const Duotone() : a.duotone,
-      hsl: preset.adjustments.hsl.isNeutral ? a.hsl : const HslAdjustments(),
-    );
+    return preset.remove(s.adjustments, intensity: s.presetIntensity);
   }
+
+  /// Saves the current look (all global adjustments) as a custom preset.
+  Future<Preset> saveCurrentAsPreset(String name) async {
+    final preset = await ref.read(presetLibraryControllerProvider.notifier).saveAs(name, state.edit.adjustments);
+    // The look is now "this preset at 100 %" on a neutral base.
+    update((s) => s.copyWith(presetId: preset.id, presetIntensity: 1));
+    return preset;
+  }
+
+  // ------------------------------------------------------ copy / paste
+
+  Future<void> copyEdits() => ref.read(editClipboardProvider.notifier).copy(state.edit);
+
+  bool get canPaste => ref.read(editClipboardProvider) != null;
+
+  void pasteEdits({PasteOptions options = const PasteOptions()}) {
+    final copied = ref.read(editClipboardProvider);
+    if (copied == null) return;
+    update((s) => pasteEdit(s, copied, options: options));
+  }
+
+  /// Jumps to entry [index] of the edit history (see [EditHistory.timeline]).
+  void jumpToHistory(int index) {
+    state = state.copyWith(history: state.history.jumpTo(index));
+    unawaited(_render());
+  }
+
+  /// Resets every edit (one undoable step), keeping AI generated pixels off.
+  void resetAll() => update((_) => EditState.initial);
 
   // --------------------------------------------------------------- layers
 
@@ -327,6 +515,15 @@ class PhotoEditorController extends _$PhotoEditorController {
     live: live,
   );
 
+  /// Copies mask [id] (same shape and settings) and selects the copy.
+  void duplicateMask(String id) {
+    final m = state.edit.localAdjustments.where((m) => m.id == id).firstOrNull;
+    if (m == null) return;
+    final copy = m.copyWith(id: _uuid.v4());
+    update((s) => s.copyWith(localAdjustments: [...s.localAdjustments, copy]));
+    selectMask(copy.id);
+  }
+
   void removeMask(String id) {
     update((s) => s.copyWith(localAdjustments: s.localAdjustments.where((m) => m.id != id).toList()));
     selectMask(null);
@@ -381,15 +578,28 @@ class PhotoEditorController extends _$PhotoEditorController {
     addMask(MaskKind.subject, maskPath: r.maskPath, adjustments: adjustments, invert: blurBackground);
   });
 
-  /// Runs the object eraser on [strokes] painted in output-normalized
-  /// coordinates (mapped back through the geometry to source pixels).
-  Future<void> eraseObjects(List<Stroke> strokes) => _busy(() async {
-    final rasterPath = _currentRaster;
-    final bytes = await File(rasterPath).readAsBytes();
+  /// Maps a point normalised to the output (cropped/rotated) image back to
+  /// source pixels of the current raster (`buildInverseWarp` yields
+  /// normalised source coordinates).
+  (double, double) _toSource(Offset normalized, int sw, int sh) {
+    final g = state.edit.geometry;
+    final (ow, oh) = g.outputSize(sw, sh);
+    final inv = buildInverseWarp(g, sw, sh, ow, oh);
+    final (u, v) = inv.apply(normalized.dx * ow, normalized.dy * oh);
+    return (u * sw, v * sh);
+  }
+
+  Future<(int, int)> _rasterSize(String path) async {
+    final bytes = await File(path).readAsBytes();
     final desc = await ui.ImageDescriptor.encoded(await ui.ImmutableBuffer.fromUint8List(bytes));
-    final sw = desc.width;
-    final sh = desc.height;
+    final size = (desc.width, desc.height);
     desc.dispose();
+    return size;
+  }
+
+  /// Rasterises [strokes] (output-normalised) into a white-on-black RGBA
+  /// mask in source pixel space.
+  Future<RgbaImage> _strokesToSourceMask(List<Stroke> strokes, int sw, int sh) async {
     final g = state.edit.geometry;
     final (ow, oh) = g.outputSize(sw, sh);
     final inv = buildInverseWarp(g, sw, sh, ow, oh);
@@ -414,10 +624,48 @@ class PhotoEditorController extends _$PhotoEditorController {
     final maskImg = await rec.endRecording().toImage(sw, sh);
     final data = await maskImg.toByteData();
     maskImg.dispose();
-    final mask = RgbaImage(sw, sh, data!.buffer.asUint8List());
+    return RgbaImage(sw, sh, data!.buffer.asUint8List());
+  }
+
+  /// Runs the object eraser on [strokes] painted in output-normalized
+  /// coordinates (mapped back through the geometry to source pixels).
+  Future<void> eraseObjects(List<Stroke> strokes) => _busy(() async {
+    final rasterPath = _currentRaster;
+    final (sw, sh) = await _rasterSize(rasterPath);
+    final mask = await _strokesToSourceMask(strokes, sw, sh);
     final out = await ref.read(inpaintPipelineProvider).run(rasterPath, mask);
     update((s) => s.copyWith(rasterPath: out));
     state = state.copyWith(eraserMode: false);
+  });
+
+  /// Healing / clone brush over [strokes] (output-normalised). Clone uses
+  /// [PhotoEditorState.healSource] as the source point of the first stroke.
+  Future<void> heal(List<Stroke> strokes) => _busy(() async {
+    if (strokes.isEmpty) return;
+    final rasterPath = _currentRaster;
+    final source = await loadRgba(rasterPath);
+    final sw = source.width;
+    final sh = source.height;
+    final mask = await _strokesToSourceMask(strokes, sw, sh);
+    (int, int)? offset;
+    final clone = state.healClone;
+    final src = state.healSource;
+    if (clone) {
+      if (src == null) return;
+      final first = strokes.first.points;
+      final (fx, fy) = _toSource(Offset(first[0], first[1]), sw, sh);
+      final (sx, sy) = _toSource(src, sw, sh);
+      offset = ((sx - fx).round(), (sy - fy).round());
+    }
+    final alpha = Uint8List(sw * sh);
+    for (var i = 0; i < alpha.length; i++) {
+      alpha[i] = mask.pixels[i * 4];
+    }
+    final result = await Isolate.run(
+      () => applyHeal(HealRequest(image: Rgba(sw, sh, source.pixels), mask: alpha, offset: offset, clone: clone)),
+    );
+    final path = await savePng(RgbaImage(result.width, result.height, result.data), clone ? 'clone' : 'heal');
+    update((s) => s.copyWith(rasterPath: path));
   });
 
   // --------------------------------------------------------------- output
@@ -425,17 +673,21 @@ class PhotoEditorController extends _$PhotoEditorController {
   Future<File?> export(ExportOptions options) => _busy(() async {
     final renderer = await _ensureRenderer();
     final exporter = ImageExporter(renderer);
-    final pixels = await exporter.renderFullResolution(
+    final rendered = await exporter.renderFullResolution(
       state.sourcePath!,
       state.edit,
-      onProgress: (v) => state = state.copyWith(progress: () => v * 0.8),
+      onProgress: (v) => state = state.copyWith(progress: () => v * 0.75),
     );
+    final pixels = await exporter.finish(rendered, state.edit, options, _finishing);
+    state = state.copyWith(progress: () => 0.85);
     final file = await exporter.encodeAndSave(pixels, options, exifSourcePath: state.sourcePath);
     state = state.copyWith(progress: () => 1);
-    try {
-      if (await Gal.requestPermission()) await Gal.putImage(file.path, album: 'Lumora');
-    } on Object catch (e) {
-      debugPrint('Gallery save failed: $e');
+    if (options.saveToGallery) {
+      try {
+        if (await Gal.requestPermission()) await Gal.putImage(file.path, album: 'Lumora');
+      } on Object catch (e) {
+        debugPrint('Gallery save failed: $e');
+      }
     }
     await save();
     return file;
@@ -462,21 +714,35 @@ class PhotoEditorController extends _$PhotoEditorController {
     }
     await ref
         .read(projectRepositoryProvider)
-        .savePhoto(
-          id: id,
-          name: p.basenameWithoutExtension(src),
-          sourcePath: src,
-          state: state.edit,
-          thumbnailPath: thumb,
-        );
+        .savePhoto(id: id, sourcePath: src, state: state.edit, thumbnailPath: thumb);
   }
 
   // --------------------------------------------------------------- render
 
+  void _scheduleHistogram() {
+    if (!state.showHistogram) return;
+    _histogramTimer?.cancel();
+    _histogramTimer = Timer(const Duration(milliseconds: 120), () async {
+      final img = state.rendered;
+      if (img == null || !state.showHistogram) return;
+      final small = downscaleImage(img, 256);
+      final data = await small.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+      small.dispose();
+      if (data == null) return;
+      state = state.copyWith(histogram: () => Histogram.fromRgba(data.buffer.asUint8List()));
+    });
+  }
+
   Future<PhotoRenderer> _ensureRenderer() async {
     final existing = _renderer;
     if (existing != null) return existing;
-    final r = await ref.read(photoRendererProvider.future);
+    final r = await createPhotoRenderer(ref.read);
+    // Another call may have created one while we were awaiting.
+    final raced = _renderer;
+    if (raced != null) {
+      r.dispose();
+      return raced;
+    }
     _renderer = r;
     return r;
   }
@@ -515,17 +781,34 @@ class PhotoEditorController extends _$PhotoEditorController {
         final edit = state.edit;
         await renderer.prepare(edit);
         final cropping = state.tool == EditorTool.crop;
+        final interactive = state.interactive;
         // While cropping, show the whole rotated/straightened frame.
-        final out = renderer.render(
+        var out = renderer.render(
           state.preview!,
           cropping ? edit.copyWith(geometry: edit.geometry.withoutCrop()) : edit,
           includeOverlays: !cropping,
         );
+        if (!interactive) {
+          final logo = await _finishing.logoFor(edit.watermark);
+          final finished = _finishing.preview(out, edit, logo: logo);
+          if (!identical(finished, out)) {
+            out.dispose();
+            out = finished;
+          }
+        }
+        ui.Image? clip;
+        if (state.showClipping) clip = renderer.clippingOverlay(out);
         final old = state.rendered;
-        state = state.copyWith(rendered: out);
+        final oldClip = state.clippingOverlay;
+        state = state.copyWith(rendered: out, clippingOverlay: () => clip);
         _lastRendered = out;
+        _lastClipping = clip;
         // Let the frame that still shows the old image finish first.
-        WidgetsBinding.instance.addPostFrameCallback((_) => old?.dispose());
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          old?.dispose();
+          oldClip?.dispose();
+        });
+        _scheduleHistogram();
       } while (_dirty);
     } on Object catch (e) {
       state = state.copyWith(error: () => '$e');

@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lumora/core/utils/haptics.dart';
+import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/features/photo_editor/domain/layers.dart';
 import 'package:lumora/features/photo_editor/engine/overlay_painter.dart';
 import 'package:lumora/features/photo_editor/presentation/photo_editor_controller.dart';
@@ -26,13 +28,48 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
 
   PhotoEditorController get _ctrl => ref.read(photoEditorControllerProvider.notifier);
 
+  final TransformationController _zoom = TransformationController();
+  bool _zoomed = false;
+
+  @override
+  void dispose() {
+    _zoom.dispose();
+    super.dispose();
+  }
+
+  void _resetZoom() {
+    _zoom.value = Matrix4.identity();
+    _zoomed = false;
+  }
+
+  /// Double tap: fit ↔ 1:1 (one preview pixel per device pixel), centred
+  /// on the tap.
+  void _toggleZoom(Offset focal, double fitScale, double dpr) {
+    if (_zoomed) {
+      setState(_resetZoom);
+      return;
+    }
+    final target = math.max<double>(2, 1 / (fitScale * dpr));
+    final m = Matrix4.identity()
+      ..translateByDouble(-focal.dx * (target - 1), -focal.dy * (target - 1), 0, 1)
+      ..scaleByDouble(target, target, 1, 1);
+    setState(() {
+      _zoom.value = m;
+      _zoomed = true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(photoEditorControllerProvider);
     final image = s.comparing ? s.preview : s.rendered;
     if (image == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator(semanticsLabel: context.l10n.loading));
     }
+    ref.listen(photoEditorControllerProvider.select((s) => s.interactive), (_, interactive) {
+      if (interactive && _zoomed) setState(_resetZoom);
+    });
+    final dpr = MediaQuery.devicePixelRatioOf(context);
     return LayoutBuilder(
       builder: (context, c) {
         const pad = 16.0;
@@ -40,26 +77,56 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
         final k = math.min(avail.width / image.width, avail.height / image.height);
         final size = Size(image.width * k, image.height * k);
         final rect = Offset((c.maxWidth - size.width) / 2, (c.maxHeight - size.height) / 2) & size;
-        return Stack(
+        final clip = s.clippingOverlay;
+        final picture = Stack(
           children: [
             Positioned.fromRect(
               rect: rect,
               child: DecoratedBox(
                 decoration: const BoxDecoration(boxShadow: [BoxShadow(blurRadius: 24, color: Color(0x66000000))]),
-                child: RawImage(image: image, fit: BoxFit.fill),
+                child: Semantics(
+                  image: true,
+                  label: context.l10n.photoPreview,
+                  child: RawImage(
+                    image: image,
+                    fit: BoxFit.fill,
+                    filterQuality: _zoomed ? FilterQuality.none : FilterQuality.medium,
+                  ),
+                ),
               ),
             ),
+            if (clip != null && !s.comparing && s.showClipping && clip.width == image.width)
+              Positioned.fromRect(
+                rect: rect,
+                child: IgnorePointer(
+                  child: RawImage(image: clip, fit: BoxFit.fill),
+                ),
+              ),
             if (!s.comparing) Positioned.fromRect(rect: rect, child: _interaction(s, rect.size)),
           ],
+        );
+        if (s.interactive) return picture;
+        return GestureDetector(
+          onDoubleTapDown: (d) => _toggleZoom(d.localPosition, k, dpr),
+          onDoubleTap: () {},
+          child: InteractiveViewer(
+            transformationController: _zoom,
+            maxScale: math.max(4, 2 / (k * dpr)),
+            onInteractionEnd: (_) => _zoomed = _zoom.value.getMaxScaleOnAxis() > 1.01,
+            child: SizedBox(width: c.maxWidth, height: c.maxHeight, child: picture),
+          ),
         );
       },
     );
   }
 
   Widget _interaction(PhotoEditorState s, Size size) {
+    if (s.hslPicking) return _hslPicker(size);
+    if (s.tool == EditorTool.heal && s.healSettingSource) return _healSourcePicker(s, size);
     final brushTool =
         s.tool == EditorTool.draw ||
         s.eraserMode ||
+        s.tool == EditorTool.heal ||
         (s.tool == EditorTool.masks && _selectedMask(s)?.kind == MaskKind.brush);
     if (brushTool) return _brushLayer(s, size);
     switch (s.tool) {
@@ -90,7 +157,7 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
     Stroke current() => Stroke(
       points: List.of(_livePoints),
       width: brush.size,
-      color: s.eraserMode ? 0xAAFF3B5C : brush.color,
+      color: s.eraserMode || s.tool == EditorTool.heal ? 0xAAFF3B5C : brush.color,
       eraser: brush.eraser && !s.eraserMode,
       softness: s.tool == EditorTool.masks ? math.max(brush.softness, 0.3) : brush.softness,
     );
@@ -107,7 +174,7 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
       onPanEnd: (_) {
         final stroke = current();
         setState(_livePoints.clear);
-        if (s.eraserMode) {
+        if (s.eraserMode || s.tool == EditorTool.heal) {
           _pendingEraser.add(stroke);
           setState(() {});
         } else if (s.tool == EditorTool.draw) {
@@ -121,8 +188,9 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
       },
       child: CustomPaint(
         size: size,
+        foregroundPainter: s.tool == EditorTool.heal && s.healClone ? _HealSourcePainter(s.healSource) : null,
         painter: _StrokesPainter([
-          if (s.eraserMode) ..._pendingEraser,
+          if (s.eraserMode || s.tool == EditorTool.heal) ..._pendingEraser,
           if (s.tool == EditorTool.masks) ...?_selectedMask(s)?.strokes.map((e) => e.copyWith(color: 0x88FF3B5C)),
           if (_livePoints.isNotEmpty) current(),
         ]),
@@ -131,6 +199,33 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
   }
 
   static final List<Stroke> _pendingEraser = [];
+
+  // ------------------------------------------------------ colour picker
+
+  Widget _hslPicker(Size size) {
+    Offset norm(Offset p) => Offset((p.dx / size.width).clamp(0, 1), (p.dy / size.height).clamp(0, 1));
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: (d) {
+        Haptics.selection();
+        _ctrl.pickHslBandAt(norm(d.localPosition));
+      },
+      onVerticalDragStart: (d) => _ctrl.pickHslBandAt(norm(d.localPosition)),
+      // Drag up to increase, down to decrease (targeted adjustment).
+      onVerticalDragUpdate: (d) => _ctrl.nudgeHsl(-d.delta.dy / 250),
+      onVerticalDragEnd: (_) => _ctrl.commit(),
+      child: const MouseRegion(cursor: SystemMouseCursors.precise, child: SizedBox.expand()),
+    );
+  }
+
+  Widget _healSourcePicker(PhotoEditorState s, Size size) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTapUp: (d) {
+      Haptics.light();
+      _ctrl.setHealSource(Offset(d.localPosition.dx / size.width, d.localPosition.dy / size.height));
+    },
+    child: CustomPaint(size: size, painter: _HealSourcePainter(s.healSource)),
+  );
 
   // -------------------------------------------------------- text/stickers
 
@@ -254,6 +349,29 @@ List<Stroke> takePendingEraserStrokes() {
 }
 
 void clearPendingEraserStrokes() => _EditorCanvasState._pendingEraser.clear();
+
+class _HealSourcePainter extends CustomPainter {
+  _HealSourcePainter(this.source);
+  final Offset? source;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = source;
+    if (s == null) return;
+    final c = Offset(s.dx * size.width, s.dy * size.height);
+    final ring = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = const Color(0xFF3FC5F0);
+    canvas
+      ..drawCircle(c, 14, ring)
+      ..drawLine(c - const Offset(20, 0), c + const Offset(20, 0), ring)
+      ..drawLine(c - const Offset(0, 20), c + const Offset(0, 20), ring);
+  }
+
+  @override
+  bool shouldRepaint(_HealSourcePainter old) => old.source != source;
+}
 
 class _StrokesPainter extends CustomPainter {
   _StrokesPainter(this.strokes);

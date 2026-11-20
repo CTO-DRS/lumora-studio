@@ -218,12 +218,14 @@ final class ShaderLibraryProvider
 
 String _$shaderLibraryHash() => r'3474056021146f2c2baffe5a101dfc7603583ab9';
 
-/// A fresh renderer per consumer (each owns its GPU textures).
+/// A fresh renderer per consumer (each owns its GPU textures). Only for
+/// widgets that `watch` it; see [createPhotoRenderer].
 
 @ProviderFor(photoRenderer)
 final photoRendererProvider = PhotoRendererProvider._();
 
-/// A fresh renderer per consumer (each owns its GPU textures).
+/// A fresh renderer per consumer (each owns its GPU textures). Only for
+/// widgets that `watch` it; see [createPhotoRenderer].
 
 final class PhotoRendererProvider
     extends
@@ -233,7 +235,8 @@ final class PhotoRendererProvider
           FutureOr<PhotoRenderer>
         >
     with $FutureModifier<PhotoRenderer>, $FutureProvider<PhotoRenderer> {
-  /// A fresh renderer per consumer (each owns its GPU textures).
+  /// A fresh renderer per consumer (each owns its GPU textures). Only for
+  /// widgets that `watch` it; see [createPhotoRenderer].
   PhotoRendererProvider._()
     : super(
         from: null,

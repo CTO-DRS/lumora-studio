@@ -19,7 +19,9 @@ mixin _$EditState {
  Adjustments get adjustments; GeometryState get geometry; List<OverlayLayer> get layers; List<LocalAdjustment> get localAdjustments; String? get presetId; double get presetIntensity;/// Result of a destructive AI step (background removal, inpainting,
 /// upscaling) stored as a new file. Undo simply restores the previous
 /// path, so the AI step itself stays non-destructive.
- String? get rasterPath;
+ String? get rasterPath;/// Border / frame added around the finished photo.
+ FrameSettings get frame;/// Text or logo watermark painted last.
+ WatermarkSettings? get watermark;
 /// Create a copy of EditState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -33,20 +35,20 @@ $EditStateCopyWith<EditState> get copyWith => _$EditStateCopyWithImpl<EditState>
 @override
 bool operator ==(Object other) {
   final _this = this as EditState;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is EditState&&(identical(other.adjustments, _this.adjustments) || other.adjustments == _this.adjustments)&&(identical(other.geometry, _this.geometry) || other.geometry == _this.geometry)&&const DeepCollectionEquality().equals(other.layers, _this.layers)&&const DeepCollectionEquality().equals(other.localAdjustments, _this.localAdjustments)&&(identical(other.presetId, _this.presetId) || other.presetId == _this.presetId)&&(identical(other.presetIntensity, _this.presetIntensity) || other.presetIntensity == _this.presetIntensity)&&(identical(other.rasterPath, _this.rasterPath) || other.rasterPath == _this.rasterPath));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EditState&&(identical(other.adjustments, _this.adjustments) || other.adjustments == _this.adjustments)&&(identical(other.geometry, _this.geometry) || other.geometry == _this.geometry)&&const DeepCollectionEquality().equals(other.layers, _this.layers)&&const DeepCollectionEquality().equals(other.localAdjustments, _this.localAdjustments)&&(identical(other.presetId, _this.presetId) || other.presetId == _this.presetId)&&(identical(other.presetIntensity, _this.presetIntensity) || other.presetIntensity == _this.presetIntensity)&&(identical(other.rasterPath, _this.rasterPath) || other.rasterPath == _this.rasterPath)&&(identical(other.frame, _this.frame) || other.frame == _this.frame)&&(identical(other.watermark, _this.watermark) || other.watermark == _this.watermark));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as EditState;
-  return Object.hash(runtimeType,_this.adjustments,_this.geometry,const DeepCollectionEquality().hash(_this.layers),const DeepCollectionEquality().hash(_this.localAdjustments),_this.presetId,_this.presetIntensity,_this.rasterPath);
+  return Object.hash(runtimeType,_this.adjustments,_this.geometry,const DeepCollectionEquality().hash(_this.layers),const DeepCollectionEquality().hash(_this.localAdjustments),_this.presetId,_this.presetIntensity,_this.rasterPath,_this.frame,_this.watermark);
 }
 
 @override
 String toString() {
   final _this = this as EditState;
-  return 'EditState(adjustments: ${_this.adjustments}, geometry: ${_this.geometry}, layers: ${_this.layers}, localAdjustments: ${_this.localAdjustments}, presetId: ${_this.presetId}, presetIntensity: ${_this.presetIntensity}, rasterPath: ${_this.rasterPath})';
+  return 'EditState(adjustments: ${_this.adjustments}, geometry: ${_this.geometry}, layers: ${_this.layers}, localAdjustments: ${_this.localAdjustments}, presetId: ${_this.presetId}, presetIntensity: ${_this.presetIntensity}, rasterPath: ${_this.rasterPath}, frame: ${_this.frame}, watermark: ${_this.watermark})';
 }
 
 
@@ -57,11 +59,11 @@ abstract mixin class $EditStateCopyWith<$Res>  {
   factory $EditStateCopyWith(EditState value, $Res Function(EditState) _then) = _$EditStateCopyWithImpl;
 @useResult
 $Res call({
- Adjustments adjustments, GeometryState geometry, List<OverlayLayer> layers, List<LocalAdjustment> localAdjustments, String? presetId, double presetIntensity, String? rasterPath
+ Adjustments adjustments, GeometryState geometry, List<OverlayLayer> layers, List<LocalAdjustment> localAdjustments, String? presetId, double presetIntensity, String? rasterPath, FrameSettings frame, WatermarkSettings? watermark
 });
 
 
-$AdjustmentsCopyWith<$Res> get adjustments;$GeometryStateCopyWith<$Res> get geometry;
+$AdjustmentsCopyWith<$Res> get adjustments;$GeometryStateCopyWith<$Res> get geometry;$FrameSettingsCopyWith<$Res> get frame;$WatermarkSettingsCopyWith<$Res>? get watermark;
 
 }
 /// @nodoc
@@ -74,7 +76,7 @@ class _$EditStateCopyWithImpl<$Res>
 
 /// Create a copy of EditState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? adjustments = null,Object? geometry = null,Object? layers = null,Object? localAdjustments = null,Object? presetId = freezed,Object? presetIntensity = null,Object? rasterPath = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? adjustments = null,Object? geometry = null,Object? layers = null,Object? localAdjustments = null,Object? presetId = freezed,Object? presetIntensity = null,Object? rasterPath = freezed,Object? frame = null,Object? watermark = freezed,}) {
   return _then(EditState(
 adjustments: null == adjustments ? _self.adjustments : adjustments // ignore: cast_nullable_to_non_nullable
 as Adjustments,geometry: null == geometry ? _self.geometry : geometry // ignore: cast_nullable_to_non_nullable
@@ -83,7 +85,9 @@ as List<OverlayLayer>,localAdjustments: null == localAdjustments ? _self.localAd
 as List<LocalAdjustment>,presetId: freezed == presetId ? _self.presetId : presetId // ignore: cast_nullable_to_non_nullable
 as String?,presetIntensity: null == presetIntensity ? _self.presetIntensity : presetIntensity // ignore: cast_nullable_to_non_nullable
 as double,rasterPath: freezed == rasterPath ? _self.rasterPath : rasterPath // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,frame: null == frame ? _self.frame : frame // ignore: cast_nullable_to_non_nullable
+as FrameSettings,watermark: freezed == watermark ? _self.watermark : watermark // ignore: cast_nullable_to_non_nullable
+as WatermarkSettings?,
   ));
 }
 /// Create a copy of EditState
@@ -103,6 +107,27 @@ $GeometryStateCopyWith<$Res> get geometry {
   
   return $GeometryStateCopyWith<$Res>(_self.geometry, (value) {
     return _then(_self.copyWith(geometry: value));
+  });
+}/// Create a copy of EditState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$FrameSettingsCopyWith<$Res> get frame {
+  
+  return $FrameSettingsCopyWith<$Res>(_self.frame, (value) {
+    return _then(_self.copyWith(frame: value));
+  });
+}/// Create a copy of EditState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$WatermarkSettingsCopyWith<$Res>? get watermark {
+    if (_self.watermark == null) {
+    return null;
+  }
+
+  return $WatermarkSettingsCopyWith<$Res>(_self.watermark!, (value) {
+    return _then(_self.copyWith(watermark: value));
   });
 }
 }
@@ -186,10 +211,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Adjustments adjustments,  GeometryState geometry,  List<OverlayLayer> layers,  List<LocalAdjustment> localAdjustments,  String? presetId,  double presetIntensity,  String? rasterPath)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Adjustments adjustments,  GeometryState geometry,  List<OverlayLayer> layers,  List<LocalAdjustment> localAdjustments,  String? presetId,  double presetIntensity,  String? rasterPath,  FrameSettings frame,  WatermarkSettings? watermark)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _EditState() when $default != null:
-return $default(_that.adjustments,_that.geometry,_that.layers,_that.localAdjustments,_that.presetId,_that.presetIntensity,_that.rasterPath);case _:
+return $default(_that.adjustments,_that.geometry,_that.layers,_that.localAdjustments,_that.presetId,_that.presetIntensity,_that.rasterPath,_that.frame,_that.watermark);case _:
   return orElse();
 
 }
@@ -207,10 +232,10 @@ return $default(_that.adjustments,_that.geometry,_that.layers,_that.localAdjustm
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Adjustments adjustments,  GeometryState geometry,  List<OverlayLayer> layers,  List<LocalAdjustment> localAdjustments,  String? presetId,  double presetIntensity,  String? rasterPath)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Adjustments adjustments,  GeometryState geometry,  List<OverlayLayer> layers,  List<LocalAdjustment> localAdjustments,  String? presetId,  double presetIntensity,  String? rasterPath,  FrameSettings frame,  WatermarkSettings? watermark)  $default,) {final _that = this;
 switch (_that) {
 case _EditState():
-return $default(_that.adjustments,_that.geometry,_that.layers,_that.localAdjustments,_that.presetId,_that.presetIntensity,_that.rasterPath);case _:
+return $default(_that.adjustments,_that.geometry,_that.layers,_that.localAdjustments,_that.presetId,_that.presetIntensity,_that.rasterPath,_that.frame,_that.watermark);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -227,10 +252,10 @@ return $default(_that.adjustments,_that.geometry,_that.layers,_that.localAdjustm
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Adjustments adjustments,  GeometryState geometry,  List<OverlayLayer> layers,  List<LocalAdjustment> localAdjustments,  String? presetId,  double presetIntensity,  String? rasterPath)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Adjustments adjustments,  GeometryState geometry,  List<OverlayLayer> layers,  List<LocalAdjustment> localAdjustments,  String? presetId,  double presetIntensity,  String? rasterPath,  FrameSettings frame,  WatermarkSettings? watermark)?  $default,) {final _that = this;
 switch (_that) {
 case _EditState() when $default != null:
-return $default(_that.adjustments,_that.geometry,_that.layers,_that.localAdjustments,_that.presetId,_that.presetIntensity,_that.rasterPath);case _:
+return $default(_that.adjustments,_that.geometry,_that.layers,_that.localAdjustments,_that.presetId,_that.presetIntensity,_that.rasterPath,_that.frame,_that.watermark);case _:
   return null;
 
 }
@@ -242,7 +267,7 @@ return $default(_that.adjustments,_that.geometry,_that.layers,_that.localAdjustm
 @JsonSerializable()
 
 class _EditState extends EditState {
-  const _EditState({this.adjustments = const Adjustments(), this.geometry = const GeometryState(),  List<OverlayLayer> layers = const <OverlayLayer>[],  List<LocalAdjustment> localAdjustments = const <LocalAdjustment>[], this.presetId, this.presetIntensity = 1, this.rasterPath}): _layers = layers,_localAdjustments = localAdjustments,super._();
+  const _EditState({this.adjustments = const Adjustments(), this.geometry = const GeometryState(),  List<OverlayLayer> layers = const <OverlayLayer>[],  List<LocalAdjustment> localAdjustments = const <LocalAdjustment>[], this.presetId, this.presetIntensity = 1, this.rasterPath, this.frame = const FrameSettings(), this.watermark}): _layers = layers,_localAdjustments = localAdjustments,super._();
   factory _EditState.fromJson(Map<String, dynamic> json) => _$EditStateFromJson(json);
 
 @override@JsonKey() final  Adjustments adjustments;
@@ -267,6 +292,10 @@ class _EditState extends EditState {
 /// upscaling) stored as a new file. Undo simply restores the previous
 /// path, so the AI step itself stays non-destructive.
 @override final  String? rasterPath;
+/// Border / frame added around the finished photo.
+@override@JsonKey() final  FrameSettings frame;
+/// Text or logo watermark painted last.
+@override final  WatermarkSettings? watermark;
 
 /// Create a copy of EditState
 /// with the given fields replaced by the non-null parameter values.
@@ -281,18 +310,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _EditState&&(identical(other.adjustments, adjustments) || other.adjustments == adjustments)&&(identical(other.geometry, geometry) || other.geometry == geometry)&&const DeepCollectionEquality().equals(other.layers, _layers)&&const DeepCollectionEquality().equals(other.localAdjustments, _localAdjustments)&&(identical(other.presetId, presetId) || other.presetId == presetId)&&(identical(other.presetIntensity, presetIntensity) || other.presetIntensity == presetIntensity)&&(identical(other.rasterPath, rasterPath) || other.rasterPath == rasterPath));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _EditState&&(identical(other.adjustments, adjustments) || other.adjustments == adjustments)&&(identical(other.geometry, geometry) || other.geometry == geometry)&&const DeepCollectionEquality().equals(other.layers, _layers)&&const DeepCollectionEquality().equals(other.localAdjustments, _localAdjustments)&&(identical(other.presetId, presetId) || other.presetId == presetId)&&(identical(other.presetIntensity, presetIntensity) || other.presetIntensity == presetIntensity)&&(identical(other.rasterPath, rasterPath) || other.rasterPath == rasterPath)&&(identical(other.frame, frame) || other.frame == frame)&&(identical(other.watermark, watermark) || other.watermark == watermark));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,adjustments,geometry,const DeepCollectionEquality().hash(_layers),const DeepCollectionEquality().hash(_localAdjustments),presetId,presetIntensity,rasterPath);
+    return Object.hash(runtimeType,adjustments,geometry,const DeepCollectionEquality().hash(_layers),const DeepCollectionEquality().hash(_localAdjustments),presetId,presetIntensity,rasterPath,frame,watermark);
 }
 
 @override
 String toString() {
-    return 'EditState(adjustments: $adjustments, geometry: $geometry, layers: $layers, localAdjustments: $localAdjustments, presetId: $presetId, presetIntensity: $presetIntensity, rasterPath: $rasterPath)';
+    return 'EditState(adjustments: $adjustments, geometry: $geometry, layers: $layers, localAdjustments: $localAdjustments, presetId: $presetId, presetIntensity: $presetIntensity, rasterPath: $rasterPath, frame: $frame, watermark: $watermark)';
 }
 
 
@@ -303,11 +332,11 @@ abstract mixin class _$EditStateCopyWith<$Res> implements $EditStateCopyWith<$Re
   factory _$EditStateCopyWith(_EditState value, $Res Function(_EditState) _then) = __$EditStateCopyWithImpl;
 @override @useResult
 $Res call({
- Adjustments adjustments, GeometryState geometry, List<OverlayLayer> layers, List<LocalAdjustment> localAdjustments, String? presetId, double presetIntensity, String? rasterPath
+ Adjustments adjustments, GeometryState geometry, List<OverlayLayer> layers, List<LocalAdjustment> localAdjustments, String? presetId, double presetIntensity, String? rasterPath, FrameSettings frame, WatermarkSettings? watermark
 });
 
 
-@override $AdjustmentsCopyWith<$Res> get adjustments;@override $GeometryStateCopyWith<$Res> get geometry;
+@override $AdjustmentsCopyWith<$Res> get adjustments;@override $GeometryStateCopyWith<$Res> get geometry;@override $FrameSettingsCopyWith<$Res> get frame;@override $WatermarkSettingsCopyWith<$Res>? get watermark;
 
 }
 /// @nodoc
@@ -320,7 +349,7 @@ class __$EditStateCopyWithImpl<$Res>
 
 /// Create a copy of EditState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? adjustments = null,Object? geometry = null,Object? layers = null,Object? localAdjustments = null,Object? presetId = freezed,Object? presetIntensity = null,Object? rasterPath = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? adjustments = null,Object? geometry = null,Object? layers = null,Object? localAdjustments = null,Object? presetId = freezed,Object? presetIntensity = null,Object? rasterPath = freezed,Object? frame = null,Object? watermark = freezed,}) {
   return _then(_EditState(
 adjustments: null == adjustments ? _self.adjustments : adjustments // ignore: cast_nullable_to_non_nullable
 as Adjustments,geometry: null == geometry ? _self.geometry : geometry // ignore: cast_nullable_to_non_nullable
@@ -329,7 +358,9 @@ as List<OverlayLayer>,localAdjustments: null == localAdjustments ? _self._localA
 as List<LocalAdjustment>,presetId: freezed == presetId ? _self.presetId : presetId // ignore: cast_nullable_to_non_nullable
 as String?,presetIntensity: null == presetIntensity ? _self.presetIntensity : presetIntensity // ignore: cast_nullable_to_non_nullable
 as double,rasterPath: freezed == rasterPath ? _self.rasterPath : rasterPath // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,frame: null == frame ? _self.frame : frame // ignore: cast_nullable_to_non_nullable
+as FrameSettings,watermark: freezed == watermark ? _self.watermark : watermark // ignore: cast_nullable_to_non_nullable
+as WatermarkSettings?,
   ));
 }
 
@@ -350,6 +381,27 @@ $GeometryStateCopyWith<$Res> get geometry {
   
   return $GeometryStateCopyWith<$Res>(_self.geometry, (value) {
     return _then(_self.copyWith(geometry: value));
+  });
+}/// Create a copy of EditState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$FrameSettingsCopyWith<$Res> get frame {
+  
+  return $FrameSettingsCopyWith<$Res>(_self.frame, (value) {
+    return _then(_self.copyWith(frame: value));
+  });
+}/// Create a copy of EditState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$WatermarkSettingsCopyWith<$Res>? get watermark {
+    if (_self.watermark == null) {
+    return null;
+  }
+
+  return $WatermarkSettingsCopyWith<$Res>(_self.watermark!, (value) {
+    return _then(_self.copyWith(watermark: value));
   });
 }
 }

@@ -1,7 +1,7 @@
 name: lumora
 description: "Lumora Studio – a 100% on-device, open-source AI photo & video editor."
 publish_to: 'none'
-version: 0.1.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ^3.12.0
@@ -61,5 +61,6 @@ flutter:
     - shaders/mask_blend.frag
     - shaders/warp.frag
     - shaders/video_filter.frag
+    - shaders/clipping.frag
   assets:
     - assets/luts/

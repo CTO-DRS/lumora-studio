@@ -24,7 +24,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recentProjects => 'Recent projects';
 
   @override
-  String get noProjects => 'No projects yet. Open a photo or video to start.';
+  String get noProjects => 'Open a photo or video to start. Your edits are saved automatically on this device.';
 
   @override
   String get aiModels => 'AI models';
@@ -501,4 +501,472 @@ class AppLocalizationsEn extends AppLocalizations {
   String projectName(String date) {
     return 'Project $date';
   }
+
+  @override
+  String get catFavorites => 'Favorites';
+
+  @override
+  String get catEssentials => 'Essentials';
+
+  @override
+  String get catPortrait => 'Portrait';
+
+  @override
+  String get catFood => 'Food';
+
+  @override
+  String get catFilm => 'Film';
+
+  @override
+  String get catVintage => 'Vintage';
+
+  @override
+  String get catCinematic => 'Cinematic';
+
+  @override
+  String get catLandscape => 'Landscape';
+
+  @override
+  String get catBw => 'B&W';
+
+  @override
+  String get catCreative => 'Creative';
+
+  @override
+  String get catCustom => 'My presets';
+
+  @override
+  String get savePreset => 'Save as preset';
+
+  @override
+  String get presetDefaultName => 'My look';
+
+  @override
+  String presetSaved(String name) {
+    return 'Preset “$name” saved';
+  }
+
+  @override
+  String get favorite => 'Add to favorites';
+
+  @override
+  String get unfavorite => 'Remove from favorites';
+
+  @override
+  String get rename => 'Rename';
+
+  @override
+  String get exportPresets => 'Export presets';
+
+  @override
+  String get importPresets => 'Import presets';
+
+  @override
+  String presetsImported(int count) {
+    return '$count presets imported';
+  }
+
+  @override
+  String importFailed(String error) {
+    return 'Import failed: $error';
+  }
+
+  @override
+  String get noFavorites => 'Long-press any look to add it here';
+
+  @override
+  String get copyEdits => 'Copy edits';
+
+  @override
+  String get pasteEdits => 'Paste edits';
+
+  @override
+  String get editsCopied => 'Edits copied';
+
+  @override
+  String get editsPasted => 'Edits pasted';
+
+  @override
+  String get pasteWhat => 'What to paste';
+
+  @override
+  String get pasteAdjustments => 'Light, color & look';
+
+  @override
+  String get pasteGeometry => 'Crop & rotation';
+
+  @override
+  String get pasteMasks => 'Masks';
+
+  @override
+  String get pasteOverlays => 'Text & stickers';
+
+  @override
+  String get pasteFinishing => 'Frame & watermark';
+
+  @override
+  String get resetAll => 'Reset all edits';
+
+  @override
+  String get more => 'More';
+
+  @override
+  String get photoPreview => 'Photo preview';
+
+  @override
+  String get pickColor => 'Pick a color in the photo';
+
+  @override
+  String get pickColorHint => 'Tap a color in the photo, then drag up or down on it to adjust';
+
+  @override
+  String get hideMask => 'Hide mask';
+
+  @override
+  String get showMask => 'Show mask';
+
+  @override
+  String get frameBorder => 'Border';
+
+  @override
+  String get framePolaroid => 'Polaroid';
+
+  @override
+  String get frameColor => 'Color';
+
+  @override
+  String get frameBlur => 'Blurred photo';
+
+  @override
+  String get frameWidth => 'Border width';
+
+  @override
+  String get cornerRadius => 'Rounded corners';
+
+  @override
+  String get watermarkText => 'Watermark text';
+
+  @override
+  String get watermarkLogo => 'Logo';
+
+  @override
+  String get remove => 'Remove';
+
+  @override
+  String get margin => 'Margin';
+
+  @override
+  String get healMode => 'Heal';
+
+  @override
+  String get cloneMode => 'Clone';
+
+  @override
+  String get healHint => 'Paint over blemishes, dust or small objects, then tap Apply';
+
+  @override
+  String get cloneSetSourceHint => 'Tap the photo to choose the area to copy from';
+
+  @override
+  String get clonePaintHint => 'Paint where the source should be copied, then tap Apply';
+
+  @override
+  String get setSource => 'Set source';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get histogram => 'Histogram';
+
+  @override
+  String get clippingWarnings => 'Clipping warnings';
+
+  @override
+  String get shadowClipping => 'Crushed shadows';
+
+  @override
+  String get highlightClipping => 'Blown highlights';
+
+  @override
+  String get histOriginal => 'Original';
+
+  @override
+  String get histLayers => 'Text & stickers';
+
+  @override
+  String get histPixels => 'Retouch / AI';
+
+  @override
+  String get histOther => 'Edit';
+
+  @override
+  String get toolFrame => 'Frame';
+
+  @override
+  String get toolWatermark => 'Watermark';
+
+  @override
+  String get toolHeal => 'Heal';
+
+  @override
+  String get history => 'History';
+
+  @override
+  String get exportSize => 'Size';
+
+  @override
+  String get sizeOriginal => 'Original';
+
+  @override
+  String get sizeStory => 'Story';
+
+  @override
+  String get fitPad => 'Fit (add border)';
+
+  @override
+  String get fitCrop => 'Fill (crop)';
+
+  @override
+  String get saveToGallery => 'Save to gallery';
+
+  @override
+  String photoProjectName(String date) {
+    return 'Photo · $date';
+  }
+
+  @override
+  String videoProjectName(String date) {
+    return 'Video · $date';
+  }
+
+  @override
+  String copyOf(String name) {
+    return '$name (copy)';
+  }
+
+  @override
+  String get quickTools => 'Quick tools';
+
+  @override
+  String get scanDocument => 'Scan document';
+
+  @override
+  String get collage => 'Collage';
+
+  @override
+  String get batchEdit => 'Batch edit';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get noProjectsTitle => 'Nothing here yet';
+
+  @override
+  String get open => 'Open';
+
+  @override
+  String get skip => 'Skip';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get getStarted => 'Get started';
+
+  @override
+  String get tipPrivateTitle => '100% on your device';
+
+  @override
+  String get tipPrivateBody => 'Every photo and video is processed on your phone. No cloud, no account, no tracking.';
+
+  @override
+  String get tipLooksTitle => 'Looks made from your photo';
+
+  @override
+  String get tipLooksBody => 'Preview 45 looks live on your own photo, star your favorites and save your own presets.';
+
+  @override
+  String get tipAiTitle => 'AI that stays offline';
+
+  @override
+  String get tipAiBody =>
+      'Remove backgrounds, erase objects, heal blemishes and upscale 4× — models download once and run on the device.';
+
+  @override
+  String get tipToolsTitle => 'Scan, collage, batch';
+
+  @override
+  String get tipToolsBody => 'Scan paper documents to PDF, build collages, and apply one look to many photos at once.';
+
+  @override
+  String get appearance => 'Appearance';
+
+  @override
+  String get haptics => 'Haptic feedback';
+
+  @override
+  String get exportDefaults => 'Export defaults';
+
+  @override
+  String get exportMaxSize => 'Maximum size';
+
+  @override
+  String get storage => 'Storage';
+
+  @override
+  String get clearCache => 'Clear temporary files';
+
+  @override
+  String cacheCleared(String size) {
+    return '$size freed';
+  }
+
+  @override
+  String get showTips => 'Show tips again';
+
+  @override
+  String get scanOriginal => 'Original';
+
+  @override
+  String get scanMagic => 'Magic color';
+
+  @override
+  String get scanNoShadow => 'No shadows';
+
+  @override
+  String get scanGray => 'Grayscale';
+
+  @override
+  String get scanBw => 'B&W';
+
+  @override
+  String get scanFitPage => 'Fit page to image';
+
+  @override
+  String get scanSaveImages => 'Save pages as images';
+
+  @override
+  String get scanIntro =>
+      'Photograph a paper document. Edges are detected automatically, the page is flattened and cleaned up, then exported as a PDF — all on your device.';
+
+  @override
+  String get scanCamera => 'Take a photo';
+
+  @override
+  String get scanGallery => 'Choose from gallery';
+
+  @override
+  String get scanCorners => 'Corners';
+
+  @override
+  String get scanResult => 'Result';
+
+  @override
+  String get scanAdjustHint => 'Edges were hard to find — drag the corners onto the page.';
+
+  @override
+  String get scanAutoDetect => 'Detect edges';
+
+  @override
+  String get scanFullFrame => 'Use whole photo';
+
+  @override
+  String get scanAddPage => 'Add page';
+
+  @override
+  String get cornerTopLeft => 'Top-left corner';
+
+  @override
+  String get cornerTopRight => 'Top-right corner';
+
+  @override
+  String get cornerBottomRight => 'Bottom-right corner';
+
+  @override
+  String get cornerBottomLeft => 'Bottom-left corner';
+
+  @override
+  String batchDone(int done, int total) {
+    return '$done of $total photos exported';
+  }
+
+  @override
+  String batchStart(int count) {
+    return 'Export $count';
+  }
+
+  @override
+  String get batchLook => 'Look to apply';
+
+  @override
+  String get batchUseCopied => 'Use copied edits';
+
+  @override
+  String get batchNoCopied => 'Copy edits in the photo editor first';
+
+  @override
+  String batchPhotos(int count) {
+    return '$count photos';
+  }
+
+  @override
+  String get batchAdd => 'Add photos';
+
+  @override
+  String get batchIntro => 'Pick photos, choose a look or your copied edits, and export them all at full resolution.';
+
+  @override
+  String get collageIntro => 'Pick up to 9 photos to arrange them in a layout with borders and a background.';
+
+  @override
+  String get collagePick => 'Choose photos';
+
+  @override
+  String get collageLayout => 'Layout';
+
+  @override
+  String get collageBorder => 'Borders';
+
+  @override
+  String get collageSpacing => 'Spacing';
+
+  @override
+  String get frameSaved => 'Frame saved to your gallery';
+
+  @override
+  String get saveFrame => 'Save frame as photo';
+
+  @override
+  String get stabilize => 'Stabilize';
+
+  @override
+  String get stabilizeHint => 'Smooths shaky footage at export (two passes)';
+
+  @override
+  String get lookStrength => 'Filter strength';
+
+  @override
+  String get keyframe => 'Keyframe at playhead';
+
+  @override
+  String get clearKeyframes => 'Clear keyframes';
+
+  @override
+  String keyframesHint(int count) {
+    return '$count keyframes · move the playhead and change the strength to animate the filter';
+  }
+
+  @override
+  String get exportGif => 'Animated GIF';
+
+  @override
+  String get exportGifHint => '480 px, 12 fps, first 30 s';
+
+  @override
+  String get play => 'Play';
+
+  @override
+  String get pause => 'Pause';
 }

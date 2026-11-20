@@ -2,13 +2,14 @@ import 'dart:async';
 
 import 'package:gal/gal.dart';
 import 'package:lumora/core/providers.dart';
+import 'package:lumora/features/photo_editor/data/preset_store.dart';
 import 'package:lumora/features/photo_editor/domain/edit_history.dart';
-import 'package:lumora/features/photo_editor/domain/presets.dart';
+import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
+import 'package:lumora/features/video_editor/domain/look_keyframes.dart';
 import 'package:lumora/features/video_editor/domain/timeline_ops.dart';
 import 'package:lumora/features/video_editor/domain/video_project.dart';
 import 'package:lumora/features/video_editor/engine/video_engine.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:path/path.dart' as p;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -151,7 +152,7 @@ class VideoEditorController extends _$VideoEditorController {
   void splitAtPlayhead() => update((p) => p.splitAt(state.playheadMs, newId: _uuid.v4()));
 
   void applyPreset(String? id) {
-    final preset = presetById(id);
+    final preset = ref.read(presetLibraryControllerProvider).byId(id);
     update(
       (p) => p.copyWith(
         presetId: id,
@@ -183,13 +184,93 @@ class VideoEditorController extends _$VideoEditorController {
     selectText(null);
   }
 
+  // ------------------------------------------------- look strength / keys
+
+  void setLookIntensity(double v, {bool live = false}) {
+    final ms = state.playheadMs;
+    if (state.project.lookKeyframes.isEmpty) {
+      update((p) => p.copyWith(lookIntensity: v.clamp(0.0, 1.0)), live: live);
+    } else {
+      update((p) => p.setKeyframe(ms, v), live: live);
+    }
+  }
+
+  /// Adds a keyframe at the playhead with the current strength, or removes
+  /// the one already there.
+  void toggleKeyframeAtPlayhead() {
+    final ms = state.playheadMs;
+    final p = state.project;
+    if (p.keyframeNear(ms) != null) {
+      update((p) => p.removeKeyframeNear(ms));
+    } else {
+      update((p) => p.setKeyframe(ms, p.lookIntensityAt(ms)));
+    }
+  }
+
+  void clearKeyframes() => update((p) => p.copyWith(lookKeyframes: const []));
+
+  // --------------------------------------------------------- per clip
+
+  void setStabilize(String clipId, {required bool enabled, double? strength}) => update(
+    (p) => p.copyWith(
+      clips: [
+        for (final c in p.clips)
+          c.id == clipId ? c.copyWith(stabilize: enabled, stabilizeStrength: strength ?? c.stabilizeStrength) : c,
+      ],
+    ),
+  );
+
+  /// Saves the frame under the playhead as a photo; returns its path.
+  Future<String?> extractFrame() async {
+    final hit = state.project.clipAt(state.playheadMs);
+    if (hit == null) return null;
+    final (index, local) = hit;
+    try {
+      final path = await _engine.extractFrame(state.project.clips[index], local);
+      try {
+        if (await Gal.requestPermission()) await Gal.putImage(path, album: 'Lumora');
+      } on Object catch (e) {
+        debugPrint('gallery: $e');
+      }
+      return path;
+    } on Object catch (e) {
+      state = state.copyWith(error: () => '$e');
+      return null;
+    }
+  }
+
+  Future<String?> exportGif({int width = 480, int fps = 12}) async {
+    state = state.copyWith(busy: true, progress: () => 0, error: () => null);
+    try {
+      final out = await _engine.exportGif(
+        state.project,
+        width: width,
+        fps: fps,
+        maxMs: 30000,
+        onProgress: (v) => state = state.copyWith(progress: () => v),
+      );
+      try {
+        if (await Gal.requestPermission()) await Gal.putImage(out, album: 'Lumora');
+      } on Object catch (e) {
+        debugPrint('gallery: $e');
+      }
+      return out;
+    } on Object catch (e) {
+      state = state.copyWith(error: () => '$e');
+      return null;
+    } finally {
+      state = state.copyWith(busy: false, progress: () => null);
+    }
+  }
+
   void setMusic(String? path) =>
       update((p) => path == null ? p.copyWith(music: null) : p.copyWith(music: AudioTrack(path: path)));
 
   Future<String?> export(VideoExportQuality quality) async {
     state = state.copyWith(busy: true, progress: () => 0, error: () => null);
+    PhotoRenderer? renderer;
     try {
-      final renderer = quality == VideoExportQuality.studio ? await ref.read(photoRendererProvider.future) : null;
+      renderer = quality == VideoExportQuality.studio ? await createPhotoRenderer(ref.read) : null;
       final out = await _engine.export(
         state.project,
         quality: quality,
@@ -207,6 +288,7 @@ class VideoEditorController extends _$VideoEditorController {
       state = state.copyWith(error: () => '$e');
       return null;
     } finally {
+      renderer?.dispose();
       state = state.copyWith(busy: false, progress: () => null);
     }
   }
@@ -222,7 +304,6 @@ class VideoEditorController extends _$VideoEditorController {
         .read(projectRepositoryProvider)
         .saveVideo(
           id: id,
-          name: p.basenameWithoutExtension(first.path),
           project: state.project,
           thumbnailPath: thumbs == null || thumbs.isEmpty ? null : thumbs.first,
         );

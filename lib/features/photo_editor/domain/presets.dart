@@ -1,6 +1,8 @@
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
 
-enum PresetCategory { essentials, film, cinematic, portrait, bw, creative }
+/// Built-in categories, in the order the editor shows them. [custom] holds
+/// presets saved or imported by the user.
+enum PresetCategory { essentials, portrait, food, film, vintage, cinematic, landscape, bw, creative, custom }
 
 /// A named look. Presets are plain [Adjustments] recipes (optionally
 /// pointing at a bundled 3D LUT) and are blended with the user's own edits
@@ -14,6 +16,12 @@ class Preset {
     required this.adjustments,
   });
 
+  /// A preset saved or imported by the user (single display name).
+  const Preset.custom({required this.id, required String name, required this.adjustments})
+    : nameEn = name,
+      nameAr = name,
+      category = PresetCategory.custom;
+
   final String id;
   final String nameEn;
   final String nameAr;
@@ -21,6 +29,34 @@ class Preset {
   final Adjustments adjustments;
 
   String name(String languageCode) => languageCode == 'ar' ? nameAr : nameEn;
+
+  bool get isCustom => category == PresetCategory.custom;
+
+  /// Removes this preset's contribution (applied at [intensity]) from
+  /// [current], recovering the adjustments the user had before choosing it.
+  Adjustments remove(Adjustments current, {double intensity = 1}) {
+    var a = current;
+    for (final param in AdjustmentParam.values) {
+      if (param == AdjustmentParam.lutIntensity) continue;
+      final target = param.read(adjustments);
+      if (target == param.neutral) continue;
+      a = param.write(a, param.read(a) - (target - param.neutral) * intensity);
+    }
+    return a.copyWith(
+      lutId: adjustments.lutId != null ? null : a.lutId,
+      lutIntensity: adjustments.lutId != null ? 1 : a.lutIntensity,
+      curves: adjustments.curves.isIdentity ? a.curves : const CurveSet(),
+      splitTone: adjustments.splitTone == const SplitTone() ? a.splitTone : const SplitTone(),
+      duotone: adjustments.duotone.strength > 0 ? const Duotone() : a.duotone,
+      hsl: adjustments.hsl.isNeutral ? a.hsl : _subtractHsl(a.hsl, adjustments.hsl, intensity),
+    );
+  }
+
+  static HslAdjustments _subtractHsl(HslAdjustments a, HslAdjustments p, double k) => HslAdjustments(
+    hue: _addBands(a.hue, p.hue, -k),
+    saturation: _addBands(a.saturation, p.saturation, -k),
+    luminance: _addBands(a.luminance, p.luminance, -k),
+  );
 
   /// Returns [base] with this preset applied at [intensity] (0..1).
   /// Scalar sliders are interpolated from the neutral value towards the
@@ -80,7 +116,7 @@ const _fadeCurve = [CurvePoint(0, 0.08), CurvePoint(0.25, 0.27), CurvePoint(0.75
 const _sCurve = [CurvePoint(0, 0), CurvePoint(0.25, 0.2), CurvePoint(0.75, 0.82), CurvePoint(1, 1)];
 const _strongS = [CurvePoint(0, 0), CurvePoint(0.25, 0.16), CurvePoint(0.75, 0.86), CurvePoint(1, 1)];
 
-/// 30 built-in looks.
+/// 45 built-in looks.
 const List<Preset> kBuiltInPresets = [
   // ---- Essentials
   Preset(
@@ -456,6 +492,198 @@ const List<Preset> kBuiltInPresets = [
       tint: 0.1,
       vignette: 0.2,
       splitTone: SplitTone(shadowHue: 0.75, shadowSaturation: 0.2, highlightHue: 0.95, highlightSaturation: 0.15),
+    ),
+  ),
+  // ---- Essentials (extra)
+  Preset(
+    id: 'clean_paper',
+    nameEn: 'Clean Paper',
+    nameAr: 'ورق نظيف',
+    category: PresetCategory.essentials,
+    adjustments: Adjustments(
+      exposure: 0.25,
+      contrast: 0.35,
+      whites: 0.4,
+      blacks: -0.3,
+      shadows: 0.35,
+      saturation: -0.35,
+      sharpen: 0.4,
+      structure: 0.2,
+    ),
+  ),
+  Preset(
+    id: 'hdr_natural',
+    nameEn: 'HDR Natural',
+    nameAr: 'HDR طبيعي',
+    category: PresetCategory.essentials,
+    adjustments: Adjustments(highlights: -0.55, shadows: 0.5, clarity: 0.3, structure: 0.2, vibrance: 0.15),
+  ),
+  // ---- Portrait (extra)
+  Preset(
+    id: 'portrait_matte',
+    nameEn: 'Matte Skin',
+    nameAr: 'بشرة مطفية',
+    category: PresetCategory.portrait,
+    adjustments: Adjustments(
+      fade: 0.12,
+      clarity: -0.2,
+      contrast: -0.08,
+      temperature: 0.06,
+      hsl: HslAdjustments(saturation: [0, -0.12, 0, 0, 0, 0, 0, 0], luminance: [0, 0.12, 0, 0, 0, 0, 0, 0]),
+    ),
+  ),
+  Preset(
+    id: 'bronze',
+    nameEn: 'Bronze',
+    nameAr: 'برونزي',
+    category: PresetCategory.portrait,
+    adjustments: Adjustments(
+      temperature: 0.22,
+      contrast: 0.18,
+      vibrance: -0.1,
+      splitTone: SplitTone(shadowHue: 0.08, shadowSaturation: 0.18, highlightHue: 0.1, highlightSaturation: 0.2),
+    ),
+  ),
+  // ---- Food
+  Preset(
+    id: 'food_fresh',
+    nameEn: 'Fresh',
+    nameAr: 'طازج',
+    category: PresetCategory.food,
+    adjustments: Adjustments(
+      exposure: 0.15,
+      vibrance: 0.35,
+      clarity: 0.15,
+      sharpen: 0.25,
+      temperature: 0.05,
+      hsl: HslAdjustments(saturation: [0.1, 0.15, 0.1, 0.2, 0, 0, 0, 0]),
+    ),
+  ),
+  Preset(
+    id: 'food_warm',
+    nameEn: 'Bakery',
+    nameAr: 'مخبوزات',
+    category: PresetCategory.food,
+    adjustments: Adjustments(
+      temperature: 0.25,
+      exposure: 0.1,
+      shadows: 0.2,
+      vibrance: 0.2,
+      structure: 0.15,
+      hsl: HslAdjustments(saturation: [0, 0.2, 0.15, 0, 0, -0.2, 0, 0], luminance: [0, 0.1, 0.1, 0, 0, 0, 0, 0]),
+    ),
+  ),
+  Preset(
+    id: 'food_moody',
+    nameEn: 'Dark Table',
+    nameAr: 'طاولة داكنة',
+    category: PresetCategory.food,
+    adjustments: Adjustments(
+      exposure: -0.2,
+      contrast: 0.25,
+      highlights: -0.3,
+      vignette: -0.35,
+      clarity: 0.2,
+      saturation: -0.05,
+      temperature: 0.08,
+    ),
+  ),
+  Preset(
+    id: 'food_cafe',
+    nameEn: 'Café',
+    nameAr: 'مقهى',
+    category: PresetCategory.food,
+    adjustments: Adjustments(
+      exposure: 0.2,
+      fade: 0.08,
+      temperature: 0.12,
+      contrast: -0.05,
+      shadows: 0.25,
+      splitTone: SplitTone(highlightHue: 0.1, highlightSaturation: 0.12),
+    ),
+  ),
+  // ---- Vintage
+  Preset(
+    id: 'seventies',
+    nameEn: '70s',
+    nameAr: 'السبعينات',
+    category: PresetCategory.vintage,
+    adjustments: Adjustments(
+      temperature: 0.25,
+      fade: 0.18,
+      saturation: -0.15,
+      grain: 0.25,
+      vignette: -0.25,
+      splitTone: SplitTone(shadowHue: 0.45, shadowSaturation: 0.15, highlightHue: 0.12, highlightSaturation: 0.25),
+    ),
+  ),
+  Preset(
+    id: 'polaroid_fade',
+    nameEn: 'Polaroid',
+    nameAr: 'بولارويد',
+    category: PresetCategory.vintage,
+    adjustments: Adjustments(
+      fade: 0.22,
+      contrast: -0.1,
+      tint: 0.06,
+      temperature: 0.1,
+      vignette: -0.2,
+      curves: CurveSet(blue: [CurvePoint(0, 0.1), CurvePoint(1, 0.92)]),
+    ),
+  ),
+  Preset(
+    id: 'retro_green',
+    nameEn: 'Retro Green',
+    nameAr: 'أخضر قديم',
+    category: PresetCategory.vintage,
+    adjustments: Adjustments(
+      tint: -0.15,
+      fade: 0.12,
+      saturation: -0.2,
+      grain: 0.2,
+      splitTone: SplitTone(shadowHue: 0.33, shadowSaturation: 0.2, highlightHue: 0.14, highlightSaturation: 0.15),
+    ),
+  ),
+  Preset(
+    id: 'faded_memory',
+    nameEn: 'Memory',
+    nameAr: 'ذكرى',
+    category: PresetCategory.vintage,
+    adjustments: Adjustments(fade: 0.3, saturation: -0.35, exposure: 0.1, clarity: -0.2, grain: 0.2, temperature: 0.12),
+  ),
+  // ---- Landscape
+  Preset(
+    id: 'vivid_landscape',
+    nameEn: 'Vivid Land',
+    nameAr: 'طبيعة زاهية',
+    category: PresetCategory.landscape,
+    adjustments: Adjustments(
+      vibrance: 0.4,
+      dehaze: 0.25,
+      clarity: 0.25,
+      highlights: -0.35,
+      shadows: 0.2,
+      hsl: HslAdjustments(saturation: [0, 0, 0, 0.2, 0.15, 0.2, 0, 0], luminance: [0, 0, 0, 0, 0, -0.15, 0, 0]),
+    ),
+  ),
+  Preset(
+    id: 'misty',
+    nameEn: 'Misty',
+    nameAr: 'ضبابي',
+    category: PresetCategory.landscape,
+    adjustments: Adjustments(dehaze: -0.3, fade: 0.1, temperature: -0.1, contrast: -0.15, exposure: 0.15),
+  ),
+  Preset(
+    id: 'golden_valley',
+    nameEn: 'Golden Valley',
+    nameAr: 'وادي ذهبي',
+    category: PresetCategory.landscape,
+    adjustments: Adjustments(
+      temperature: 0.3,
+      vibrance: 0.25,
+      dehaze: 0.15,
+      highlights: -0.25,
+      splitTone: SplitTone(highlightHue: 0.1, highlightSaturation: 0.25, shadowHue: 0.6, shadowSaturation: 0.1),
     ),
   ),
 ];

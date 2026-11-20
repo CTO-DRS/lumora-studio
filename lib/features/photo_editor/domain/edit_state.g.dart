@@ -26,6 +26,12 @@ _EditState _$EditStateFromJson(Map<String, dynamic> json) => _EditState(
   presetId: json['presetId'] as String?,
   presetIntensity: (json['presetIntensity'] as num?)?.toDouble() ?? 1,
   rasterPath: json['rasterPath'] as String?,
+  frame: json['frame'] == null
+      ? const FrameSettings()
+      : FrameSettings.fromJson(json['frame'] as Map<String, dynamic>),
+  watermark: json['watermark'] == null
+      ? null
+      : WatermarkSettings.fromJson(json['watermark'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$EditStateToJson(
@@ -38,4 +44,6 @@ Map<String, dynamic> _$EditStateToJson(
   'presetId': instance.presetId,
   'presetIntensity': instance.presetIntensity,
   'rasterPath': instance.rasterPath,
+  'frame': instance.frame.toJson(),
+  'watermark': instance.watermark?.toJson(),
 };

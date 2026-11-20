@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
 import 'package:lumora/features/photo_editor/engine/curves/tone_curve.dart';
+import 'package:lumora/features/video_editor/domain/look_keyframes.dart';
 import 'package:lumora/features/video_editor/domain/timeline_ops.dart';
 import 'package:lumora/features/video_editor/domain/video_project.dart';
 
@@ -21,13 +22,16 @@ enum VideoEncoder {
 
 /// Inputs that exist only at export time (rendered by Flutter).
 class ExportAssets {
-  const ExportAssets({this.textOverlayPngs = const {}, this.lutFiles = const {}});
+  const ExportAssets({this.textOverlayPngs = const {}, this.lutFiles = const {}, this.stabilizeFiles = const {}});
 
   /// Full-frame transparent PNG per [VideoText.id].
   final Map<String, String> textOverlayPngs;
 
   /// `.cube` file path per LUT id (built-ins are copied to disk first).
   final Map<String, String> lutFiles;
+
+  /// vid.stab transforms file per [VideoClip.id] (from the detect pass).
+  final Map<String, String> stabilizeFiles;
 }
 
 /// Builds FFmpeg argument lists for a [VideoProject]. Pure Dart and fully
@@ -83,7 +87,7 @@ class FfmpegCommandBuilder {
     // ---- per clip chains
     for (var i = 0; i < p.clips.length; i++) {
       final c = p.clips[i];
-      filters.add('[$i:v]${_videoChain(c, w, h, p.fps)}[v$i]');
+      filters.add('[$i:v]${_videoChain(c, w, h, p.fps, stabilizeFile: assets.stabilizeFiles[c.id])}[v$i]');
       filters.add(_audioChain(i, c, p.originalVolume));
     }
 
@@ -112,8 +116,20 @@ class FfmpegCommandBuilder {
     // ---- look (fast FFmpeg approximation of the photo pipeline)
     if (includeLook) {
       final look = lookFilters(p.look, lutPath: p.look.lutId == null ? null : assets.lutFiles[p.look.lutId]);
-      if (look.isNotEmpty) {
-        filters.add('[$vCur]$look[vlook]');
+      final animated = p.lookKeyframes.isNotEmpty;
+      final constant = p.lookIntensity.clamp(0.0, 1.0);
+      if (look.isNotEmpty && (animated || constant > 0.001)) {
+        if (!animated && constant >= 0.999) {
+          filters.add('[$vCur]$look[vlook]');
+        } else {
+          // Blend original (A) and graded (B) frames by the keyframed
+          // strength: out = A + (B - A) * k(T).
+          final k = p.lookIntensityExpression();
+          filters
+            ..add('[$vCur]split[lk0][lk1]')
+            ..add('[lk1]$look[lk2]')
+            ..add("[lk0][lk2]blend=all_expr='A+(B-A)*($k)'[vlook]");
+        }
         vCur = 'vlook';
       }
     }
@@ -170,10 +186,11 @@ class FfmpegCommandBuilder {
     VideoEncoder.videotoolbox => ['-c:v', 'h264_videotoolbox', '-b:v', '12M', '-pix_fmt', 'yuv420p'],
   };
 
-  static String _videoChain(VideoClip c, int w, int h, int fps) {
+  static String _videoChain(VideoClip c, int w, int h, int fps, {String? stabilizeFile}) {
     final parts = <String>[
       'trim=start=${_s(c.inMs)}:end=${_s(c.outMs)}',
       'setpts=PTS-STARTPTS',
+      if (c.stabilize && stabilizeFile != null) ...stabilizeTransform(stabilizeFile, c.stabilizeStrength),
       if (c.reversed) 'reverse',
       if (c.speed != 1) 'setpts=PTS/${_f(c.speed)}',
       if (c.isCropped)
@@ -187,6 +204,62 @@ class FfmpegCommandBuilder {
     ];
     return parts.join(',');
   }
+
+  /// Second vid.stab pass (applied right after trimming).
+  static List<String> stabilizeTransform(String trfPath, double strength) => [
+    "vidstabtransform=input='${escapeFilterPath(trfPath)}':smoothing=${stabilizeSmoothing(strength)}:optzoom=1:interpol=bilinear",
+    'unsharp=5:5:0.6:3:3:0.3',
+  ];
+
+  /// First vid.stab pass: analyses the trimmed clip and writes [trfPath].
+  static List<String> stabilizeDetectArgs(VideoClip c, String trfPath) => [
+    '-y',
+    '-hide_banner',
+    '-ss',
+    _s(c.inMs),
+    '-t',
+    _s(c.outMs - c.inMs),
+    '-i',
+    c.path,
+    '-vf',
+    "vidstabdetect=shakiness=6:accuracy=12:result='${escapeFilterPath(trfPath)}'",
+    '-f',
+    'null',
+    '-',
+  ];
+
+  /// High-quality GIF from [input] with a generated palette.
+  static List<String> gifArgs(String input, String output, {int width = 480, int fps = 12, int? maxMs}) => [
+    '-y',
+    '-hide_banner',
+    if (maxMs != null) ...['-t', _s(maxMs)],
+    '-i',
+    input,
+    '-filter_complex',
+    [
+      'fps=$fps,scale=$width:-2:flags=lanczos,split[g0][g1]',
+      '[g0]palettegen=max_colors=192:stats_mode=diff[gp]',
+      '[g1][gp]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle',
+    ].join(';'),
+    '-loop',
+    '0',
+    output,
+  ];
+
+  /// Grabs one frame at [sourceMs] of [path] as a high-quality JPEG.
+  static List<String> frameArgs(String path, int sourceMs, String output) => [
+    '-y',
+    '-hide_banner',
+    '-ss',
+    _s(sourceMs),
+    '-i',
+    path,
+    '-frames:v',
+    '1',
+    '-q:v',
+    '1',
+    output,
+  ];
 
   static List<String> _rotation(int turns) => switch (turns % 4) {
     1 => ['transpose=1'],

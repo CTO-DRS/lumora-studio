@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
+import 'package:lumora/features/photo_editor/domain/finishing.dart';
 import 'package:lumora/features/photo_editor/domain/geometry.dart';
 import 'package:lumora/features/photo_editor/domain/layers.dart';
 
@@ -24,6 +25,12 @@ abstract class EditState with _$EditState {
     /// upscaling) stored as a new file. Undo simply restores the previous
     /// path, so the AI step itself stays non-destructive.
     String? rasterPath,
+
+    /// Border / frame added around the finished photo.
+    @Default(FrameSettings()) FrameSettings frame,
+
+    /// Text or logo watermark painted last.
+    WatermarkSettings? watermark,
   }) = _EditState;
 
   const EditState._();

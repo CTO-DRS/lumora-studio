@@ -2,14 +2,23 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumora/core/router/app_router.dart';
+import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
+import 'package:lumora/features/photo_editor/data/preset_store.dart';
+import 'package:lumora/features/photo_editor/domain/edit_clipboard.dart';
 import 'package:lumora/features/photo_editor/engine/image_exporter.dart';
+import 'package:lumora/features/photo_editor/engine/pixel_ops.dart';
 import 'package:lumora/features/photo_editor/presentation/photo_editor_controller.dart';
 import 'package:lumora/features/photo_editor/presentation/widgets/editor_canvas.dart';
+import 'package:lumora/features/photo_editor/presentation/widgets/finish_panels.dart';
 import 'package:lumora/features/photo_editor/presentation/widgets/tool_panels.dart';
 import 'package:lumora/features/settings/data/settings_controller.dart';
+import 'package:lumora/l10n/app_localizations.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
+
+/// Screens at least this wide use the side-panel (tablet) layout.
+const kTabletBreakpoint = 840.0;
 
 class PhotoEditorPage extends ConsumerStatefulWidget {
   const PhotoEditorPage({required this.args, super.key});
@@ -27,16 +36,44 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
     final ctrl = ref.read(photoEditorControllerProvider.notifier);
     final id = widget.args.projectId;
     final path = widget.args.sourcePath;
-    Future.microtask(() {
-      if (id != null) return ctrl.openProject(id);
-      if (path != null) return ctrl.open(path);
+    Future.microtask(() async {
+      if (id != null) {
+        await ctrl.openProject(id);
+      } else if (path != null) {
+        await ctrl.open(path);
+      }
+      await _runInitialAction(ctrl);
     });
+  }
+
+  Future<void> _runInitialAction(PhotoEditorController ctrl) async {
+    switch (widget.args.initialAction) {
+      case null:
+        return;
+      case QuickAction.removeBackground:
+        ctrl.setTool(EditorTool.ai);
+        await ctrl.removeBackground();
+      case QuickAction.autoEnhance:
+        ctrl.setTool(EditorTool.adjust);
+        await ctrl.autoEnhance();
+      case QuickAction.upscale:
+        ctrl.setTool(EditorTool.ai);
+        await ctrl.upscale();
+      case QuickAction.eraser:
+        ctrl
+          ..setTool(EditorTool.ai)
+          ..setEraserMode(value: true);
+      case QuickAction.heal:
+        ctrl.setTool(EditorTool.heal);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(photoEditorControllerProvider);
     final ctrl = ref.read(photoEditorControllerProvider.notifier);
+    // Keeps the live preset thumbnails cached while the editor is open.
+    ref.watch(presetThumbnailCacheProvider);
     final l = context.l10n;
 
     ref.listen(photoEditorControllerProvider.select((s) => s.error), (_, error) {
@@ -44,6 +81,52 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.aiFailed(error))));
       }
     });
+
+    final canvas = Stack(
+      children: [
+        const Positioned.fill(child: EditorCanvas()),
+        if (s.showHistogram && s.histogram != null)
+          PositionedDirectional(
+            top: 8,
+            start: 8,
+            child: IgnorePointer(child: HistogramView(histogram: s.histogram!)),
+          ),
+        if (s.busy)
+          Positioned.fill(
+            child: ColoredBox(
+              color: Colors.black45,
+              child: Center(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(value: s.progress),
+                        const SizedBox(height: 12),
+                        Text(l.aiWorking),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    final panel = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      switchInCurve: Curves.easeOutCubic,
+      transitionBuilder: (child, anim) => FadeTransition(
+        opacity: anim,
+        child: SlideTransition(
+          position: Tween(begin: const Offset(0, 0.04), end: Offset.zero).animate(anim),
+          child: child,
+        ),
+      ),
+      child: KeyedSubtree(key: ValueKey(s.tool), child: _panel(s.tool)),
+    );
 
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
@@ -56,23 +139,26 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
             IconButton(tooltip: l.redo, onPressed: s.history.canRedo ? ctrl.redo : null, icon: const Icon(Icons.redo)),
             Tooltip(
               message: l.compare,
-              child: GestureDetector(
-                onTapDown: (_) => ctrl.setComparing(value: true),
-                onTapUp: (_) => ctrl.setComparing(value: false),
-                onTapCancel: () => ctrl.setComparing(value: false),
-                child: const Padding(padding: EdgeInsets.all(12), child: Icon(Icons.compare)),
+              child: Semantics(
+                button: true,
+                label: l.compare,
+                child: GestureDetector(
+                  onTapDown: (_) {
+                    Haptics.light();
+                    ctrl.setComparing(value: true);
+                  },
+                  onTapUp: (_) => ctrl.setComparing(value: false),
+                  onTapCancel: () => ctrl.setComparing(value: false),
+                  child: const Padding(padding: EdgeInsets.all(12), child: Icon(Icons.compare)),
+                ),
               ),
             ),
             IconButton(
-              tooltip: l.save,
-              icon: const Icon(Icons.save_outlined),
-              onPressed: () async {
-                await ctrl.save();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.saved)));
-                }
-              },
+              tooltip: l.history,
+              icon: const Icon(Icons.history),
+              onPressed: () => showHistorySheet(context, ref),
             ),
+            _MoreMenu(state: s),
             Padding(
               padding: const EdgeInsetsDirectional.only(end: 8),
               child: FilledButton(
@@ -82,42 +168,45 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
             ),
           ],
         ),
-        body: Column(
-          children: [
-            Expanded(
-              child: Stack(
+        body: LayoutBuilder(
+          builder: (context, c) {
+            if (c.maxWidth >= kTabletBreakpoint) {
+              return Row(
                 children: [
-                  const Positioned.fill(child: EditorCanvas()),
-                  if (s.busy)
-                    Positioned.fill(
-                      child: ColoredBox(
-                        color: Colors.black45,
-                        child: Center(
-                          child: Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  CircularProgressIndicator(value: s.progress),
-                                  const SizedBox(height: 12),
-                                  Text(l.aiWorking),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                  Expanded(child: canvas),
+                  const VerticalDivider(width: 1),
+                  SizedBox(
+                    width: 380,
+                    child: Column(
+                      children: [
+                        Expanded(child: panel),
+                        const Divider(height: 1),
+                        _ToolBar(selected: s.tool, onSelect: _select, wrap: true),
+                      ],
                     ),
+                  ),
                 ],
-              ),
-            ),
-            SizedBox(height: 230, child: _panel(s.tool)),
-            _ToolBar(selected: s.tool, onSelect: ctrl.setTool),
-          ],
+              );
+            }
+            final panelHeight = (c.maxHeight * 0.32).clamp(200.0, 280.0);
+            return Column(
+              children: [
+                Expanded(child: canvas),
+                SizedBox(height: panelHeight, child: panel),
+                _ToolBar(selected: s.tool, onSelect: _select),
+              ],
+            );
+          },
         ),
       ),
     );
+  }
+
+  void _select(EditorTool tool) {
+    Haptics.selection();
+    // Unapplied eraser/heal strokes belong to the tool being left.
+    clearPendingEraserStrokes();
+    ref.read(photoEditorControllerProvider.notifier).setTool(tool);
   }
 
   Widget _panel(EditorTool tool) => switch (tool) {
@@ -131,63 +220,40 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
     EditorTool.stickers => const StickersPanel(),
     EditorTool.draw => const DrawPanel(),
     EditorTool.masks => const MasksPanel(),
+    EditorTool.heal => const HealPanel(),
     EditorTool.ai => const AiPanel(),
+    EditorTool.frame => const FramePanel(),
+    EditorTool.watermark => const WatermarkPanel(),
   };
 
   Future<void> _showExport(BuildContext context) async {
     final settings = ref.read(settingsControllerProvider);
-    var format = settings.exportFormat;
-    var quality = settings.exportQuality.toDouble();
-    var keepExif = settings.keepExif;
     final l = context.l10n;
-    final go = await showModalBottomSheet<bool>(
+    final options = await showModalBottomSheet<(ExportOptions, bool)>(
       context: context,
-      builder: (c) => StatefulBuilder(
-        builder: (c, setSheet) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(l.exportFormat, style: Theme.of(c).textTheme.titleSmall),
-              const SizedBox(height: 8),
-              SegmentedButton<ExportFormat>(
-                segments: [
-                  for (final f in ExportFormat.values) ButtonSegment(value: f, label: Text(f.extension.toUpperCase())),
-                ],
-                selected: {format},
-                onSelectionChanged: (v) => setSheet(() => format = v.first),
-              ),
-              if (format != ExportFormat.png) ...[
-                const SizedBox(height: 12),
-                Text('${l.quality}: ${quality.round()}'),
-                Slider(value: quality, min: 50, max: 100, divisions: 50, onChanged: (v) => setSheet(() => quality = v)),
-              ],
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(l.keepExif),
-                value: keepExif,
-                onChanged: format == ExportFormat.jpeg ? (v) => setSheet(() => keepExif = v) : null,
-              ),
-              const SizedBox(height: 8),
-              FilledButton.icon(
-                onPressed: () => Navigator.pop(c, true),
-                icon: const Icon(Icons.ios_share),
-                label: Text('${l.export} · ${l.fullResolution}'),
-              ),
-            ],
-          ),
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (c) => ExportSheet(
+        initial: ExportOptions(
+          format: settings.exportFormat,
+          quality: settings.exportQuality,
+          keepExif: settings.keepExif,
+          maxDimension: settings.exportMaxDimension,
         ),
       ),
     );
-    if (go != true) return;
+    if (options == null) return;
+    final (opts, shareAfter) = options;
     await ref
         .read(settingsControllerProvider.notifier)
-        .setExport(format: format, quality: quality.round(), keepExif: keepExif);
-    final file = await ref
-        .read(photoEditorControllerProvider.notifier)
-        .export(ExportOptions(format: format, quality: quality.round(), keepExif: keepExif));
+        .setExport(format: opts.format, quality: opts.quality, keepExif: opts.keepExif);
+    final file = await ref.read(photoEditorControllerProvider.notifier).export(opts);
     if (file == null || !context.mounted) return;
+    Haptics.medium();
+    if (shareAfter) {
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(l.exported),
@@ -200,29 +266,344 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
   }
 }
 
-class _ToolBar extends StatelessWidget {
-  const _ToolBar({required this.selected, required this.onSelect});
+String socialLabel(AppLocalizations l, SocialSize s) => switch (s) {
+  SocialSize.original => l.sizeOriginal,
+  SocialSize.instagramPortrait => 'Instagram 4:5',
+  SocialSize.instagramSquare => 'Instagram 1:1',
+  SocialSize.story => '${l.sizeStory} 9:16',
+  SocialSize.x => 'X 16:9',
+  SocialSize.whatsapp => 'WhatsApp',
+  SocialSize.facebook => 'Facebook',
+};
 
-  final EditorTool selected;
-  final ValueChanged<EditorTool> onSelect;
+/// Export options sheet. Pops `(options, shareInsteadOfSaving)`.
+class ExportSheet extends StatefulWidget {
+  const ExportSheet({required this.initial, super.key});
+  final ExportOptions initial;
+
+  @override
+  State<ExportSheet> createState() => _ExportSheetState();
+}
+
+class _ExportSheetState extends State<ExportSheet> {
+  late ExportFormat _format = widget.initial.format;
+  late double _quality = widget.initial.quality.toDouble();
+  late bool _keepExif = widget.initial.keepExif;
+  SocialSize _social = SocialSize.original;
+  SocialFit _fit = SocialFit.pad;
+  bool _padBlur = true;
+
+  ExportOptions _options({required bool gallery}) => ExportOptions(
+    format: _format,
+    quality: _quality.round(),
+    keepExif: _keepExif,
+    maxDimension: _social == SocialSize.original ? widget.initial.maxDimension : null,
+    social: _social,
+    socialFit: _fit,
+    padBlur: _padBlur,
+    saveToGallery: gallery,
+  );
 
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    final items = <(EditorTool, IconData, String)>[
-      (EditorTool.presets, Icons.auto_awesome, l.toolPresets),
-      (EditorTool.adjust, Icons.tune, l.toolAdjust),
-      (EditorTool.hsl, Icons.palette_outlined, l.toolHsl),
-      (EditorTool.curves, Icons.show_chart, l.toolCurves),
-      (EditorTool.lut, Icons.filter_vintage_outlined, l.toolLut),
-      (EditorTool.crop, Icons.crop_rotate, l.toolCrop),
-      (EditorTool.masks, Icons.blur_circular, l.toolMasks),
-      (EditorTool.ai, Icons.psychology_alt_outlined, l.toolAi),
-      (EditorTool.text, Icons.text_fields, l.toolText),
-      (EditorTool.stickers, Icons.emoji_emotions_outlined, l.toolStickers),
-      (EditorTool.draw, Icons.draw_outlined, l.toolDraw),
-    ];
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l.exportSize, style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final size in SocialSize.values)
+                  ChoiceChip(
+                    label: Text(socialLabel(l, size)),
+                    selected: _social == size,
+                    onSelected: (_) => setState(() {
+                      _social = size;
+                      if (size != SocialSize.original) {
+                        _quality = size.quality.toDouble();
+                        if (_format == ExportFormat.png) _format = ExportFormat.jpeg;
+                      }
+                    }),
+                  ),
+              ],
+            ),
+            if (_social.fixedAspect) ...[
+              const SizedBox(height: 8),
+              SegmentedButton<SocialFit>(
+                segments: [
+                  ButtonSegment(value: SocialFit.pad, icon: const Icon(Icons.fit_screen), label: Text(l.fitPad)),
+                  ButtonSegment(value: SocialFit.crop, icon: const Icon(Icons.crop), label: Text(l.fitCrop)),
+                ],
+                selected: {_fit},
+                onSelectionChanged: (v) => setState(() => _fit = v.first),
+              ),
+              if (_fit == SocialFit.pad)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l.frameBlur),
+                  value: _padBlur,
+                  onChanged: (v) => setState(() => _padBlur = v),
+                ),
+            ],
+            const SizedBox(height: 12),
+            Text(l.exportFormat, style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            SegmentedButton<ExportFormat>(
+              segments: [
+                for (final f in ExportFormat.values) ButtonSegment(value: f, label: Text(f.extension.toUpperCase())),
+              ],
+              selected: {_format},
+              onSelectionChanged: (v) => setState(() => _format = v.first),
+            ),
+            if (_format != ExportFormat.png) ...[
+              const SizedBox(height: 12),
+              Text('${l.quality}: ${_quality.round()}'),
+              Slider(
+                value: _quality,
+                min: 50,
+                max: 100,
+                divisions: 50,
+                label: '${_quality.round()}',
+                onChanged: (v) => setState(() => _quality = v),
+              ),
+            ],
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l.keepExif),
+              value: _keepExif,
+              onChanged: _format == ExportFormat.jpeg ? (v) => setState(() => _keepExif = v) : null,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.pop(context, (_options(gallery: false), true)),
+                    icon: const Icon(Icons.share_outlined),
+                    label: Text(l.share),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: FilledButton.icon(
+                    onPressed: () => Navigator.pop(context, (_options(gallery: true), false)),
+                    icon: const Icon(Icons.download_outlined),
+                    label: Text(l.saveToGallery),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MoreMenu extends ConsumerWidget {
+  const _MoreMenu({required this.state});
+  final PhotoEditorState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l10n;
+    final ctrl = ref.read(photoEditorControllerProvider.notifier);
+    final canPaste = ref.watch(editClipboardProvider) != null;
+    return PopupMenuButton<String>(
+      tooltip: l.more,
+      onSelected: (v) async {
+        switch (v) {
+          case 'copy':
+            await ctrl.copyEdits();
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.editsCopied)));
+            }
+          case 'paste':
+            final opts = await showPasteOptions(context);
+            if (opts != null) {
+              ctrl.pasteEdits(options: opts);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.editsPasted)));
+              }
+            }
+          case 'preset':
+            if (context.mounted) await savePresetDialog(context, ref);
+          case 'histogram':
+            ctrl.toggleHistogram();
+          case 'clipping':
+            ctrl.toggleClipping();
+          case 'save':
+            await ctrl.save();
+            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.saved)));
+          case 'reset':
+            ctrl.resetAll();
+        }
+      },
+      itemBuilder: (c) => [
+        PopupMenuItem(
+          value: 'copy',
+          child: ListTile(leading: const Icon(Icons.copy), title: Text(l.copyEdits)),
+        ),
+        PopupMenuItem(
+          value: 'paste',
+          enabled: canPaste,
+          child: ListTile(leading: const Icon(Icons.paste), title: Text(l.pasteEdits)),
+        ),
+        PopupMenuItem(
+          value: 'preset',
+          child: ListTile(leading: const Icon(Icons.bookmark_add_outlined), title: Text(l.savePreset)),
+        ),
+        const PopupMenuDivider(),
+        CheckedPopupMenuItem(value: 'histogram', checked: state.showHistogram, child: Text(l.histogram)),
+        CheckedPopupMenuItem(value: 'clipping', checked: state.showClipping, child: Text(l.clippingWarnings)),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'save',
+          child: ListTile(leading: const Icon(Icons.save_outlined), title: Text(l.save)),
+        ),
+        PopupMenuItem(
+          value: 'reset',
+          child: ListTile(leading: const Icon(Icons.restart_alt), title: Text(l.resetAll)),
+        ),
+      ],
+    );
+  }
+}
+
+/// Lets the user choose which parts of the copied edit to paste.
+Future<PasteOptions?> showPasteOptions(BuildContext context) {
+  var opts = const PasteOptions();
+  final l = context.l10n;
+  return showDialog<PasteOptions>(
+    context: context,
+    builder: (c) => StatefulBuilder(
+      builder: (c, setState) => AlertDialog(
+        title: Text(l.pasteWhat),
+        contentPadding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CheckboxListTile(
+              title: Text(l.pasteAdjustments),
+              value: opts.adjustments,
+              onChanged: (v) => setState(() => opts = opts.copyWith(adjustments: v)),
+            ),
+            CheckboxListTile(
+              title: Text(l.pasteGeometry),
+              value: opts.geometry,
+              onChanged: (v) => setState(() => opts = opts.copyWith(geometry: v)),
+            ),
+            CheckboxListTile(
+              title: Text(l.pasteMasks),
+              value: opts.masks,
+              onChanged: (v) => setState(() => opts = opts.copyWith(masks: v)),
+            ),
+            CheckboxListTile(
+              title: Text(l.pasteOverlays),
+              value: opts.overlays,
+              onChanged: (v) => setState(() => opts = opts.copyWith(overlays: v)),
+            ),
+            CheckboxListTile(
+              title: Text(l.pasteFinishing),
+              value: opts.finishing,
+              onChanged: (v) => setState(() => opts = opts.copyWith(finishing: v)),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: Text(l.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(c, opts), child: Text(l.pasteEdits)),
+        ],
+      ),
+    ),
+  );
+}
+
+class _ToolBar extends StatelessWidget {
+  const _ToolBar({required this.selected, required this.onSelect, this.wrap = false});
+
+  final EditorTool selected;
+  final ValueChanged<EditorTool> onSelect;
+
+  /// Grid layout for the tablet side panel.
+  final bool wrap;
+
+  static List<(EditorTool, IconData, String)> items(AppLocalizations l) => [
+    (EditorTool.presets, Icons.auto_awesome, l.toolPresets),
+    (EditorTool.adjust, Icons.tune, l.toolAdjust),
+    (EditorTool.hsl, Icons.palette_outlined, l.toolHsl),
+    (EditorTool.curves, Icons.show_chart, l.toolCurves),
+    (EditorTool.lut, Icons.filter_vintage_outlined, l.toolLut),
+    (EditorTool.crop, Icons.crop_rotate, l.toolCrop),
+    (EditorTool.masks, Icons.blur_circular, l.toolMasks),
+    (EditorTool.heal, Icons.healing, l.toolHeal),
+    (EditorTool.ai, Icons.psychology_alt_outlined, l.toolAi),
+    (EditorTool.text, Icons.text_fields, l.toolText),
+    (EditorTool.stickers, Icons.emoji_emotions_outlined, l.toolStickers),
+    (EditorTool.draw, Icons.draw_outlined, l.toolDraw),
+    (EditorTool.frame, Icons.crop_din, l.toolFrame),
+    (EditorTool.watermark, Icons.branding_watermark_outlined, l.toolWatermark),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
     final scheme = Theme.of(context).colorScheme;
+    Widget item(EditorTool tool, IconData icon, String label) {
+      final active = tool == selected;
+      return Semantics(
+        selected: active,
+        button: true,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => onSelect(tool),
+          child: SizedBox(
+            width: 68,
+            height: 60,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedScale(
+                  scale: active ? 1.15 : 1,
+                  duration: const Duration(milliseconds: 160),
+                  child: Icon(icon, color: active ? scheme.primary : scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: active ? scheme.primary : scheme.onSurfaceVariant,
+                    fontWeight: active ? FontWeight.w700 : null,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final list = items(l);
+    if (wrap) {
+      return SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Wrap(alignment: WrapAlignment.center, children: [for (final (t, i, label) in list) item(t, i, label)]),
+        ),
+      );
+    }
     return SafeArea(
       top: false,
       child: SizedBox(
@@ -230,30 +611,7 @@ class _ToolBar extends StatelessWidget {
         child: ListView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          children: [
-            for (final (tool, icon, label) in items)
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => onSelect(tool),
-                child: SizedBox(
-                  width: 68,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(icon, color: tool == selected ? scheme.primary : scheme.onSurfaceVariant),
-                      const SizedBox(height: 2),
-                      Text(
-                        label,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: tool == selected ? scheme.primary : scheme.onSurfaceVariant,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
+          children: [for (final (t, i, label) in list) item(t, i, label)],
         ),
       ),
     );
