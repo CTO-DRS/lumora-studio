@@ -1,0 +1,21 @@
+name: unpack-source
+on:
+  push:
+    paths: ['lumora-src.zip']
+permissions:
+  contents: write
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip source and commit
+        run: |
+          unzip -o lumora-src.zip -d .
+          git rm -q --cached lumora-src.zip
+          rm lumora-src.zip
+          git config user.name "CTO-DRS"
+          git config user.email "CTO-DRS@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: Lumora Studio — on-device AI photo & video editor (Flutter)"
+          git push
