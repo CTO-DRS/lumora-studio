@@ -1,0 +1,32 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+formatter:
+  page_width: 120
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "lib/l10n/app_localizations*.dart"
+    - "build/**"
+    - android/**
+    - ios/**
+  errors:
+    invalid_annotation_target: ignore
+
+linter:
+  rules:
+    public_member_api_docs: false
+    lines_longer_than_80_chars: false
+    flutter_style_todos: false
+    one_member_abstracts: false
+    # Style preferences relaxed for readability of render/FFmpeg code.
+    cascade_invocations: false
+    prefer_if_elements_to_conditional_expressions: false
+    prefer_constructors_over_static_methods: false
+    use_named_constants: false
+    comment_references: false
+    no_default_cases: false
+    # Fire-and-forget futures are intentional in UI callbacks / notifiers.
+    discarded_futures: false
+    async_return_with_no_await: false

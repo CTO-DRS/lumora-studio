@@ -1,0 +1,62 @@
+import 'package:lumora/features/ai/data/model_manager.dart';
+import 'package:lumora/features/ai/data/onnx_engine.dart';
+import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
+import 'package:lumora/features/photo_editor/engine/lut/lut_repository.dart';
+import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
+import 'package:lumora/features/photo_editor/engine/shader_library.dart';
+import 'package:lumora/features/projects/data/app_database.dart';
+import 'package:lumora/features/projects/data/project_repository.dart';
+import 'package:lumora/features/video_editor/engine/video_engine.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'providers.g.dart';
+
+@Riverpod(keepAlive: true)
+AppDatabase appDatabase(Ref ref) {
+  final db = AppDatabase();
+  ref.onDispose(db.close);
+  return db;
+}
+
+@Riverpod(keepAlive: true)
+ProjectRepository projectRepository(Ref ref) => ProjectRepository(ref.watch(appDatabaseProvider));
+
+@Riverpod(keepAlive: true)
+Stream<List<ProjectSummary>> recentProjects(Ref ref) => ref.watch(projectRepositoryProvider).watchRecent();
+
+@Riverpod(keepAlive: true)
+LutRepository lutRepository(Ref ref) => LutRepository();
+
+@Riverpod(keepAlive: true)
+Future<ShaderLibrary> shaderLibrary(Ref ref) => ShaderLibrary.load();
+
+/// A fresh renderer per consumer (each owns its GPU textures).
+@riverpod
+Future<PhotoRenderer> photoRenderer(Ref ref) async {
+  final shaders = await ref.watch(shaderLibraryProvider.future);
+  final renderer = PhotoRenderer(shaders, ref.watch(lutRepositoryProvider));
+  ref.onDispose(renderer.dispose);
+  return renderer;
+}
+
+@Riverpod(keepAlive: true)
+ModelManager modelManager(Ref ref) => ModelManager();
+
+@Riverpod(keepAlive: true)
+InferenceEngine inferenceEngine(Ref ref) {
+  final engine = OnnxInferenceEngine(ref.watch(modelManagerProvider));
+  ref.onDispose(engine.release);
+  return engine;
+}
+
+@Riverpod(keepAlive: true)
+SegmentationPipeline segmentationPipeline(Ref ref) => SegmentationPipeline(ref.watch(inferenceEngineProvider));
+
+@Riverpod(keepAlive: true)
+UpscalePipeline upscalePipeline(Ref ref) => UpscalePipeline(ref.watch(inferenceEngineProvider));
+
+@Riverpod(keepAlive: true)
+InpaintPipeline inpaintPipeline(Ref ref) => InpaintPipeline(ref.watch(inferenceEngineProvider));
+
+@Riverpod(keepAlive: true)
+VideoEngine videoEngine(Ref ref) => VideoEngine();
