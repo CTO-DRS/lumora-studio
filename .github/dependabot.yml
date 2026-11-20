@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: pub
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      riverpod:
+        patterns: ["*riverpod*"]
+      codegen:
+        patterns: ["freezed*", "json_*", "build_runner", "drift*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: monthly
