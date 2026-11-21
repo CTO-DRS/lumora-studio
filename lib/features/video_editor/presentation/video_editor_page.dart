@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lumora/core/router/app_router.dart';
+import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/core/widgets/labeled_slider.dart';
@@ -68,98 +69,116 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) unawaited(ctrl.save());
       },
-      child: Scaffold(
-        appBar: AppBar(
-          actions: [
-            IconButton(onPressed: s.history.canUndo ? ctrl.undo : null, icon: const Icon(Icons.undo), tooltip: l.undo),
-            IconButton(onPressed: s.history.canRedo ? ctrl.redo : null, icon: const Icon(Icons.redo), tooltip: l.redo),
-            Padding(
-              padding: const EdgeInsetsDirectional.only(end: 8),
-              child: FilledButton(
-                onPressed: s.busy || s.project.clips.isEmpty ? null : () => _export(context),
-                child: Text(l.export),
+      child: LumoraBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: GlassAppBar(
+            actions: [
+              IconButton(
+                onPressed: s.history.canUndo ? ctrl.undo : null,
+                icon: const Icon(Icons.undo),
+                tooltip: l.undo,
               ),
-            ),
-          ],
-        ),
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 840;
-            final main = <Widget>[
-              Expanded(
-                child: Stack(
-                  children: [
-                    Positioned.fill(child: VideoPreview(key: _preview)),
-                    if (s.busy && s.progress != null)
-                      Positioned.fill(
-                        child: ColoredBox(
-                          color: Colors.black54,
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                CircularProgressIndicator(value: s.progress),
-                                const SizedBox(height: 12),
-                                Text('${l.exporting} ${((s.progress ?? 0) * 100).round()}%'),
-                                TextButton(onPressed: ctrl.cancelExport, child: Text(l.cancel)),
-                              ],
+              IconButton(
+                onPressed: s.history.canRedo ? ctrl.redo : null,
+                icon: const Icon(Icons.redo),
+                tooltip: l.redo,
+              ),
+              const SizedBox(width: 6),
+              GlowButton.small(
+                onPressed: s.busy || s.project.clips.isEmpty ? null : () => _export(context),
+                label: l.export,
+              ),
+            ],
+          ),
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              final wide = constraints.maxWidth >= 840;
+              final main = <Widget>[
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: VideoPreview(key: _preview)),
+                      if (s.busy && s.progress != null)
+                        Positioned.fill(
+                          child: ColoredBox(
+                            color: Colors.black54,
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircularProgressIndicator(value: s.progress),
+                                  const SizedBox(height: 12),
+                                  Text('${l.exporting} ${((s.progress ?? 0) * 100).round()}%'),
+                                  TextButton(onPressed: ctrl.cancelExport, child: Text(l.cancel)),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: _preview.currentState?.playing ?? false ? l.pause : l.play,
+                      icon: Icon(_preview.currentState?.playing ?? false ? Icons.pause : Icons.play_arrow),
+                      onPressed: () async {
+                        await _preview.currentState?.togglePlay();
+                        setState(() {});
+                      },
+                    ),
+                    Text('${_fmt(s.playheadMs)} / ${_fmt(s.project.totalDurationMs)}'),
+                    const Spacer(),
+                    IconButton(tooltip: l.split, icon: const Icon(Icons.content_cut), onPressed: ctrl.splitAtPlayhead),
+                    IconButton(
+                      tooltip: l.addClip,
+                      icon: const Icon(Icons.add_box_outlined),
+                      onPressed: () async {
+                        final files = await ImagePicker().pickMultiVideo();
+                        if (files.isNotEmpty) await ctrl.addClips([for (final f in files) f.path]);
+                      },
+                    ),
                   ],
                 ),
-              ),
-              Row(
+                SizedBox(height: 130, child: TimelineView(onScrub: (ms) => _preview.currentState?.scrubTo(ms))),
+              ];
+              if (wide) {
+                return Row(
+                  children: [
+                    Expanded(child: Column(children: main)),
+                    const VerticalDivider(width: 1),
+                    SizedBox(
+                      width: 360,
+                      child: Column(
+                        children: [
+                          Expanded(child: _panel(context, s)),
+                          _toolBar(context),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return Column(
                 children: [
-                  IconButton(
-                    tooltip: _preview.currentState?.playing ?? false ? l.pause : l.play,
-                    icon: Icon(_preview.currentState?.playing ?? false ? Icons.pause : Icons.play_arrow),
-                    onPressed: () async {
-                      await _preview.currentState?.togglePlay();
-                      setState(() {});
-                    },
-                  ),
-                  Text('${_fmt(s.playheadMs)} / ${_fmt(s.project.totalDurationMs)}'),
-                  const Spacer(),
-                  IconButton(tooltip: l.split, icon: const Icon(Icons.content_cut), onPressed: ctrl.splitAtPlayhead),
-                  IconButton(
-                    tooltip: l.addClip,
-                    icon: const Icon(Icons.add_box_outlined),
-                    onPressed: () async {
-                      final files = await ImagePicker().pickMultiVideo();
-                      if (files.isNotEmpty) await ctrl.addClips([for (final f in files) f.path]);
-                    },
-                  ),
-                ],
-              ),
-              SizedBox(height: 130, child: TimelineView(onScrub: (ms) => _preview.currentState?.scrubTo(ms))),
-            ];
-            if (wide) {
-              return Row(
-                children: [
-                  Expanded(child: Column(children: main)),
-                  const VerticalDivider(width: 1),
-                  SizedBox(
-                    width: 360,
-                    child: Column(
-                      children: [
-                        Expanded(child: _panel(context, s)),
-                        _toolBar(context),
-                      ],
+                  ...main,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: GlassContainer(
+                      radius: 24,
+                      height: 190,
+                      fill: context.lumora.glassFillStrong,
+                      padding: const EdgeInsets.only(top: 6),
+                      child: _panel(context, s),
                     ),
                   ),
+                  _toolBar(context),
                 ],
               );
-            }
-            return Column(
-              children: [
-                ...main,
-                SizedBox(height: 190, child: _panel(context, s)),
-                _toolBar(context),
-              ],
-            );
-          },
+            },
+          ),
         ),
       ),
     );
@@ -174,26 +193,33 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
       (_VideoTool.audio, Icons.music_note_outlined, l.music),
       (_VideoTool.format, Icons.aspect_ratio, l.aspectRatio),
     ];
-    final scheme = Theme.of(context).colorScheme;
     return SafeArea(
       top: false,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          for (final (tool, icon, label) in items)
-            InkWell(
-              onTap: () => setState(() => _tool = tool),
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  children: [
-                    Icon(icon, color: tool == _tool ? scheme.primary : null),
-                    Text(label, style: Theme.of(context).textTheme.labelSmall),
-                  ],
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+        child: GlassContainer(
+          blur: true,
+          radius: 26,
+          fill: context.lumora.glassFillStrong,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              for (final (tool, icon, label) in items)
+                Expanded(
+                  child: GlassToolTile(
+                    icon: icon,
+                    label: label,
+                    active: tool == _tool,
+                    onTap: () {
+                      Haptics.selection();
+                      setState(() => _tool = tool);
+                    },
+                  ),
                 ),
-              ),
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

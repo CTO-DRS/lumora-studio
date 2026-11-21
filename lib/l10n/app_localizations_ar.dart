@@ -1034,4 +1034,75 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get aiAccelerationHint =>
       'أسرع على بعض الهواتف (XNNPACK). أوقفه إذا كانت أدوات الذكاء الاصطناعي تُغلق التطبيق.';
+
+  @override
+  String get navHome => 'الرئيسية';
+
+  @override
+  String get navTemplates => 'القوالب';
+
+  @override
+  String get navProjects => 'المشاريع';
+
+  @override
+  String get create => 'إنشاء';
+
+  @override
+  String get createTitle => 'إنشاء جديد';
+
+  @override
+  String get createPhotoSub => 'افتح صورة من معرض الصور';
+
+  @override
+  String get createVideoSub => 'قصّ وفلترة ودمج المقاطع';
+
+  @override
+  String get createCollageSub => 'رتّب عدة صور في تصميم واحد';
+
+  @override
+  String get createScanSub => 'حوّل الورق إلى ملف PDF نظيف';
+
+  @override
+  String get createBatchSub => 'طبّق مظهرًا واحدًا على صور كثيرة';
+
+  @override
+  String get aiToolsTitle => 'أدوات الذكاء الاصطناعي';
+
+  @override
+  String get aiToolsShort => 'أدوات الذكاء';
+
+  @override
+  String get onDevice => 'يعمل على جهازك';
+
+  @override
+  String get docScanner => 'ماسح المستندات';
+
+  @override
+  String get search => 'بحث';
+
+  @override
+  String get searchProjects => 'ابحث في المشاريع';
+
+  @override
+  String get clearSearch => 'مسح البحث';
+
+  @override
+  String get seeAll => 'عرض الكل';
+
+  @override
+  String get allProjects => 'كل المشاريع';
+
+  @override
+  String get noMatchingProjects => 'لا توجد مشاريع تطابق البحث';
+
+  @override
+  String get templatesSubtitle => 'اختر مظهرًا ثم اختر صورة لتطبيقه عليها';
+
+  @override
+  String modelNotInstalled(String size) {
+    return 'يلزم تنزيل النموذج: $size';
+  }
+
+  @override
+  String get noCustomPresets => 'احفظ مظهرًا في المحرّر ليظهر هنا';
 }

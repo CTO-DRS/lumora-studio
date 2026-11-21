@@ -1033,4 +1033,75 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiAccelerationHint => 'Faster on some phones (XNNPACK). Turn it off if AI tools close the app.';
+
+  @override
+  String get navHome => 'Home';
+
+  @override
+  String get navTemplates => 'Templates';
+
+  @override
+  String get navProjects => 'Projects';
+
+  @override
+  String get create => 'Create';
+
+  @override
+  String get createTitle => 'Create something new';
+
+  @override
+  String get createPhotoSub => 'Open a photo from your gallery';
+
+  @override
+  String get createVideoSub => 'Trim, filter and join clips';
+
+  @override
+  String get createCollageSub => 'Arrange several photos in one layout';
+
+  @override
+  String get createScanSub => 'Turn paper into a clean PDF';
+
+  @override
+  String get createBatchSub => 'Apply one look to many photos';
+
+  @override
+  String get aiToolsTitle => 'AI tools';
+
+  @override
+  String get aiToolsShort => 'AI tools';
+
+  @override
+  String get onDevice => 'Runs on your device';
+
+  @override
+  String get docScanner => 'Document scanner';
+
+  @override
+  String get search => 'Search';
+
+  @override
+  String get searchProjects => 'Search projects';
+
+  @override
+  String get clearSearch => 'Clear search';
+
+  @override
+  String get seeAll => 'See all';
+
+  @override
+  String get allProjects => 'All projects';
+
+  @override
+  String get noMatchingProjects => 'No projects match your search';
+
+  @override
+  String get templatesSubtitle => 'Pick a look, then choose a photo to apply it to';
+
+  @override
+  String modelNotInstalled(String size) {
+    return 'Model download needed: $size';
+  }
+
+  @override
+  String get noCustomPresets => 'Save a look in the editor to see it here';
 }

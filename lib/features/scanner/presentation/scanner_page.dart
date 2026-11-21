@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
@@ -197,32 +198,28 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
   Widget build(BuildContext context) {
     final l = context.l10n;
     final page = _page;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l.scanDocument),
-        actions: [
-          if (_pages.isNotEmpty)
-            Padding(
-              padding: const EdgeInsetsDirectional.only(end: 8),
-              child: FilledButton.icon(
-                onPressed: _busy ? null : _export,
-                icon: const Icon(Icons.ios_share),
-                label: Text(l.export),
+    return LumoraBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: GlassAppBar(
+          title: Text(l.scanDocument),
+          actions: [
+            if (_pages.isNotEmpty)
+              GlowButton.small(onPressed: _busy ? null : _export, icon: Icons.ios_share, label: l.export),
+          ],
+        ),
+        body: Stack(
+          children: [
+            if (page == null) _empty(l) else _editor(l, page),
+            if (_busy)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Colors.black45,
+                  child: Center(child: CircularProgressIndicator(value: _progress)),
+                ),
               ),
-            ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          if (page == null) _empty(l) else _editor(l, page),
-          if (_busy)
-            Positioned.fill(
-              child: ColoredBox(
-                color: Colors.black45,
-                child: Center(child: CircularProgressIndicator(value: _progress)),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -233,15 +230,11 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.document_scanner_outlined, size: 72),
+          GlowIconOrb(icon: Icons.document_scanner_outlined, color: context.lumora.apricot, size: 96),
           const SizedBox(height: 16),
           Text(l.scanIntro, textAlign: TextAlign.center),
           const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => _add(ImageSource.camera),
-            icon: const Icon(Icons.photo_camera_outlined),
-            label: Text(l.scanCamera),
-          ),
+          GlowButton(onPressed: () => _add(ImageSource.camera), icon: Icons.photo_camera_outlined, label: l.scanCamera),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: () => _add(ImageSource.gallery),

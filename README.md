@@ -8,18 +8,18 @@
 
 [![CI](https://github.com/CTO-DRS/lumora-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/CTO-DRS/lumora-studio/actions/workflows/ci.yml)
 [![Release](https://github.com/CTO-DRS/lumora-studio/actions/workflows/release.yml/badge.svg)](https://github.com/CTO-DRS/lumora-studio/releases/latest)
-![Version](https://img.shields.io/badge/version-1.1.1-FFB547)
+![Version](https://img.shields.io/badge/version-1.2.0-7C6CF2)
 ![Flutter](https://img.shields.io/badge/Flutter-3.50-02569B?logo=flutter)
 ![Dart](https://img.shields.io/badge/Dart-3.14-0175C2?logo=dart)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
 [English](#english) · [العربية](#arabic)
 
-| Home | Photo editor | AI tools | Video timeline |
+| Home | Photo editor | AI tools | Templates |
 |:---:|:---:|:---:|:---:|
-| ![home](docs/screenshots/home.svg) | ![photo](docs/screenshots/photo_editor.svg) | ![ai](docs/screenshots/ai_tools.svg) | ![video](docs/screenshots/video_editor.svg) |
+| ![home](docs/screenshots/home.png) | ![photo](docs/screenshots/photo_editor.png) | ![ai](docs/screenshots/ai_tools.png) | ![templates](docs/screenshots/templates.png) |
 
-<sub>Screenshot placeholders. Replace them with real captures from a device (see `docs/screenshots/README.md`).</sub>
+<sub>v1.2 "calm glass" design, rendered from the app's own widgets (Arabic, dark theme). Design mockups: [home](docs/screenshots/design/mock_home.png) · [editor](docs/screenshots/design/mock_editor.png) · [AI tools](docs/screenshots/design/mock_ai.png). See [docs/screenshots](docs/screenshots/README.md).</sub>
 
 </div>
 
@@ -32,6 +32,15 @@
 ### Download
 
 Get the latest APK (Android) or unsigned iOS build from **[Releases](https://github.com/CTO-DRS/lumora-studio/releases/latest)**. Most phones need the `arm64-v8a` APK.
+
+### What's new in 1.2
+
+- **New look — "calm glass"**: frosted glass surfaces on a calm navy background, soft violet→blue accents and muted tool colours. Easy on the eyes for long sessions; glow is kept for the selected item and the main button only. Light theme included.
+- **New navigation**: a floating glass bottom bar with **Home, Templates, Projects, Settings** and a raised **Create** button (photo, video, collage, scanner, batch).
+- **Templates tab**: browse every look by category, previewed live, then pick a photo to open it with that look.
+- **Projects tab** with search; Home shows recent projects, quick tools and an **AI tools** sheet that runs on your device (download size and progress on each card).
+- **Photo editor** redesign: glass top bar, framed photo, preset strip with a glowing selection, gradient sliders and a floating tool bar.
+- **New app icon** (Android adaptive + iOS) and a navy launch screen.
 
 ### What's new in 1.1
 
@@ -214,6 +223,15 @@ Lumora's source code is MIT. The default video engine package, `ffmpeg_kit_flutt
 ### التحميل
 
 حمّل أحدث نسخة APK للأندرويد أو نسخة iOS غير الموقّعة من صفحة **[الإصدارات](https://github.com/CTO-DRS/lumora-studio/releases/latest)**. أغلب الهواتف تحتاج ملف `arm64-v8a`.
+
+### الجديد في الإصدار 1.2
+
+- **مظهر جديد "زجاج هادئ"**: أسطح زجاجية شفافة على خلفية كحلية هادئة، ولمسات بنفسجية وزرقاء ناعمة، وألوان أدوات هادئة. مريح للعين في جلسات التحرير الطويلة، والتوهج فقط للعنصر المحدد والزر الرئيسي. مع وضع فاتح.
+- **تنقّل جديد**: شريط سفلي زجاجي عائم فيه **الرئيسية، القوالب، المشاريع، الإعدادات** وزر **إنشاء** بارز (صورة، فيديو، تجميعة، ماسح، دفعة).
+- **تبويب القوالب**: تصفّح كل الأنماط حسب الفئة بمعاينة حيّة، ثم اختر صورة لتفتحها بهذا النمط.
+- **تبويب المشاريع** مع البحث، والرئيسية تعرض المشاريع الأخيرة والأدوات السريعة ولوحة **أدوات الذكاء الاصطناعي** التي تعمل على جهازك (حجم التنزيل والتقدّم على كل بطاقة).
+- **محرر الصور** بتصميم جديد: شريط علوي زجاجي، صورة بإطار، شريط أنماط بتحديد متوهّج، منزلقات متدرجة، وشريط أدوات عائم.
+- **أيقونة جديدة للتطبيق** (Android التكيّفية وiOS) وشاشة بدء كحلية.
 
 ### الجديد في الإصدار 1.1
 

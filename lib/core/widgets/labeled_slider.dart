@@ -1,3 +1,5 @@
+import 'package:lumora/core/ui/lumora_tokens.dart';
+import 'package:lumora/core/ui/slider_shapes.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Compact slider row used across the editors. Shows a centred track for
@@ -50,13 +52,22 @@ class LabeledSlider extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: Slider(
-                value: value.clamp(min, max),
-                min: min,
-                max: max,
-                secondaryTrackValue: min < neutral ? neutral : null,
-                onChanged: onChanged,
-                onChangeEnd: onChangeEnd,
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  // Bipolar ranges fill from the neutral value to the thumb.
+                  trackShape: GlowSliderTrackShape(
+                    colors: context.lumora.primaryGradient,
+                    inactive: context.lumora.trackInactive,
+                    origin: min < neutral && max > min ? (neutral - min) / (max - min) : null,
+                  ),
+                ),
+                child: Slider(
+                  value: value.clamp(min, max),
+                  min: min,
+                  max: max,
+                  onChanged: onChanged,
+                  onChangeEnd: onChangeEnd,
+                ),
               ),
             ),
             SizedBox(
@@ -64,7 +75,10 @@ class LabeledSlider extends StatelessWidget {
               child: Text(
                 shown > 0 && min < neutral ? '+$shown' : '$shown',
                 textAlign: TextAlign.end,
-                style: theme.textTheme.labelSmall,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: changed ? theme.colorScheme.onSurface : context.lumora.textMuted,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
             ),
           ],

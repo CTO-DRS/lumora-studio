@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumora/core/providers.dart';
+import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/core/widgets/labeled_slider.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
+import 'package:lumora/features/ai/presentation/ai_tools_sheet.dart';
 import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
 import 'package:lumora/features/photo_editor/domain/geometry.dart';
@@ -1102,41 +1104,58 @@ class AiPanel extends ConsumerWidget {
       if (!await ensureModelsDownloaded(context, ref, aiToolModels(tool))) return;
       await action();
     };
-    final actions = <(IconData, String, VoidCallback)>[
-      (Icons.auto_fix_high, l.aiAutoEnhance, ctrl.autoEnhance),
-      (Icons.content_cut, l.aiRemoveBg, withModels(AiTool.removeBackground, ctrl.removeBackground)),
-      (Icons.person, l.aiPortraitBg, withModels(AiTool.cutOutPerson, () => ctrl.removeBackground(portrait: true))),
-      (
-        Icons.blur_on,
-        l.aiBlurBg,
-        withModels(AiTool.backgroundBlur, () => ctrl.subjectAdjustment(blurBackground: true)),
+    final t = context.lumora;
+    final cards = <AiToolCard>[
+      AiToolCard(
+        icon: Icons.content_cut,
+        color: t.violet,
+        label: l.aiRemoveBg,
+        tool: AiTool.removeBackground,
+        onTap: withModels(AiTool.removeBackground, ctrl.removeBackground),
       ),
-      (
-        Icons.face_retouching_natural,
-        l.aiRetouch,
-        withModels(AiTool.portraitRetouch, () => ctrl.subjectAdjustment(retouch: true)),
+      AiToolCard(icon: Icons.auto_fix_high, color: t.apricot, label: l.aiAutoEnhance, onTap: ctrl.autoEnhance),
+      AiToolCard(
+        icon: Icons.blur_on,
+        color: t.blue,
+        label: l.aiBlurBg,
+        tool: AiTool.backgroundBlur,
+        onTap: withModels(AiTool.backgroundBlur, () => ctrl.subjectAdjustment(blurBackground: true)),
       ),
-      (Icons.cleaning_services_outlined, l.aiEraser, withModels(AiTool.eraser, () => ctrl.setEraserMode(value: true))),
-      (Icons.high_quality, l.aiUpscale, withModels(AiTool.upscale, ctrl.upscale)),
+      AiToolCard(
+        icon: Icons.person_outline,
+        color: t.teal,
+        label: l.aiPortraitBg,
+        tool: AiTool.cutOutPerson,
+        onTap: withModels(AiTool.cutOutPerson, () => ctrl.removeBackground(portrait: true)),
+      ),
+      AiToolCard(
+        icon: Icons.cleaning_services_outlined,
+        color: t.mint,
+        label: l.aiEraser,
+        tool: AiTool.eraser,
+        onTap: withModels(AiTool.eraser, () => ctrl.setEraserMode(value: true)),
+      ),
+      AiToolCard(
+        icon: Icons.face_retouching_natural,
+        color: t.rose,
+        label: l.aiRetouch,
+        tool: AiTool.portraitRetouch,
+        onTap: withModels(AiTool.portraitRetouch, () => ctrl.subjectAdjustment(retouch: true)),
+      ),
+      AiToolCard(
+        icon: Icons.open_in_full,
+        color: t.violet,
+        label: l.aiUpscale,
+        tool: AiTool.upscale,
+        onTap: withModels(AiTool.upscale, ctrl.upscale),
+      ),
     ];
-    return GridView.count(
-      crossAxisCount: 4,
-      padding: const EdgeInsets.all(12),
-      childAspectRatio: 0.95,
+    return Column(
       children: [
-        for (final (icon, label, action) in actions)
-          InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: s.busy ? null : action,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(radius: 22, child: Icon(icon)),
-                const SizedBox(height: 6),
-                Text(label, textAlign: TextAlign.center, maxLines: 2, style: Theme.of(context).textTheme.labelSmall),
-              ],
-            ),
-          ),
+        const Padding(padding: EdgeInsets.fromLTRB(14, 0, 14, 10), child: AiToolsHeader(compact: true)),
+        Expanded(
+          child: AiToolsGrid(cards: cards, enabled: !s.busy, padding: const EdgeInsets.fromLTRB(12, 0, 12, 12)),
+        ),
       ],
     );
   }

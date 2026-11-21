@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lumora/core/providers.dart';
+import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/core/widgets/labeled_slider.dart';
@@ -229,127 +230,128 @@ class _CollagePageState extends ConsumerState<CollagePage> {
   Widget build(BuildContext context) {
     final l = context.l10n;
     final scheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l.collage),
-        actions: [
-          if (_paths.isNotEmpty) ...[
-            IconButton(
-              tooltip: l.share,
-              icon: const Icon(Icons.share_outlined),
-              onPressed: _busy ? null : () => _export(share: true),
-            ),
-            Padding(
-              padding: const EdgeInsetsDirectional.only(end: 8),
-              child: FilledButton(onPressed: _busy ? null : () => _export(share: false), child: Text(l.export)),
-            ),
-          ],
-        ],
-      ),
-      body: _paths.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.dashboard_outlined, size: 72),
-                    const SizedBox(height: 16),
-                    Text(l.collageIntro, textAlign: TextAlign.center),
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: _busy ? null : _pick,
-                      icon: const Icon(Icons.add_photo_alternate_outlined),
-                      label: Text(l.collagePick),
-                    ),
-                  ],
-                ),
+    return LumoraBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: GlassAppBar(
+          title: Text(l.collage),
+          actions: [
+            if (_paths.isNotEmpty) ...[
+              IconButton(
+                tooltip: l.share,
+                icon: const Icon(Icons.share_outlined),
+                onPressed: _busy ? null : () => _export(share: true),
               ),
-            )
-          : Column(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Center(
-                      child: AspectRatio(
-                        aspectRatio: _aspect,
-                        child: LayoutBuilder(
-                          builder: (context, c) {
-                            final size = Size(c.maxWidth, c.maxHeight);
-                            return GestureDetector(
-                              onTapUp: (d) => setState(() => _selected = _hit(d.localPosition, size)),
-                              onLongPressStart: (d) {
-                                final i = _hit(d.localPosition, size);
-                                if (i != null && i < _paths.length) _pick(replace: i);
-                              },
-                              onScaleStart: (d) {
-                                final i = _hit(d.localFocalPoint, size);
-                                if (i != null) {
-                                  _selected = i;
-                                  _gestureStart = _transforms[i];
-                                }
-                              },
-                              onScaleUpdate: (d) {
-                                final i = _selected;
-                                final start = _gestureStart;
-                                if (i == null || start == null) return;
-                                final r = cellRect(
-                                  _layout.cells[i],
-                                  size.width,
-                                  size.height,
-                                  spacing: _spacing * size.shortestSide,
-                                  margin: _margin * size.shortestSide,
-                                );
-                                setState(() {
-                                  final t = _transforms[i];
-                                  _transforms[i] = t.copyWith(
-                                    scale: start.scale * d.scale,
-                                    panX: t.panX - d.focalPointDelta.dx / r.width * 2 / math.max(1, t.scale),
-                                    panY: t.panY - d.focalPointDelta.dy / r.height * 2 / math.max(1, t.scale),
+              const SizedBox(width: 6),
+              GlowButton.small(label: l.export, onPressed: _busy ? null : () => _export(share: false)),
+            ],
+          ],
+        ),
+        body: _paths.isEmpty
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GlowIconOrb(icon: Icons.dashboard_outlined, color: context.lumora.rose, size: 96),
+                      const SizedBox(height: 16),
+                      Text(l.collageIntro, textAlign: TextAlign.center),
+                      const SizedBox(height: 24),
+                      GlowButton(
+                        onPressed: _busy ? null : _pick,
+                        icon: Icons.add_photo_alternate_outlined,
+                        label: l.collagePick,
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : Column(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Center(
+                        child: AspectRatio(
+                          aspectRatio: _aspect,
+                          child: LayoutBuilder(
+                            builder: (context, c) {
+                              final size = Size(c.maxWidth, c.maxHeight);
+                              return GestureDetector(
+                                onTapUp: (d) => setState(() => _selected = _hit(d.localPosition, size)),
+                                onLongPressStart: (d) {
+                                  final i = _hit(d.localPosition, size);
+                                  if (i != null && i < _paths.length) _pick(replace: i);
+                                },
+                                onScaleStart: (d) {
+                                  final i = _hit(d.localFocalPoint, size);
+                                  if (i != null) {
+                                    _selected = i;
+                                    _gestureStart = _transforms[i];
+                                  }
+                                },
+                                onScaleUpdate: (d) {
+                                  final i = _selected;
+                                  final start = _gestureStart;
+                                  if (i == null || start == null) return;
+                                  final r = cellRect(
+                                    _layout.cells[i],
+                                    size.width,
+                                    size.height,
+                                    spacing: _spacing * size.shortestSide,
+                                    margin: _margin * size.shortestSide,
                                   );
-                                });
-                              },
-                              child: CustomPaint(
-                                size: size,
-                                painter: _CollagePainter(
-                                  layout: _layout,
-                                  images: _images,
-                                  transforms: _transforms,
-                                  spacing: _spacing,
-                                  margin: _margin,
-                                  radius: _radius,
-                                  background: _background,
-                                  gradient: _gradient,
-                                  selected: _selected,
-                                  highlight: scheme.primary,
+                                  setState(() {
+                                    final t = _transforms[i];
+                                    _transforms[i] = t.copyWith(
+                                      scale: start.scale * d.scale,
+                                      panX: t.panX - d.focalPointDelta.dx / r.width * 2 / math.max(1, t.scale),
+                                      panY: t.panY - d.focalPointDelta.dy / r.height * 2 / math.max(1, t.scale),
+                                    );
+                                  });
+                                },
+                                child: CustomPaint(
+                                  size: size,
+                                  painter: _CollagePainter(
+                                    layout: _layout,
+                                    images: _images,
+                                    transforms: _transforms,
+                                    spacing: _spacing,
+                                    margin: _margin,
+                                    radius: _radius,
+                                    background: _background,
+                                    gradient: _gradient,
+                                    selected: _selected,
+                                    highlight: scheme.primary,
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                if (_busy) const LinearProgressIndicator(),
-                SizedBox(height: 150, child: _tabBody(l)),
-                SafeArea(
-                  top: false,
-                  child: NavigationBar(
-                    height: 64,
-                    selectedIndex: _tab,
-                    onDestinationSelected: (i) => setState(() => _tab = i),
-                    destinations: [
-                      NavigationDestination(icon: const Icon(Icons.dashboard_outlined), label: l.collageLayout),
-                      NavigationDestination(icon: const Icon(Icons.aspect_ratio), label: l.aspectRatio),
-                      NavigationDestination(icon: const Icon(Icons.border_outer), label: l.collageBorder),
-                      NavigationDestination(icon: const Icon(Icons.format_color_fill), label: l.background),
-                    ],
+                  if (_busy) const LinearProgressIndicator(),
+                  SizedBox(height: 150, child: _tabBody(l)),
+                  SafeArea(
+                    top: false,
+                    child: NavigationBar(
+                      height: 64,
+                      selectedIndex: _tab,
+                      onDestinationSelected: (i) => setState(() => _tab = i),
+                      destinations: [
+                        NavigationDestination(icon: const Icon(Icons.dashboard_outlined), label: l.collageLayout),
+                        NavigationDestination(icon: const Icon(Icons.aspect_ratio), label: l.aspectRatio),
+                        NavigationDestination(icon: const Icon(Icons.border_outer), label: l.collageBorder),
+                        NavigationDestination(icon: const Icon(Icons.format_color_fill), label: l.background),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+      ),
     );
   }
 

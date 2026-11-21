@@ -9,6 +9,7 @@ import 'package:lumora/features/ai/data/model_manager.dart';
 import 'package:lumora/features/ai/data/onnx_engine.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
 import 'package:lumora/features/ai/presentation/ai_error_text.dart';
+import 'package:lumora/features/ai/presentation/ai_tools_sheet.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Makes sure every model in [specs] is on the device before an AI tool
@@ -29,7 +30,7 @@ Future<bool> ensureModelsDownloaded(BuildContext context, WidgetRef ref, List<Mo
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (c) => AlertDialog(
-      icon: const Icon(Icons.download_for_offline_outlined),
+      icon: Icon(Icons.download_for_offline_outlined, color: Theme.of(context).colorScheme.primary),
       title: Text(l.modelNeededTitle),
       content: Text(l.modelNeededBody(names, formatBytes(total))),
       actions: [
@@ -39,21 +40,29 @@ Future<bool> ensureModelsDownloaded(BuildContext context, WidgetRef ref, List<Mo
     ),
   );
   if (confirmed != true || !context.mounted) return false;
+  final progress = ref.read(modelDownloadProgressProvider.notifier);
   final ok = await showDialog<bool>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => ModelDownloadDialog(manager: manager, specs: missing),
+    builder: (_) => ModelDownloadDialog(manager: manager, specs: missing, onProgress: progress.set),
   );
+  for (final s in missing) {
+    progress.clear(s.id);
+  }
+  if (context.mounted) ref.invalidate(installedModelsProvider);
   return ok ?? false;
 }
 
 /// Downloads [specs] one after the other with a progress bar. Pops `true`
 /// when done, `false` when the user closes it after an error.
 class ModelDownloadDialog extends StatefulWidget {
-  const ModelDownloadDialog({required this.manager, required this.specs, super.key});
+  const ModelDownloadDialog({required this.manager, required this.specs, super.key, this.onProgress});
 
   final ModelManager manager;
   final List<ModelSpec> specs;
+
+  /// Mirrors progress (model id, 0..1) to the AI tool cards.
+  final void Function(String id, double fraction)? onProgress;
 
   @override
   State<ModelDownloadDialog> createState() => _ModelDownloadDialogState();
@@ -83,6 +92,7 @@ class _ModelDownloadDialogState extends State<ModelDownloadDialog> {
           spec,
           onProgress: (p) {
             if (mounted) setState(() => _fraction = p.total > 0 ? p.fraction : null);
+            if (p.total > 0) widget.onProgress?.call(spec.id, p.fraction);
           },
         );
         if (mounted) setState(() => _fraction = null);

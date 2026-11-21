@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumora/core/router/app_router.dart';
+import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
@@ -50,6 +51,13 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
   }
 
   Future<void> _runInitialAction(PhotoEditorController ctrl) async {
+    final presetId = widget.args.initialPresetId;
+    if (presetId != null) {
+      ctrl
+        ..setTool(EditorTool.presets)
+        ..applyPreset(presetId);
+    }
+    Future<bool> models(AiTool tool) async => mounted && await ensureModelsDownloaded(context, ref, aiToolModels(tool));
     switch (widget.args.initialAction) {
       case null:
         return;
@@ -70,6 +78,18 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
         ctrl.setEraserMode(value: true);
       case QuickAction.heal:
         ctrl.setTool(EditorTool.heal);
+      case QuickAction.cutOutPerson:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.cutOutPerson)) return;
+        await ctrl.removeBackground(portrait: true);
+      case QuickAction.blurBackground:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.backgroundBlur)) return;
+        await ctrl.subjectAdjustment(blurBackground: true);
+      case QuickAction.retouch:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.portraitRetouch)) return;
+        await ctrl.subjectAdjustment(retouch: true);
     }
   }
 
@@ -136,75 +156,75 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
       child: KeyedSubtree(key: ValueKey(s.tool), child: _panel(s.tool)),
     );
 
+    final topBar = _EditorTopBar(state: s, onExport: () => _showExport(context));
+
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) unawaited(ctrl.save());
       },
-      child: Scaffold(
-        appBar: AppBar(
-          actions: [
-            IconButton(tooltip: l.undo, onPressed: s.history.canUndo ? ctrl.undo : null, icon: const Icon(Icons.undo)),
-            IconButton(tooltip: l.redo, onPressed: s.history.canRedo ? ctrl.redo : null, icon: const Icon(Icons.redo)),
-            Tooltip(
-              message: l.compare,
-              child: Semantics(
-                button: true,
-                label: l.compare,
-                child: GestureDetector(
-                  onTapDown: (_) {
-                    Haptics.light();
-                    ctrl.setComparing(value: true);
-                  },
-                  onTapUp: (_) => ctrl.setComparing(value: false),
-                  onTapCancel: () => ctrl.setComparing(value: false),
-                  child: const Padding(padding: EdgeInsets.all(12), child: Icon(Icons.compare)),
-                ),
-              ),
-            ),
-            IconButton(
-              tooltip: l.history,
-              icon: const Icon(Icons.history),
-              onPressed: () => showHistorySheet(context, ref),
-            ),
-            _MoreMenu(state: s),
-            Padding(
-              padding: const EdgeInsetsDirectional.only(end: 8),
-              child: FilledButton(
-                onPressed: s.busy || s.rendered == null ? null : () => _showExport(context),
-                child: Text(l.export),
-              ),
-            ),
-          ],
-        ),
-        body: LayoutBuilder(
-          builder: (context, c) {
-            if (c.maxWidth >= kTabletBreakpoint) {
-              return Row(
-                children: [
-                  Expanded(child: canvas),
-                  const VerticalDivider(width: 1),
-                  SizedBox(
-                    width: 380,
-                    child: Column(
-                      children: [
-                        Expanded(child: panel),
-                        const Divider(height: 1),
-                        _ToolBar(selected: s.tool, onSelect: _select, wrap: true),
-                      ],
+      child: LumoraBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, c) {
+                if (c.maxWidth >= kTabletBreakpoint) {
+                  return Column(
+                    children: [
+                      Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 4), child: topBar),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(child: canvas),
+                            Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 12, 12),
+                              child: SizedBox(
+                                width: 380,
+                                child: GlassContainer(
+                                  radius: 26,
+                                  fill: context.lumora.glassFillStrong,
+                                  child: Column(
+                                    children: [
+                                      Expanded(
+                                        child: Padding(padding: const EdgeInsets.only(top: 8), child: panel),
+                                      ),
+                                      const Divider(height: 1),
+                                      _ToolBar(selected: s.tool, onSelect: _select, wrap: true),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                final panelHeight = (c.maxHeight * 0.3).clamp(196.0, 270.0);
+                return Column(
+                  children: [
+                    Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 0), child: topBar),
+                    Expanded(child: canvas),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: GlassContainer(
+                        radius: 26,
+                        height: panelHeight,
+                        fill: context.lumora.glassFillStrong,
+                        padding: const EdgeInsets.only(top: 10),
+                        child: panel,
+                      ),
                     ),
-                  ),
-                ],
-              );
-            }
-            final panelHeight = (c.maxHeight * 0.32).clamp(200.0, 280.0);
-            return Column(
-              children: [
-                Expanded(child: canvas),
-                SizedBox(height: panelHeight, child: panel),
-                _ToolBar(selected: s.tool, onSelect: _select),
-              ],
-            );
-          },
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                      child: _ToolBar(selected: s.tool, onSelect: _select),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
@@ -417,6 +437,8 @@ class _ExportSheetState extends State<ExportSheet> {
   }
 }
 
+void _noop() {}
+
 class _MoreMenu extends ConsumerWidget {
   const _MoreMenu({required this.state});
   final PhotoEditorState state;
@@ -428,6 +450,10 @@ class _MoreMenu extends ConsumerWidget {
     final canPaste = ref.watch(editClipboardProvider) != null;
     return PopupMenuButton<String>(
       tooltip: l.more,
+      padding: EdgeInsets.zero,
+      child: const IgnorePointer(
+        child: GlassIconButton(icon: Icons.more_horiz, size: 38, onPressed: _noop),
+      ),
       onSelected: (v) async {
         switch (v) {
           case 'copy':
@@ -536,6 +562,67 @@ Future<PasteOptions?> showPasteOptions(BuildContext context) {
   );
 }
 
+class _EditorTopBar extends ConsumerWidget {
+  const _EditorTopBar({required this.state, required this.onExport});
+
+  final PhotoEditorState state;
+  final VoidCallback onExport;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l10n;
+    final s = state;
+    final ctrl = ref.read(photoEditorControllerProvider.notifier);
+    const gap = SizedBox(width: 6);
+    return GlassTopBar(
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      children: [
+        GlassIconButton(
+          icon: Icons.arrow_back,
+          size: 38,
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          onPressed: () => Navigator.maybePop(context),
+        ),
+        gap,
+        _MoreMenu(state: s),
+        gap,
+        GlassIconButton(
+          icon: Icons.history,
+          size: 38,
+          tooltip: l.history,
+          onPressed: () => showHistorySheet(context, ref),
+        ),
+        gap,
+        Tooltip(
+          message: l.compare,
+          child: Semantics(
+            button: true,
+            label: l.compare,
+            child: GestureDetector(
+              onTapDown: (_) {
+                Haptics.light();
+                ctrl.setComparing(value: true);
+              },
+              onTapUp: (_) => ctrl.setComparing(value: false),
+              onTapCancel: () => ctrl.setComparing(value: false),
+              child: IgnorePointer(
+                child: GlassIconButton(icon: Icons.compare, size: 38, selected: s.comparing, onPressed: () {}),
+              ),
+            ),
+          ),
+        ),
+        const Spacer(),
+        GlassIconButton(icon: Icons.undo, size: 38, tooltip: l.undo, onPressed: s.history.canUndo ? ctrl.undo : null),
+        gap,
+        GlassIconButton(icon: Icons.redo, size: 38, tooltip: l.redo, onPressed: s.history.canRedo ? ctrl.redo : null),
+        const SizedBox(width: 8),
+        GlowButton.small(label: l.export, onPressed: s.busy || s.rendered == null ? null : onExport),
+      ],
+    );
+  }
+}
+
 class _ToolBar extends StatelessWidget {
   const _ToolBar({required this.selected, required this.onSelect, this.wrap = false});
 
@@ -549,15 +636,15 @@ class _ToolBar extends StatelessWidget {
     (EditorTool.presets, Icons.auto_awesome, l.toolPresets),
     (EditorTool.adjust, Icons.tune, l.toolAdjust),
     (EditorTool.hsl, Icons.palette_outlined, l.toolHsl),
+    (EditorTool.ai, Icons.psychology_alt_outlined, l.toolAi),
+    (EditorTool.crop, Icons.crop_rotate, l.toolCrop),
+    (EditorTool.text, Icons.text_fields, l.toolText),
+    (EditorTool.draw, Icons.draw_outlined, l.toolDraw),
     (EditorTool.curves, Icons.show_chart, l.toolCurves),
     (EditorTool.lut, Icons.filter_vintage_outlined, l.toolLut),
-    (EditorTool.crop, Icons.crop_rotate, l.toolCrop),
     (EditorTool.masks, Icons.blur_circular, l.toolMasks),
     (EditorTool.heal, Icons.healing, l.toolHeal),
-    (EditorTool.ai, Icons.psychology_alt_outlined, l.toolAi),
-    (EditorTool.text, Icons.text_fields, l.toolText),
     (EditorTool.stickers, Icons.emoji_emotions_outlined, l.toolStickers),
-    (EditorTool.draw, Icons.draw_outlined, l.toolDraw),
     (EditorTool.frame, Icons.crop_din, l.toolFrame),
     (EditorTool.watermark, Icons.branding_watermark_outlined, l.toolWatermark),
   ];
@@ -565,62 +652,26 @@ class _ToolBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    final scheme = Theme.of(context).colorScheme;
-    Widget item(EditorTool tool, IconData icon, String label) {
-      final active = tool == selected;
-      return Semantics(
-        selected: active,
-        button: true,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => onSelect(tool),
-          child: SizedBox(
-            width: 68,
-            height: 60,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedScale(
-                  scale: active ? 1.15 : 1,
-                  duration: const Duration(milliseconds: 160),
-                  child: Icon(icon, color: active ? scheme.primary : scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  maxLines: 1,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: active ? scheme.primary : scheme.onSurfaceVariant,
-                    fontWeight: active ? FontWeight.w700 : null,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    final t = context.lumora;
+    Widget item(EditorTool tool, IconData icon, String label) =>
+        GlassToolTile(icon: icon, label: label, active: tool == selected, onTap: () => onSelect(tool));
 
     final list = items(l);
     if (wrap) {
-      return SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Wrap(alignment: WrapAlignment.center, children: [for (final (t, i, label) in list) item(t, i, label)]),
-        ),
+      return Padding(
+        padding: const EdgeInsets.all(8),
+        child: Wrap(alignment: WrapAlignment.center, children: [for (final (t, i, label) in list) item(t, i, label)]),
       );
     }
-    return SafeArea(
-      top: false,
-      child: SizedBox(
-        height: 64,
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          children: [for (final (t, i, label) in list) item(t, i, label)],
-        ),
+    return GlassContainer(
+      blur: true,
+      radius: 26,
+      height: 84,
+      fill: t.glassFillStrong,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        children: [for (final (t, i, label) in list) item(t, i, label)],
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumora/core/providers.dart';
+import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/core/widgets/labeled_slider.dart';
@@ -141,9 +142,9 @@ class _PresetsPanelState extends ConsumerState<PresetsPanel> {
             ],
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         SizedBox(
-          height: 104,
+          height: 96,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -337,73 +338,85 @@ class _PresetTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final t = context.lumora;
     return Padding(
-      padding: const EdgeInsetsDirectional.only(end: 8),
+      padding: const EdgeInsetsDirectional.only(end: 6),
       child: Semantics(
         button: true,
         selected: selected,
         label: label,
+        excludeSemantics: true,
         child: GestureDetector(
           onTap: onTap,
           onLongPress: onLongPress,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            width: 78,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: selected ? theme.colorScheme.primary : Colors.transparent, width: 2.5),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(11.5),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: fallback),
+          child: SizedBox(
+            width: 76,
+            child: Column(
+              children: [
+                AnimatedContainer(
+                  duration: context.reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
+                  width: 70,
+                  height: 70,
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(19),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: selected ? t.borderActiveColors : [t.glassFill, t.glassFill],
                     ),
+                    border: selected ? null : Border.all(color: t.borderColors.first),
+                    boxShadow: selected ? [BoxShadow(color: t.glow, blurRadius: 14, spreadRadius: -3)] : null,
                   ),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    child: image == null
-                        ? const SizedBox.expand()
-                        : RawImage(key: ValueKey(image), image: image, fit: BoxFit.cover),
-                  ),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Color(0xAA000000)],
-                        stops: [0.5, 1],
-                      ),
-                    ),
-                  ),
-                  if (favorite)
-                    const PositionedDirectional(
-                      top: 4,
-                      end: 4,
-                      child: Icon(Icons.star_rounded, size: 16, color: Color(0xFFFFC94D)),
-                    ),
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.all(5),
-                      child: Text(
-                        label,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          shadows: const [Shadow(blurRadius: 4)],
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: fallback,
+                            ),
+                          ),
                         ),
-                      ),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 220),
+                          layoutBuilder: (current, previous) =>
+                              Stack(fit: StackFit.expand, children: [...previous, ?current]),
+                          child: image == null
+                              ? const SizedBox.expand()
+                              : RawImage(key: ValueKey(image), image: image, fit: BoxFit.cover),
+                        ),
+                        if (favorite)
+                          const PositionedDirectional(
+                            top: 3,
+                            end: 3,
+                            child: Icon(
+                              Icons.star_rounded,
+                              size: 15,
+                              color: Color(0xFFF2D58A),
+                              shadows: [Shadow(blurRadius: 4)],
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: selected ? theme.colorScheme.onSurface : t.textMuted,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -423,15 +436,13 @@ class _ActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsetsDirectional.only(end: 8),
-      child: Material(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(14),
+      padding: const EdgeInsetsDirectional.only(end: 6, bottom: 22),
+      child: GlassContainer(
+        radius: 19,
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: SizedBox(
-            width: 78,
+            width: 70,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
