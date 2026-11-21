@@ -7,6 +7,7 @@ import 'package:lumora/features/home/presentation/home_page.dart';
 import 'package:lumora/features/onboarding/presentation/onboarding_page.dart';
 import 'package:lumora/features/photo_editor/presentation/photo_editor_page.dart';
 import 'package:lumora/features/scanner/presentation/scanner_page.dart';
+import 'package:lumora/features/settings/presentation/error_log_page.dart';
 import 'package:lumora/features/settings/presentation/settings_page.dart';
 import 'package:lumora/features/video_editor/presentation/video_editor_page.dart';
 
@@ -43,6 +44,7 @@ final appRouter = GoRouter(
     ),
     GoRoute(path: '/models', builder: (_, _) => const ModelsPage()),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
+    GoRoute(path: '/errors', builder: (_, _) => const ErrorLogPage()),
     GoRoute(path: '/welcome', builder: (_, _) => const OnboardingPage()),
     GoRoute(path: '/scan', builder: (_, _) => const ScannerPage()),
     GoRoute(path: '/collage', builder: (_, _) => const CollagePage()),

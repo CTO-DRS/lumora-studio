@@ -6,6 +6,7 @@ import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
 import 'package:lumora/features/photo_editor/engine/shader_library.dart';
 import 'package:lumora/features/projects/data/app_database.dart';
 import 'package:lumora/features/projects/data/project_repository.dart';
+import 'package:lumora/features/settings/data/settings_controller.dart';
 import 'package:lumora/features/video_editor/engine/video_engine.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -55,7 +56,12 @@ ModelManager modelManager(Ref ref) => ModelManager();
 
 @Riverpod(keepAlive: true)
 InferenceEngine inferenceEngine(Ref ref) {
-  final engine = OnnxInferenceEngine(ref.watch(modelManagerProvider));
+  final engine = OnnxInferenceEngine(
+    ref.watch(modelManagerProvider),
+    // Read on every session load, so toggling the setting takes effect at the
+    // next model load (the setter releases the current session).
+    accelerated: () => ref.read(settingsControllerProvider).aiAcceleration,
+  );
   ref.onDispose(engine.release);
   return engine;
 }

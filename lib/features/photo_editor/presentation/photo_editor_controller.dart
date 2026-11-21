@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:gal/gal.dart';
 import 'package:image/image.dart' as img;
+import 'package:lumora/core/diagnostics/crash_log.dart';
 import 'package:lumora/core/providers.dart';
 import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
 import 'package:lumora/features/ai/pipelines/tensor_utils.dart';
@@ -92,6 +93,7 @@ class PhotoEditorState {
     this.selectedMaskId,
     this.eraserMode = false,
     this.error,
+    this.failure,
     this.histogram,
     this.showHistogram = false,
     this.showClipping = false,
@@ -123,6 +125,9 @@ class PhotoEditorState {
   /// AI object eraser painting mode.
   final bool eraserMode;
   final String? error;
+
+  /// The exception behind [error] (localised by the page).
+  final Object? failure;
 
   /// Histogram of the latest render (when [showHistogram]).
   final Histogram? histogram;
@@ -168,6 +173,7 @@ class PhotoEditorState {
     String? Function()? selectedMaskId,
     bool? eraserMode,
     String? Function()? error,
+    Object? Function()? failure,
     Histogram? Function()? histogram,
     bool? showHistogram,
     bool? showClipping,
@@ -192,6 +198,7 @@ class PhotoEditorState {
     selectedMaskId: selectedMaskId != null ? selectedMaskId() : this.selectedMaskId,
     eraserMode: eraserMode ?? this.eraserMode,
     error: error != null ? error() : this.error,
+    failure: failure != null ? failure() : this.failure,
     histogram: histogram != null ? histogram() : this.histogram,
     showHistogram: showHistogram ?? this.showHistogram,
     showClipping: showClipping ?? this.showClipping,
@@ -533,12 +540,16 @@ class PhotoEditorController extends _$PhotoEditorController {
 
   String get _currentRaster => state.edit.rasterPath ?? state.sourcePath!;
 
-  Future<T?> _busy<T>(Future<T> Function() job) async {
-    state = state.copyWith(busy: true, progress: () => null, error: () => null);
+  Future<T?> _busy<T>(Future<T> Function() job, {String? label}) async {
+    state = state.copyWith(busy: true, progress: () => null, error: () => null, failure: () => null);
+    if (label != null) CrashLog.instance.breadcrumb('Editor: $label started');
     try {
-      return await job();
-    } on Object catch (e) {
-      state = state.copyWith(error: () => '$e');
+      final r = await job();
+      if (label != null) CrashLog.instance.breadcrumb('Editor: $label finished');
+      return r;
+    } on Object catch (e, st) {
+      CrashLog.instance.record(label ?? 'Editor', '$e', st);
+      state = state.copyWith(error: () => '$e', failure: () => e);
       return null;
     } finally {
       state = state.copyWith(busy: false, progress: () => null);
@@ -548,23 +559,29 @@ class PhotoEditorController extends _$PhotoEditorController {
   Future<void> autoEnhance() async {
     final preview = state.preview;
     if (preview == null) return;
-    final data = await preview.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
-    if (data == null) return;
-    final stats = enhance.ImageStats.fromRgba(data.buffer.asUint8List(), preview.width, preview.height);
-    updateAdjustments((a) => enhance.autoEnhance(stats, base: a));
+    CrashLog.instance.breadcrumb('Editor: auto enhance ${preview.width}x${preview.height}');
+    try {
+      final data = await preview.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+      if (data == null) return;
+      final stats = enhance.ImageStats.fromRgba(data.buffer.asUint8List(), preview.width, preview.height);
+      updateAdjustments((a) => enhance.autoEnhance(stats, base: a));
+    } on Object catch (e, st) {
+      CrashLog.instance.record('autoEnhance', '$e', st);
+      state = state.copyWith(error: () => '$e', failure: () => e);
+    }
   }
 
   Future<void> removeBackground({bool portrait = false}) => _busy(() async {
     final r = await ref.read(segmentationPipelineProvider).run(_currentRaster, portrait: portrait);
     update((s) => s.copyWith(rasterPath: r.cutoutPath));
-  });
+  }, label: portrait ? 'cut out person' : 'remove background');
 
   Future<void> upscale() => _busy(() async {
     final path = await ref
         .read(upscalePipelineProvider)
         .run(_currentRaster, onProgress: (v) => state = state.copyWith(progress: () => v));
     update((s) => s.copyWith(rasterPath: path));
-  });
+  }, label: 'upscale 4x');
 
   /// Subject mask → masked local adjustment ([retouch] = skin smoothing,
   /// [blurBackground] = background blur).
@@ -576,7 +593,7 @@ class PhotoEditorController extends _$PhotoEditorController {
         ? const Adjustments(blur: 0.5)
         : const Adjustments(exposure: 0.3);
     addMask(MaskKind.subject, maskPath: r.maskPath, adjustments: adjustments, invert: blurBackground);
-  });
+  }, label: retouch ? 'portrait retouch' : (blurBackground ? 'background blur' : 'subject mask'));
 
   /// Maps a point normalised to the output (cropped/rotated) image back to
   /// source pixels of the current raster (`buildInverseWarp` yields
@@ -599,7 +616,7 @@ class PhotoEditorController extends _$PhotoEditorController {
 
   /// Rasterises [strokes] (output-normalised) into a white-on-black RGBA
   /// mask in source pixel space.
-  Future<RgbaImage> _strokesToSourceMask(List<Stroke> strokes, int sw, int sh) async {
+  Future<RgbaImage> _strokesToSourceMask(List<Stroke> strokes, int sw, int sh, {int? maxSide}) async {
     final g = state.edit.geometry;
     final (ow, oh) = g.outputSize(sw, sh);
     final inv = buildInverseWarp(g, sw, sh, ow, oh);
@@ -617,14 +634,20 @@ class PhotoEditorController extends _$PhotoEditorController {
           color: 0xFFFFFFFF,
         ),
     ];
+    // Optionally rasterised smaller (the eraser works on a capped copy):
+    // a full-size mask of a 50+ MP photo can exceed the GPU texture limit.
+    final k = maxSide == null ? 1.0 : math.min(1, maxSide / math.max(sw, sh)).toDouble();
+    final mw = math.max(1, (sw * k).round());
+    final mh = math.max(1, (sh * k).round());
     final rec = ui.PictureRecorder();
     final size = Size(sw.toDouble(), sh.toDouble());
-    final canvas = Canvas(rec)..drawRect(Offset.zero & size, Paint()..color = Colors.black);
+    final canvas = Canvas(rec)..scale(mw / sw, mh / sh);
+    canvas.drawRect(Offset.zero & size, Paint()..color = Colors.black);
     OverlayPainter.paintStrokes(canvas, size, mapped, asMask: true);
-    final maskImg = await rec.endRecording().toImage(sw, sh);
+    final maskImg = await rec.endRecording().toImage(mw, mh);
     final data = await maskImg.toByteData();
     maskImg.dispose();
-    return RgbaImage(sw, sh, data!.buffer.asUint8List());
+    return RgbaImage(mw, mh, data!.buffer.asUint8List());
   }
 
   /// Runs the object eraser on [strokes] painted in output-normalized
@@ -632,11 +655,11 @@ class PhotoEditorController extends _$PhotoEditorController {
   Future<void> eraseObjects(List<Stroke> strokes) => _busy(() async {
     final rasterPath = _currentRaster;
     final (sw, sh) = await _rasterSize(rasterPath);
-    final mask = await _strokesToSourceMask(strokes, sw, sh);
+    final mask = await _strokesToSourceMask(strokes, sw, sh, maxSide: InpaintPipeline.maxSide);
     final out = await ref.read(inpaintPipelineProvider).run(rasterPath, mask);
     update((s) => s.copyWith(rasterPath: out));
     state = state.copyWith(eraserMode: false);
-  });
+  }, label: 'object eraser');
 
   /// Healing / clone brush over [strokes] (output-normalised). Clone uses
   /// [PhotoEditorState.healSource] as the source point of the first stroke.

@@ -1,8 +1,12 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 
+import 'package:lumora/core/diagnostics/crash_log.dart';
 import 'package:lumora/features/ai/data/model_manager.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
 
@@ -16,65 +20,223 @@ abstract class InferenceEngine {
   Future<void> release();
 }
 
-/// ONNX Runtime implementation (flutter_onnxruntime). Uses the platform's
-/// accelerated execution providers when available (CoreML on iOS, NNAPI /
-/// XNNPACK on Android) and falls back to CPU.
+/// Which step of an AI tool failed.
+enum AiErrorKind {
+  /// The model could not be downloaded (network, HTTP error, disk).
+  download,
+
+  /// The downloaded file does not match its SHA-256.
+  checksum,
+
+  /// The model is not on the device yet (and was not downloaded).
+  notDownloaded,
+
+  /// ONNX Runtime could not load the model.
+  session,
+
+  /// Inference itself failed.
+  inference,
+
+  /// Not enough memory for this image/model.
+  memory,
+
+  /// The photo could not be read.
+  input,
+}
+
+/// A failure of an AI tool with a kind the UI can explain in plain words.
+class AiException implements Exception {
+  const AiException(this.kind, {this.model, this.detail});
+
+  final AiErrorKind kind;
+  final ModelSpec? model;
+
+  /// Technical detail (kept for the error log / "details" text).
+  final String? detail;
+
+  @override
+  String toString() => 'AiException(${kind.name}${model == null ? '' : ', ${model!.id}'}): ${detail ?? ''}';
+}
+
+/// Converts any error thrown by a platform channel / runtime into a short
+/// technical string.
+String describeNativeError(Object e) {
+  if (e is PlatformException) {
+    return '${e.code}: ${e.message ?? ''}';
+  }
+  return '$e';
+}
+
+/// Session options used for every model.
+///
+/// The safe default is **CPU only** with KleidiAI disabled: the XNNPACK
+/// execution provider and KleidiAI kernels are faster on many phones but have
+/// caused native crashes / unbounded memory growth on some devices and
+/// graphs, and a native abort cannot be caught from Dart. [accelerated]
+/// (Settings → "AI acceleration") opts back in.
+OrtSessionOptions sessionOptionsFor({
+  required bool accelerated,
+  required bool android,
+  required bool apple,
+  required int cores,
+}) {
+  // Leave cores for the UI and the OS; ORT's default (all cores) makes
+  // low-end phones stutter and some vendors' thermal governors kill the app.
+  final threads = math.max(1, math.min(4, cores ~/ 2));
+  if (!accelerated) {
+    return OrtSessionOptions(
+      providers: const [OrtProvider.CPU],
+      intraOpNumThreads: threads,
+      interOpNumThreads: 1,
+      sessionConfigs: const {'mlas.disable_kleidiai': '1'},
+    );
+  }
+  return OrtSessionOptions(
+    providers: [if (apple) OrtProvider.CORE_ML, if (android) OrtProvider.XNNPACK, OrtProvider.CPU],
+    // XNNPACK uses its own thread pool; ORT recommends 1 intra-op thread with it.
+    intraOpNumThreads: android ? 1 : threads,
+    interOpNumThreads: 1,
+  );
+}
+
+/// ONNX Runtime implementation (flutter_onnxruntime).
+///
+/// * CPU by default; XNNPACK / Core ML only when [accelerated] returns true.
+/// * Only **one** session is kept in memory: models are loaded on demand and
+///   the previous one is closed first, so a photo session never holds the
+///   segmentation, matting, eraser and upscaler graphs at the same time.
+/// * Runs are serialized (the plugin is not re-entrant per session).
+/// * Every step leaves a breadcrumb in [CrashLog], so a native crash can be
+///   attributed on-device.
 class OnnxInferenceEngine implements InferenceEngine {
-  OnnxInferenceEngine(this._models);
+  OnnxInferenceEngine(this._models, {bool Function()? accelerated}) : _accelerated = accelerated ?? (() => false);
 
   final ModelManager _models;
-  final OnnxRuntime _ort = OnnxRuntime();
-  final Map<String, OrtSession> _sessions = {};
+  final bool Function() _accelerated;
+  OnnxRuntime? _ort;
+  String? _sessionModelId;
+  OrtSession? _session;
+  Future<void> _queue = Future.value();
 
-  Future<OrtSession> _session(ModelSpec spec) async {
-    final existing = _sessions[spec.id];
-    if (existing != null) return existing;
-    final file = await _models.ensure(spec);
-    final providers = <OrtProvider>[
-      if (Platform.isIOS || Platform.isMacOS) OrtProvider.CORE_ML,
-      if (Platform.isAndroid) OrtProvider.XNNPACK,
-      OrtProvider.CPU,
-    ];
+  OnnxRuntime get _runtime => _ort ??= OnnxRuntime();
+
+  Future<OrtSession> _sessionFor(ModelSpec spec) async {
+    final existing = _session;
+    if (existing != null && _sessionModelId == spec.id) return existing;
+    await _closeSession();
+
+    if (!await _models.isInstalled(spec)) {
+      throw AiException(AiErrorKind.notDownloaded, model: spec);
+    }
+    final File file;
+    try {
+      file = await _models.ensure(spec);
+    } on ModelChecksumException catch (e) {
+      throw AiException(AiErrorKind.checksum, model: spec, detail: '$e');
+    } on Object catch (e) {
+      throw AiException(AiErrorKind.download, model: spec, detail: describeNativeError(e));
+    }
+
+    final accelerated = _accelerated();
+    final options = sessionOptionsFor(
+      accelerated: accelerated,
+      android: Platform.isAndroid,
+      apple: Platform.isIOS || Platform.isMacOS,
+      cores: Platform.numberOfProcessors,
+    );
+    CrashLog.instance.breadcrumb(
+      'AI: loading ${spec.id} (${spec.sizeMb.toStringAsFixed(1)} MB, '
+      '${accelerated ? 'accelerated' : 'cpu'}, threads ${options.intraOpNumThreads})',
+    );
     OrtSession session;
     try {
-      session = await _ort.createSession(
-        file.path,
-        options: OrtSessionOptions(providers: providers, intraOpNumThreads: 4),
-      );
-    } on Object {
+      session = await _runtime.createSession(file.path, options: options);
+    } on Object catch (e) {
+      if (!accelerated) {
+        throw AiException(AiErrorKind.session, model: spec, detail: describeNativeError(e));
+      }
       // Some graphs are not supported by accelerated providers; use CPU.
-      session = await _ort.createSession(file.path, options: OrtSessionOptions(providers: [OrtProvider.CPU]));
+      CrashLog.instance.breadcrumb('AI: accelerated session failed (${describeNativeError(e)}), retrying on CPU');
+      try {
+        session = await _runtime.createSession(
+          file.path,
+          options: sessionOptionsFor(
+            accelerated: false,
+            android: false,
+            apple: false,
+            cores: Platform.numberOfProcessors,
+          ),
+        );
+      } on Object catch (e2) {
+        throw AiException(AiErrorKind.session, model: spec, detail: describeNativeError(e2));
+      }
     }
-    return _sessions[spec.id] = session;
+    _sessionModelId = spec.id;
+    return _session = session;
+  }
+
+  Future<T> _serialized<T>(Future<T> Function() job) {
+    final result = _queue.then((_) => job());
+    _queue = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
   }
 
   @override
-  Future<List<num>> run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
-    final session = await _session(model);
+  Future<List<num>> run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) =>
+      _serialized(() => _run(model, inputs));
+
+  Future<List<num>> _run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
+    final session = await _sessionFor(model);
+    final shapes = {for (final e in inputs.entries) e.key: e.value.$2};
+    CrashLog.instance.breadcrumb('AI: run ${model.id} inputs $shapes');
     final values = <String, OrtValue>{};
+    Map<String, OrtValue>? outputs;
     try {
       for (final e in inputs.entries) {
         values[e.key] = await OrtValue.fromList(e.value.$1, e.value.$2);
       }
-      final outputs = await session.run(values);
+      outputs = await session.run(values);
       final out = outputs[model.outputName] ?? outputs.values.first;
       final flat = await out.asFlattenedList();
-      for (final o in outputs.values) {
-        await o.dispose();
-      }
+      CrashLog.instance.breadcrumb('AI: run ${model.id} done (${flat.length} values)');
       return flat.cast<num>();
+    } on AiException {
+      rethrow;
+    } on Object catch (e) {
+      final detail = describeNativeError(e);
+      final oom = e is OutOfMemoryError || detail.contains('OutOfMemory') || detail.toLowerCase().contains('bad_alloc');
+      throw AiException(oom ? AiErrorKind.memory : AiErrorKind.inference, model: model, detail: detail);
     } finally {
+      // Outputs first (they may reference session memory), then inputs.
+      for (final o in outputs?.values ?? const <OrtValue>[]) {
+        await _safeDispose(o);
+      }
       for (final v in values.values) {
-        await v.dispose();
+        await _safeDispose(v);
       }
     }
   }
 
-  @override
-  Future<void> release() async {
-    for (final s in _sessions.values) {
-      await s.close();
+  static Future<void> _safeDispose(OrtValue v) async {
+    try {
+      await v.dispose();
+    } on Object catch (_) {
+      // Already released.
     }
-    _sessions.clear();
   }
+
+  Future<void> _closeSession() async {
+    final s = _session;
+    _session = null;
+    _sessionModelId = null;
+    if (s == null) return;
+    try {
+      await s.close();
+    } on Object catch (e) {
+      CrashLog.instance.breadcrumb('AI: closing session failed: ${describeNativeError(e)}');
+    }
+  }
+
+  @override
+  Future<void> release() => _serialized(_closeSession);
 }

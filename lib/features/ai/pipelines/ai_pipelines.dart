@@ -13,9 +13,16 @@ import 'package:path_provider/path_provider.dart';
 /// Decodes any supported file into an [RgbaImage] (EXIF orientation baked),
 /// optionally capping the long side.
 Future<RgbaImage> loadRgba(String path, {int? maxSide}) async {
-  final bytes = await File(path).readAsBytes();
+  final Uint8List bytes;
+  try {
+    bytes = await File(path).readAsBytes();
+  } on FileSystemException catch (e) {
+    throw AiException(AiErrorKind.input, detail: '$e');
+  }
   return Isolate.run(() {
-    var image = img.bakeOrientation(img.decodeImage(bytes)!);
+    final decoded = img.decodeImage(bytes);
+    if (decoded == null) throw const AiException(AiErrorKind.input, detail: 'unsupported or corrupt image');
+    var image = img.bakeOrientation(decoded);
     if (maxSide != null && math.max(image.width, image.height) > maxSide) {
       image = image.width >= image.height
           ? img.copyResize(image, width: maxSide, interpolation: img.Interpolation.cubic)
@@ -111,10 +118,19 @@ class UpscalePipeline {
 
   static const scale = 4;
 
+  /// Largest input area (≈0.79 MP → ≈12.6 MP output). The accumulation
+  /// buffers need 16 bytes per *output* pixel, so this bounds peak memory
+  /// to roughly 200 MB plus the result.
+  static const int maxInputPixels = 1024 * 768;
+
   Future<String> run(String imagePath, {int maxInputSide = 1024, void Function(double)? onProgress}) async {
     const model = ModelRegistry.realEsrgan;
     final tile = model.fixedInputSize!;
     var src = await loadRgba(imagePath, maxSide: maxInputSide);
+    if (src.width * src.height > maxInputPixels) {
+      final k = math.sqrt(maxInputPixels / (src.width * src.height));
+      src = src.resize(math.max(1, (src.width * k).floor()), math.max(1, (src.height * k).floor()));
+    }
     // Pad tiny images up to a full tile.
     final pw = math.max(src.width, tile);
     final ph = math.max(src.height, tile);
@@ -155,21 +171,21 @@ class UpscalePipeline {
 
     final cropW = origW * scale;
     final cropH = origH * scale;
-    final result = await Isolate.run(() {
-      final out = RgbaImage(cropW, cropH);
-      for (var y = 0; y < cropH; y++) {
-        for (var x = 0; x < cropW; x++) {
-          final o = y * outW + x;
-          final w = wsum[o] == 0 ? 1 : wsum[o];
-          final d = (y * cropW + x) * 4;
-          out.pixels[d] = (acc[o * 3] / w * 255).round().clamp(0, 255);
-          out.pixels[d + 1] = (acc[o * 3 + 1] / w * 255).round().clamp(0, 255);
-          out.pixels[d + 2] = (acc[o * 3 + 2] / w * 255).round().clamp(0, 255);
-          out.pixels[d + 3] = 255;
-        }
+    // Normalised in place on this isolate (Isolate.run would copy the
+    // ~200 MB accumulation buffers), yielding to the UI every few rows.
+    final result = RgbaImage(cropW, cropH);
+    for (var y = 0; y < cropH; y++) {
+      for (var x = 0; x < cropW; x++) {
+        final o = y * outW + x;
+        final w = wsum[o] == 0 ? 1 : wsum[o];
+        final d = (y * cropW + x) * 4;
+        result.pixels[d] = (acc[o * 3] / w * 255).round().clamp(0, 255);
+        result.pixels[d + 1] = (acc[o * 3 + 1] / w * 255).round().clamp(0, 255);
+        result.pixels[d + 2] = (acc[o * 3 + 2] / w * 255).round().clamp(0, 255);
+        result.pixels[d + 3] = 255;
       }
-      return out;
-    });
+      if (y % 64 == 63) await Future<void>.delayed(Duration.zero);
+    }
     return savePng(result, 'upscaled');
   }
 
@@ -217,8 +233,13 @@ class InpaintPipeline {
 
   /// [maskRgba] is a white-on-black mask the size of the image at
   /// [imagePath] (white = remove).
+  /// Long-side cap for the photo the eraser works on. Full-resolution
+  /// 48–200 MP photos need several copies of their RGBA buffer and can get
+  /// the app killed for memory.
+  static const maxSide = 4096;
+
   Future<String> run(String imagePath, RgbaImage maskRgba, {InpaintModel model = InpaintModel.migan}) async {
-    final source = await loadRgba(imagePath);
+    final source = await loadRgba(imagePath, maxSide: maxSide);
     final mask = maskRgba.width == source.width && maskRgba.height == source.height
         ? maskRgba
         : maskRgba.resize(source.width, source.height);

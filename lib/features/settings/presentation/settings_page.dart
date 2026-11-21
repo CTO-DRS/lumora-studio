@@ -1,13 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lumora/core/app_info.dart';
 import 'package:lumora/core/providers.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/core/utils/storage.dart';
 import 'package:lumora/features/photo_editor/engine/image_exporter.dart';
 import 'package:lumora/features/settings/data/settings_controller.dart';
 import 'package:material_ui/material_ui.dart';
-
-const kAppVersion = '1.1.0';
 
 final FutureProvider<(int, int)> _storageProvider = FutureProvider.autoDispose<(int, int)>((ref) async {
   final models = await ref.read(modelManagerProvider).installedBytes();
@@ -112,6 +111,18 @@ class SettingsPage extends ConsumerWidget {
             value: s.keepExif,
             onChanged: (v) => c.setExport(keepExif: v),
           ),
+          header(l.toolAi),
+          SwitchListTile(
+            secondary: const Icon(Icons.speed),
+            title: Text(l.aiAcceleration),
+            subtitle: Text(l.aiAccelerationHint),
+            value: s.aiAcceleration,
+            onChanged: (v) async {
+              await c.setAiAcceleration(enabled: v);
+              // Drop the loaded model so the next run uses the new providers.
+              await ref.read(inferenceEngineProvider).release();
+            },
+          ),
           header(l.storage),
           ListTile(
             leading: const Icon(Icons.memory),
@@ -134,6 +145,13 @@ class SettingsPage extends ConsumerWidget {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.cacheCleared(formatBytes(freed)))));
               }
             },
+          ),
+          ListTile(
+            leading: const Icon(Icons.bug_report_outlined),
+            title: Text(l.errorLog),
+            subtitle: Text(l.errorLogSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/errors'),
           ),
           header(l.about),
           ListTile(

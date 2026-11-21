@@ -2,6 +2,27 @@
 
 All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
+## [1.1.1] - 2026-11-21
+
+### Fixed
+- **AI tools no longer close the app on Android.** Release builds are shrunk by R8, which renamed/removed ONNX Runtime's Java classes (`ai.onnxruntime.*`) that its native library looks up by name; the first AI tool then aborted the whole process ("Lumora Studio has stopped"). `android/app/proguard-rules.pro` now keeps ONNX Runtime, the flutter_onnxruntime bridge and FFmpegKit, and is wired into the release build type.
+- Safer on-device inference: CPU execution by default (XNNPACK and KleidiAI kernels are now an opt-in "AI acceleration" switch in Settings), at most 4 threads, only one model loaded at a time, serialized runs, outputs released before inputs.
+- Lower peak memory: the object eraser works on a copy capped at 4096 px (its mask too), and 4× upscale caps the input at ≈0.8 MP and no longer copies its ~200 MB buffers into a second isolate.
+- Every AI tool checks that its model is on the device first: it asks before downloading and shows a progress dialog with retry. Failures are shown in plain words (no internet, damaged model, not enough memory, model cannot load on this device) instead of raw exceptions.
+
+### Added
+- **Settings › Error log**: a local log of Dart errors, breadcrumbs of each AI step, and — on Android 11+ — why the previous run ended (native crash, ANR, low memory) plus any uncaught JVM exception. Copy or share it; nothing is uploaded.
+
+### Changed
+- Version 1.1.1 (build 3).
+
+### الإصلاحات (العربية)
+- **أدوات الذكاء الاصطناعي لم تعد تُغلق التطبيق على Android.** كان R8 في نسخ الإصدار يحذف أو يعيد تسمية أصناف Java الخاصة بـ ONNX Runtime التي تبحث عنها مكتبته الأصلية بالاسم، فيتوقف التطبيق بالكامل ("Lumora Studio توقف") عند أول أداة ذكاء. أضفنا قواعد الحماية في `android/app/proguard-rules.pro` لـ ONNX Runtime وجسر flutter_onnxruntime وFFmpegKit وربطناها بنوع بناء الإصدار.
+- تشغيل أكثر أمانًا: المعالج المركزي (CPU) افتراضيًا، وأصبح تسريع XNNPACK/KleidiAI خيارًا اختياريًا "تسريع الذكاء الاصطناعي" في الإعدادات، بحد أقصى 4 خيوط، ونموذج واحد في الذاكرة في كل مرة.
+- استهلاك ذاكرة أقل: ممحاة العناصر تعمل على نسخة لا تتجاوز 4096 بكسل، والتكبير 4× يحدّ حجم الصورة المُدخلة بنحو 0.8 ميغابكسل.
+- تتحقق كل أداة من وجود نموذجها قبل التشغيل: تطلب الإذن قبل التنزيل وتعرض نافذة تقدّم مع إعادة المحاولة، وتظهر الأخطاء بكلمات واضحة بدلًا من رسائل تقنية.
+- **الإعدادات › سجل الأخطاء**: سجل محلي للأخطاء وخطوات الذكاء الاصطناعي وسبب انتهاء التشغيل السابق (Android 11 فأحدث)، مع النسخ والمشاركة؛ لا يُرفع أي شيء.
+
 ## [1.1.0] - 2026-11-20
 
 ### Added

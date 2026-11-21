@@ -426,5 +426,35 @@
   "exportGif": "Animated GIF",
   "exportGifHint": "480 px, 12 fps, first 30 s",
   "play": "Play",
-  "pause": "Pause"
+  "pause": "Pause",
+  "aiErrDownload": "Couldn't download the AI model. Check your internet connection and try again.",
+  "aiErrChecksum": "The downloaded AI model is damaged. Delete it in Settings › AI models and download it again.",
+  "aiErrNotDownloaded": "This tool needs its AI model. Download it first.",
+  "aiErrSession": "This device couldn't load the AI model. If AI acceleration is on, turn it off in Settings and try again.",
+  "aiErrInference": "The AI model couldn't process this photo.",
+  "aiErrMemory": "Not enough memory for this photo. Try a smaller photo or close other apps.",
+  "aiErrInput": "This photo couldn't be read.",
+  "modelNeededTitle": "Download AI model?",
+  "modelNeededBody": "This tool needs {names} ({size}). It is downloaded once and kept on this device. Your photos never leave the phone.",
+  "modelDownloadingTitle": "Downloading AI model…",
+  "retry": "Retry",
+  "close": "Close",
+  "copy": "Copy",
+  "copied": "Copied",
+  "errorLog": "Error log",
+  "errorLogSubtitle": "Recent errors, stored only on this device",
+  "errorLogEmpty": "No errors recorded.",
+  "errorLogCleared": "Error log cleared",
+  "aiAcceleration": "AI acceleration (experimental)",
+  "aiAccelerationHint": "Faster on some phones (XNNPACK). Turn it off if AI tools close the app.",
+  "@modelNeededBody": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  }
 }

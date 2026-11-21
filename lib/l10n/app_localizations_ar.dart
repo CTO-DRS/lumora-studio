@@ -969,4 +969,69 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get pause => 'إيقاف مؤقت';
+
+  @override
+  String get aiErrDownload => 'تعذّر تنزيل نموذج الذكاء الاصطناعي. تحقّق من اتصال الإنترنت ثم أعد المحاولة.';
+
+  @override
+  String get aiErrChecksum =>
+      'نموذج الذكاء الاصطناعي الذي تم تنزيله تالف. احذفه من الإعدادات › نماذج الذكاء الاصطناعي ثم نزّله مجددًا.';
+
+  @override
+  String get aiErrNotDownloaded => 'تحتاج هذه الأداة إلى نموذج الذكاء الاصطناعي الخاص بها. نزّله أولًا.';
+
+  @override
+  String get aiErrSession =>
+      'تعذّر على هذا الجهاز تحميل نموذج الذكاء الاصطناعي. إن كان تسريع الذكاء الاصطناعي مفعّلًا فأوقفه من الإعدادات ثم أعد المحاولة.';
+
+  @override
+  String get aiErrInference => 'تعذّر على نموذج الذكاء الاصطناعي معالجة هذه الصورة.';
+
+  @override
+  String get aiErrMemory => 'الذاكرة غير كافية لهذه الصورة. جرّب صورة أصغر أو أغلق التطبيقات الأخرى.';
+
+  @override
+  String get aiErrInput => 'تعذّرت قراءة هذه الصورة.';
+
+  @override
+  String get modelNeededTitle => 'تنزيل نموذج الذكاء الاصطناعي؟';
+
+  @override
+  String modelNeededBody(String names, String size) {
+    return 'تحتاج هذه الأداة إلى $names ($size). يُنزَّل مرة واحدة ويبقى على هذا الجهاز، ولا تغادر صورك الهاتف أبدًا.';
+  }
+
+  @override
+  String get modelDownloadingTitle => 'جارٍ تنزيل نموذج الذكاء الاصطناعي…';
+
+  @override
+  String get retry => 'إعادة المحاولة';
+
+  @override
+  String get close => 'إغلاق';
+
+  @override
+  String get copy => 'نسخ';
+
+  @override
+  String get copied => 'تم النسخ';
+
+  @override
+  String get errorLog => 'سجل الأخطاء';
+
+  @override
+  String get errorLogSubtitle => 'آخر الأخطاء، محفوظة على هذا الجهاز فقط';
+
+  @override
+  String get errorLogEmpty => 'لا توجد أخطاء مسجّلة.';
+
+  @override
+  String get errorLogCleared => 'تم مسح سجل الأخطاء';
+
+  @override
+  String get aiAcceleration => 'تسريع الذكاء الاصطناعي (تجريبي)';
+
+  @override
+  String get aiAccelerationHint =>
+      'أسرع على بعض الهواتف (XNNPACK). أوقفه إذا كانت أدوات الذكاء الاصطناعي تُغلق التطبيق.';
 }

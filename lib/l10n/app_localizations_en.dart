@@ -969,4 +969,68 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pause => 'Pause';
+
+  @override
+  String get aiErrDownload => 'Couldn\'t download the AI model. Check your internet connection and try again.';
+
+  @override
+  String get aiErrChecksum =>
+      'The downloaded AI model is damaged. Delete it in Settings › AI models and download it again.';
+
+  @override
+  String get aiErrNotDownloaded => 'This tool needs its AI model. Download it first.';
+
+  @override
+  String get aiErrSession =>
+      'This device couldn\'t load the AI model. If AI acceleration is on, turn it off in Settings and try again.';
+
+  @override
+  String get aiErrInference => 'The AI model couldn\'t process this photo.';
+
+  @override
+  String get aiErrMemory => 'Not enough memory for this photo. Try a smaller photo or close other apps.';
+
+  @override
+  String get aiErrInput => 'This photo couldn\'t be read.';
+
+  @override
+  String get modelNeededTitle => 'Download AI model?';
+
+  @override
+  String modelNeededBody(String names, String size) {
+    return 'This tool needs $names ($size). It is downloaded once and kept on this device. Your photos never leave the phone.';
+  }
+
+  @override
+  String get modelDownloadingTitle => 'Downloading AI model…';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get copy => 'Copy';
+
+  @override
+  String get copied => 'Copied';
+
+  @override
+  String get errorLog => 'Error log';
+
+  @override
+  String get errorLogSubtitle => 'Recent errors, stored only on this device';
+
+  @override
+  String get errorLogEmpty => 'No errors recorded.';
+
+  @override
+  String get errorLogCleared => 'Error log cleared';
+
+  @override
+  String get aiAcceleration => 'AI acceleration (experimental)';
+
+  @override
+  String get aiAccelerationHint => 'Faster on some phones (XNNPACK). Turn it off if AI tools close the app.';
 }

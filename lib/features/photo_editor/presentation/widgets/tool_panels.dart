@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumora/core/providers.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/core/widgets/labeled_slider.dart';
+import 'package:lumora/features/ai/domain/model_registry.dart';
+import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
 import 'package:lumora/features/photo_editor/domain/geometry.dart';
 import 'package:lumora/features/photo_editor/domain/layers.dart';
@@ -1092,14 +1096,28 @@ class AiPanel extends ConsumerWidget {
         ),
       );
     }
+    // Every model-backed tool checks (and, after asking, downloads) its
+    // model with a progress dialog before any native code runs.
+    VoidCallback withModels(AiTool tool, FutureOr<void> Function() action) => () async {
+      if (!await ensureModelsDownloaded(context, ref, aiToolModels(tool))) return;
+      await action();
+    };
     final actions = <(IconData, String, VoidCallback)>[
       (Icons.auto_fix_high, l.aiAutoEnhance, ctrl.autoEnhance),
-      (Icons.content_cut, l.aiRemoveBg, ctrl.removeBackground),
-      (Icons.person, l.aiPortraitBg, () => ctrl.removeBackground(portrait: true)),
-      (Icons.blur_on, l.aiBlurBg, () => ctrl.subjectAdjustment(blurBackground: true)),
-      (Icons.face_retouching_natural, l.aiRetouch, () => ctrl.subjectAdjustment(retouch: true)),
-      (Icons.cleaning_services_outlined, l.aiEraser, () => ctrl.setEraserMode(value: true)),
-      (Icons.high_quality, l.aiUpscale, ctrl.upscale),
+      (Icons.content_cut, l.aiRemoveBg, withModels(AiTool.removeBackground, ctrl.removeBackground)),
+      (Icons.person, l.aiPortraitBg, withModels(AiTool.cutOutPerson, () => ctrl.removeBackground(portrait: true))),
+      (
+        Icons.blur_on,
+        l.aiBlurBg,
+        withModels(AiTool.backgroundBlur, () => ctrl.subjectAdjustment(blurBackground: true)),
+      ),
+      (
+        Icons.face_retouching_natural,
+        l.aiRetouch,
+        withModels(AiTool.portraitRetouch, () => ctrl.subjectAdjustment(retouch: true)),
+      ),
+      (Icons.cleaning_services_outlined, l.aiEraser, withModels(AiTool.eraser, () => ctrl.setEraserMode(value: true))),
+      (Icons.high_quality, l.aiUpscale, withModels(AiTool.upscale, ctrl.upscale)),
     ];
     return GridView.count(
       crossAxisCount: 4,
