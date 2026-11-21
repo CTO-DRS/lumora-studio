@@ -8,7 +8,7 @@
 
 [![CI](https://github.com/CTO-DRS/lumora-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/CTO-DRS/lumora-studio/actions/workflows/ci.yml)
 [![Release](https://github.com/CTO-DRS/lumora-studio/actions/workflows/release.yml/badge.svg)](https://github.com/CTO-DRS/lumora-studio/releases/latest)
-![Version](https://img.shields.io/badge/version-1.1.0-FFB547)
+![Version](https://img.shields.io/badge/version-1.1.1-FFB547)
 ![Flutter](https://img.shields.io/badge/Flutter-3.50-02569B?logo=flutter)
 ![Dart](https://img.shields.io/badge/Dart-3.14-0175C2?logo=dart)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)

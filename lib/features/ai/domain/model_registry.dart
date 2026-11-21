@@ -122,3 +122,14 @@ class ModelRegistry {
 
   static List<ModelSpec> forTask(AiTask task) => all.where((m) => m.task == task).toList();
 }
+
+/// The model-backed tools of the photo editor's AI tab.
+enum AiTool { removeBackground, cutOutPerson, backgroundBlur, portraitRetouch, eraser, upscale }
+
+/// Models a tool needs on the device before it can run.
+List<ModelSpec> aiToolModels(AiTool tool) => switch (tool) {
+  AiTool.removeBackground => const [ModelRegistry.u2netp],
+  AiTool.cutOutPerson || AiTool.backgroundBlur || AiTool.portraitRetouch => const [ModelRegistry.modnet],
+  AiTool.eraser => const [ModelRegistry.migan],
+  AiTool.upscale => const [ModelRegistry.realEsrgan],
+};

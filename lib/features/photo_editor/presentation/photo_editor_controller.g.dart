@@ -94,7 +94,7 @@ final class PhotoEditorControllerProvider
 }
 
 String _$photoEditorControllerHash() =>
-    r'439b16ced94328b44e652fa178b4ebd093454cfe';
+    r'3936880912e5efb111e1cb507e8f329e5c20da73';
 
 abstract class _$PhotoEditorController extends $Notifier<PhotoEditorState> {
   PhotoEditorState build();

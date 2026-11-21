@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumora/core/router/app_router.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
+import 'package:lumora/features/ai/domain/model_registry.dart';
+import 'package:lumora/features/ai/presentation/ai_error_text.dart';
+import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/data/preset_store.dart';
 import 'package:lumora/features/photo_editor/domain/edit_clipboard.dart';
 import 'package:lumora/features/photo_editor/engine/image_exporter.dart';
@@ -52,17 +55,19 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
         return;
       case QuickAction.removeBackground:
         ctrl.setTool(EditorTool.ai);
+        if (!mounted || !await ensureModelsDownloaded(context, ref, aiToolModels(AiTool.removeBackground))) return;
         await ctrl.removeBackground();
       case QuickAction.autoEnhance:
         ctrl.setTool(EditorTool.adjust);
         await ctrl.autoEnhance();
       case QuickAction.upscale:
         ctrl.setTool(EditorTool.ai);
+        if (!mounted || !await ensureModelsDownloaded(context, ref, aiToolModels(AiTool.upscale))) return;
         await ctrl.upscale();
       case QuickAction.eraser:
-        ctrl
-          ..setTool(EditorTool.ai)
-          ..setEraserMode(value: true);
+        ctrl.setTool(EditorTool.ai);
+        if (!mounted || !await ensureModelsDownloaded(context, ref, aiToolModels(AiTool.eraser))) return;
+        ctrl.setEraserMode(value: true);
       case QuickAction.heal:
         ctrl.setTool(EditorTool.heal);
     }
@@ -78,7 +83,10 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
 
     ref.listen(photoEditorControllerProvider.select((s) => s.error), (_, error) {
       if (error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.aiFailed(error))));
+        final failure = ref.read(photoEditorControllerProvider).failure;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.aiFailed(failure == null ? error : aiErrorText(l, failure)))));
       }
     });
 

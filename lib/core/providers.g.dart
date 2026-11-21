@@ -346,7 +346,7 @@ final class InferenceEngineProvider
   }
 }
 
-String _$inferenceEngineHash() => r'ceb6c68457bd44f0861fca6903296b8babcca34a';
+String _$inferenceEngineHash() => r'221d6d25d04b5b7651bf1a546f99775e2ccb73b3';
 
 @ProviderFor(segmentationPipeline)
 final segmentationPipelineProvider = SegmentationPipelineProvider._();

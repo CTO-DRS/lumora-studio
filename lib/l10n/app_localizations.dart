@@ -1945,6 +1945,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pause'**
   String get pause;
+
+  /// No description provided for @aiErrDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download the AI model. Check your internet connection and try again.'**
+  String get aiErrDownload;
+
+  /// No description provided for @aiErrChecksum.
+  ///
+  /// In en, this message translates to:
+  /// **'The downloaded AI model is damaged. Delete it in Settings › AI models and download it again.'**
+  String get aiErrChecksum;
+
+  /// No description provided for @aiErrNotDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'This tool needs its AI model. Download it first.'**
+  String get aiErrNotDownloaded;
+
+  /// No description provided for @aiErrSession.
+  ///
+  /// In en, this message translates to:
+  /// **'This device couldn\'t load the AI model. If AI acceleration is on, turn it off in Settings and try again.'**
+  String get aiErrSession;
+
+  /// No description provided for @aiErrInference.
+  ///
+  /// In en, this message translates to:
+  /// **'The AI model couldn\'t process this photo.'**
+  String get aiErrInference;
+
+  /// No description provided for @aiErrMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough memory for this photo. Try a smaller photo or close other apps.'**
+  String get aiErrMemory;
+
+  /// No description provided for @aiErrInput.
+  ///
+  /// In en, this message translates to:
+  /// **'This photo couldn\'t be read.'**
+  String get aiErrInput;
+
+  /// No description provided for @modelNeededTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Download AI model?'**
+  String get modelNeededTitle;
+
+  /// No description provided for @modelNeededBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This tool needs {names} ({size}). It is downloaded once and kept on this device. Your photos never leave the phone.'**
+  String modelNeededBody(String names, String size);
+
+  /// No description provided for @modelDownloadingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading AI model…'**
+  String get modelDownloadingTitle;
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// No description provided for @copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get copy;
+
+  /// No description provided for @copied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get copied;
+
+  /// No description provided for @errorLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Error log'**
+  String get errorLog;
+
+  /// No description provided for @errorLogSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent errors, stored only on this device'**
+  String get errorLogSubtitle;
+
+  /// No description provided for @errorLogEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No errors recorded.'**
+  String get errorLogEmpty;
+
+  /// No description provided for @errorLogCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Error log cleared'**
+  String get errorLogCleared;
+
+  /// No description provided for @aiAcceleration.
+  ///
+  /// In en, this message translates to:
+  /// **'AI acceleration (experimental)'**
+  String get aiAcceleration;
+
+  /// No description provided for @aiAccelerationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Faster on some phones (XNNPACK). Turn it off if AI tools close the app.'**
+  String get aiAccelerationHint;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

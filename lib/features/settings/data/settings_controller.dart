@@ -15,6 +15,7 @@ class AppSettings {
     this.keepExif = true,
     this.exportMaxDimension,
     this.haptics = true,
+    this.aiAcceleration = false,
     this.onboardingDone = true,
     this.loaded = false,
   });
@@ -30,6 +31,11 @@ class AppSettings {
   final int? exportMaxDimension;
   final bool haptics;
 
+  /// Opt-in XNNPACK execution provider + KleidiAI kernels for on-device AI.
+  /// Off by default: plain CPU is slower but the most compatible (some
+  /// devices/graphs crash natively with the accelerated kernels).
+  final bool aiAcceleration;
+
   /// Whether the first-run tips were shown.
   final bool onboardingDone;
 
@@ -44,6 +50,7 @@ class AppSettings {
     bool? keepExif,
     int? Function()? exportMaxDimension,
     bool? haptics,
+    bool? aiAcceleration,
     bool? onboardingDone,
     bool? loaded,
   }) => AppSettings(
@@ -54,6 +61,7 @@ class AppSettings {
     keepExif: keepExif ?? this.keepExif,
     exportMaxDimension: exportMaxDimension != null ? exportMaxDimension() : this.exportMaxDimension,
     haptics: haptics ?? this.haptics,
+    aiAcceleration: aiAcceleration ?? this.aiAcceleration,
     onboardingDone: onboardingDone ?? this.onboardingDone,
     loaded: loaded ?? this.loaded,
   );
@@ -84,6 +92,7 @@ class SettingsController extends _$SettingsController {
       keepExif: prefs.getBool('keepExif') ?? true,
       exportMaxDimension: maxDim == null || maxDim <= 0 ? null : maxDim,
       haptics: prefs.getBool('haptics') ?? true,
+      aiAcceleration: prefs.getBool('aiAcceleration') ?? false,
       // Existing installs (who already have preferences) skip the tips.
       onboardingDone: prefs.getBool('onboardingDone') ?? prefs.containsKey('exportQuality'),
       loaded: true,
@@ -121,6 +130,11 @@ class SettingsController extends _$SettingsController {
     state = state.copyWith(haptics: enabled);
     Haptics.enabled = enabled;
     await _prefs?.setBool('haptics', enabled);
+  }
+
+  Future<void> setAiAcceleration({required bool enabled}) async {
+    state = state.copyWith(aiAcceleration: enabled);
+    await _prefs?.setBool('aiAcceleration', enabled);
   }
 
   Future<void> setOnboardingDone({bool done = true}) async {

@@ -34,6 +34,15 @@ android {
             // Debug signing keeps `flutter build apk --release` working in CI.
             // Configure your own keystore before publishing to a store.
             signingConfig = signingConfigs.getByName("debug")
+            // R8 stays on (smaller APK), but with explicit keep rules: ONNX
+            // Runtime and FFmpegKit call back into Java classes by name from
+            // JNI, and stripping/renaming them aborts the process natively.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
