@@ -118,6 +118,11 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - run: flutter pub get
+      # download.onnxruntime.ai serves an invalid TLS certificate; fetch the
+      # onnxruntime-extensions archive SwiftPM insists on from Microsoft's
+      # origin storage instead (same file, same checksum). See the script.
+      - name: Route ONNX Runtime SPM binaries around download.onnxruntime.ai
+        run: bash tool/ios_fix_onnxruntime_spm.sh
       - name: Build iOS (retries for flaky SPM binary downloads)
         shell: bash
         run: |
