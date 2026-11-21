@@ -10,6 +10,7 @@ import 'package:image/image.dart' as img;
 import 'package:lumora/core/diagnostics/crash_log.dart';
 import 'package:lumora/core/providers.dart';
 import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
+import 'package:lumora/features/ai/pipelines/smart_pipelines.dart';
 import 'package:lumora/features/ai/pipelines/tensor_utils.dart';
 import 'package:lumora/features/photo_editor/data/preset_store.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
@@ -29,6 +30,8 @@ import 'package:lumora/features/photo_editor/engine/overlay_painter.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
 import 'package:lumora/features/photo_editor/engine/pixel_ops.dart';
 import 'package:lumora/features/photo_editor/engine/preset_thumbnails.dart';
+import 'package:lumora/features/smart_edit/domain/edit_ops.dart';
+import 'package:lumora/features/smart_edit/domain/photo_analysis.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -37,7 +40,26 @@ import 'package:uuid/uuid.dart';
 
 part 'photo_editor_controller.g.dart';
 
-enum EditorTool { presets, adjust, hsl, curves, lut, crop, masks, heal, ai, text, stickers, draw, frame, watermark }
+enum EditorTool {
+  smart,
+  presets,
+  adjust,
+  hsl,
+  curves,
+  lut,
+  crop,
+  masks,
+  heal,
+  ai,
+  text,
+  stickers,
+  draw,
+  frame,
+  watermark,
+}
+
+/// What to do with a tap-to-select selection.
+enum SelectionAction { erase, cutOut, adjust, blurBackground }
 
 /// Tools whose on-canvas gestures work in un-framed image coordinates.
 const Set<EditorTool> _interactiveTools = {
@@ -85,7 +107,7 @@ class PhotoEditorState {
     this.sourcePath,
     this.preview,
     this.rendered,
-    this.tool = EditorTool.presets,
+    this.tool = EditorTool.smart,
     this.busy = false,
     this.progress,
     this.comparing = false,
@@ -104,6 +126,12 @@ class PhotoEditorState {
     this.healClone = false,
     this.healSource,
     this.healSettingSource = false,
+    this.selecting = false,
+    this.selectAdd = true,
+    this.selectPoints = const [],
+    this.selectOverlay,
+    this.hasSelection = false,
+    this.suggestions = const [],
   });
 
   final EditHistory<EditState> history;
@@ -153,11 +181,22 @@ class PhotoEditorState {
   /// The next tap on the photo sets [healSource].
   final bool healSettingSource;
 
+  /// Tap-to-select mode (MobileSAM): taps add ([selectAdd]) or subtract
+  /// regions; [selectOverlay] tints the selection on the canvas.
+  final bool selecting;
+  final bool selectAdd;
+  final List<SelectPoint> selectPoints;
+  final ui.Image? selectOverlay;
+  final bool hasSelection;
+
+  /// One-tap fixes for the current photo (best first).
+  final List<Suggestion> suggestions;
+
   EditState get edit => history.present;
 
   /// Whether the canvas currently shows the un-framed image (so on-canvas
   /// gestures map 1:1 to image coordinates).
-  bool get interactive => _interactiveTools.contains(tool) || eraserMode || hslPicking;
+  bool get interactive => _interactiveTools.contains(tool) || eraserMode || hslPicking || selecting;
 
   PhotoEditorState copyWith({
     EditHistory<EditState>? history,
@@ -184,6 +223,12 @@ class PhotoEditorState {
     bool? healClone,
     Offset? Function()? healSource,
     bool? healSettingSource,
+    bool? selecting,
+    bool? selectAdd,
+    List<SelectPoint>? selectPoints,
+    ui.Image? Function()? selectOverlay,
+    bool? hasSelection,
+    List<Suggestion>? suggestions,
   }) => PhotoEditorState(
     history: history ?? this.history,
     projectId: projectId ?? this.projectId,
@@ -209,6 +254,12 @@ class PhotoEditorState {
     healClone: healClone ?? this.healClone,
     healSource: healSource != null ? healSource() : this.healSource,
     healSettingSource: healSettingSource ?? this.healSettingSource,
+    selecting: selecting ?? this.selecting,
+    selectAdd: selectAdd ?? this.selectAdd,
+    selectPoints: selectPoints ?? this.selectPoints,
+    selectOverlay: selectOverlay != null ? selectOverlay() : this.selectOverlay,
+    hasSelection: hasSelection ?? this.hasSelection,
+    suggestions: suggestions ?? this.suggestions,
   );
 }
 
@@ -226,6 +277,9 @@ class PhotoEditorController extends _$PhotoEditorController {
   ui.Image? _lastClipping;
   final FinishingRenderer _finishing = FinishingRenderer();
   Timer? _histogramTimer;
+  RgbaImage? _selectionMask;
+  ui.Image? _lastSelectOverlay;
+  String? _analysedPath;
 
   @override
   PhotoEditorState build() {
@@ -238,6 +292,7 @@ class PhotoEditorController extends _$PhotoEditorController {
       _lastPreview?.dispose();
       _lastRendered?.dispose();
       _lastClipping?.dispose();
+      _lastSelectOverlay?.dispose();
       _finishing.dispose();
     });
     return PhotoEditorState(history: EditHistory(EditState.initial));
@@ -246,6 +301,7 @@ class PhotoEditorController extends _$PhotoEditorController {
   // ------------------------------------------------------------ lifecycle
 
   Future<void> open(String sourcePath) async {
+    _analysedPath = null;
     state = PhotoEditorState(
       history: EditHistory(EditState.initial),
       projectId: ref.read(projectRepositoryProvider).newId(),
@@ -257,6 +313,7 @@ class PhotoEditorController extends _$PhotoEditorController {
   Future<void> openProject(String id) async {
     final loaded = await ref.read(projectRepositoryProvider).loadPhoto(id);
     if (loaded == null) return;
+    _analysedPath = null;
     state = PhotoEditorState(history: EditHistory(loaded.$2), projectId: id, sourcePath: loaded.$1);
     await _render();
   }
@@ -289,6 +346,7 @@ class PhotoEditorController extends _$PhotoEditorController {
 
   void setTool(EditorTool tool) {
     if (tool == state.tool) return;
+    _dropSelection();
     state = state.copyWith(tool: tool, eraserMode: false, hslPicking: false, healSettingSource: false);
     unawaited(_render());
   }
@@ -383,18 +441,20 @@ class PhotoEditorController extends _$PhotoEditorController {
 
   Preset? _resolvePreset(String? id) => ref.read(presetLibraryControllerProvider).byId(id);
 
-  void applyPreset(String? id, {double intensity = 1, bool live = false}) {
-    update((s) {
-      final preset = _resolvePreset(id);
-      // Presets are applied on top of the user's adjustments recorded
-      // before any preset was chosen.
-      final base = adjustmentsWithoutPreset(s);
-      return s.copyWith(
-        presetId: preset == null ? null : id,
-        presetIntensity: intensity,
-        adjustments: preset == null ? base : preset.apply(base, intensity: intensity),
-      );
-    }, live: live);
+  void applyPreset(String? id, {double intensity = 1, bool live = false}) =>
+      update((s) => _withPreset(s, id, intensity), live: live);
+
+  /// [s] with preset [id] at [intensity] (`null` removes the active one).
+  /// Presets are applied on top of the user's adjustments recorded before
+  /// any preset was chosen.
+  EditState _withPreset(EditState s, String? id, double intensity) {
+    final preset = _resolvePreset(id);
+    final base = adjustmentsWithoutPreset(s);
+    return s.copyWith(
+      presetId: preset == null ? null : id,
+      presetIntensity: intensity,
+      adjustments: preset == null ? base : preset.apply(base, intensity: intensity),
+    );
   }
 
   /// The user's own adjustments with the active preset taken out.
@@ -691,6 +751,273 @@ class PhotoEditorController extends _$PhotoEditorController {
     update((s) => s.copyWith(rasterPath: path));
   });
 
+  // ----------------------------------------------------------- smart edit
+
+  /// Applies the instant part of [plan] (sliders, looks, rotate/flip,
+  /// auto-enhance, reset, remove look) as **one** undo step and returns the
+  /// actions that need a model or further input, in order, for the page to
+  /// run (it asks before downloading models).
+  Future<List<SmartAction>> applySmartPlan(SmartEditPlan plan) async {
+    final actions = plan.actions.toList();
+    if (actions.contains(SmartAction.undo)) undo();
+    enhance.ImageStats? stats;
+    if (actions.contains(SmartAction.autoEnhance)) stats = await _previewStats();
+    final instant = plan.ops.where((o) => o is! ActionOp || (o.action.instant && o.action != SmartAction.undo));
+    if (instant.isNotEmpty) {
+      update((s0) {
+        var s = s0;
+        for (final op in instant) {
+          switch (op) {
+            case AdjustOp():
+              s = s.copyWith(adjustments: applyAdjustOps(s.adjustments, [op]));
+            case LookOp():
+              s = _withPreset(s, op.presetId, op.intensity.clamp(0.0, 1.0));
+            case ActionOp(:final action):
+              s = switch (action) {
+                SmartAction.reset => EditState.initial,
+                SmartAction.clearLook => _withPreset(s, null, 1),
+                SmartAction.autoEnhance when stats != null => s.copyWith(
+                  adjustments: enhance.autoEnhance(stats, base: s.adjustments),
+                ),
+                _ => s.copyWith(geometry: applyGeometryAction(s.geometry, action)),
+              };
+          }
+        }
+        return s;
+      });
+    }
+    CrashLog.instance.breadcrumb('Editor: smart edit ${plan.toJson()}');
+    return [
+      for (final a in actions)
+        if (!a.instant) a,
+    ];
+  }
+
+  Future<enhance.ImageStats?> _previewStats() async {
+    final preview = state.preview;
+    if (preview == null) return null;
+    final small = downscaleImage(preview, 256);
+    final data = await small.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+    final (w, h) = (small.width, small.height);
+    small.dispose();
+    if (data == null) return null;
+    return enhance.ImageStats.fromRgba(data.buffer.asUint8List(), w, h);
+  }
+
+  /// Recomputes [PhotoEditorState.suggestions] for the current raster.
+  Future<void> _analyse() async {
+    final preview = state.preview;
+    final path = _previewPath;
+    if (preview == null || path == null || path == _analysedPath) return;
+    _analysedPath = path;
+    try {
+      final small = downscaleImage(preview, 256);
+      final data = await small.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+      final (w, h) = (small.width, small.height);
+      small.dispose();
+      if (data == null) return;
+      final analysis = PhotoAnalysis.fromRgba(data.buffer.asUint8List(), w, h);
+      state = state.copyWith(suggestions: suggestFixes(analysis));
+    } on Object catch (e, st) {
+      CrashLog.instance.record('analyse', '$e', st);
+    }
+  }
+
+  /// One-tap suggestion: added on top of the current edit (one undo step).
+  void applySuggestion(Suggestion s) {
+    final id = s.libraryPresetId;
+    if (id != null) {
+      applyPreset(id);
+    } else {
+      updateAdjustments((a) => s.preset.apply(a));
+    }
+  }
+
+  // ------------------------------------------------------ tap to select
+
+  /// Enters tap-to-select: encodes the photo once (MobileSAM encoder).
+  Future<void> startSelection() => _busy(() async {
+    await ref.read(objectSelectPipelineProvider).prepare(_currentRaster);
+    _dropSelection();
+    state = state.copyWith(selecting: true, selectAdd: true);
+    unawaited(_render());
+  }, label: 'select: encode');
+
+  void setSelectAdd({required bool value}) => state = state.copyWith(selectAdd: value);
+
+  /// Adds a prompt point at [normalized] (0..1 on the displayed, un-framed
+  /// output image) and refreshes the selection.
+  Future<void> selectAt(Offset normalized) async {
+    final preview = state.preview;
+    if (!state.selecting || preview == null) return;
+    final (u, v) = _toSource(normalized, preview.width, preview.height);
+    final point = SelectPoint(u / preview.width, v / preview.height, positive: state.selectAdd);
+    await _updateSelection([...state.selectPoints, point]);
+  }
+
+  /// Removes the last prompt point.
+  Future<void> undoSelectPoint() async {
+    final pts = state.selectPoints;
+    if (pts.isEmpty) return;
+    await _updateSelection(pts.sublist(0, pts.length - 1));
+  }
+
+  void clearSelection() {
+    _selectionMask = null;
+    _setOverlay(null);
+    state = state.copyWith(selectPoints: const [], hasSelection: false);
+  }
+
+  /// Leaves tap-to-select without applying anything.
+  void cancelSelection() {
+    _dropSelection();
+    unawaited(_render());
+  }
+
+  void _dropSelection() {
+    if (!state.selecting && _selectionMask == null) return;
+    _selectionMask = null;
+    _setOverlay(null);
+    state = state.copyWith(selecting: false, selectPoints: const [], hasSelection: false);
+  }
+
+  void _setOverlay(ui.Image? img) {
+    final old = _lastSelectOverlay;
+    _lastSelectOverlay = img;
+    state = state.copyWith(selectOverlay: () => img);
+    if (old != null) WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+  }
+
+  Future<void> _updateSelection(List<SelectPoint> points) async {
+    state = state.copyWith(selectPoints: points);
+    if (points.isEmpty) {
+      clearSelection();
+      return;
+    }
+    await _busy(() async {
+      final pipeline = ref.read(objectSelectPipelineProvider);
+      await pipeline.prepare(_currentRaster);
+      final mask = await pipeline.maskFor(points);
+      _selectionMask = mask;
+      final overlay = await _selectionOverlay(mask);
+      _setOverlay(overlay);
+      state = state.copyWith(hasSelection: maskCoverage(mask) > 0);
+    }, label: 'select: decode');
+  }
+
+  /// Tinted overlay of a source-space [mask] warped into the output frame
+  /// (crop/rotation applied) so it lines up with the canvas.
+  Future<ui.Image> _selectionOverlay(RgbaImage mask) async {
+    final g = state.edit.geometry;
+    final mw = mask.width;
+    final mh = mask.height;
+    final (ow, oh) = g.outputSize(mw, mh);
+    final w = math.max(1, ow);
+    final h = math.max(1, oh);
+    final inv = buildInverseWarp(g, mw, mh, w, h);
+    final out = Uint8List(w * h * 4);
+    bool on(int x, int y) => x >= 0 && y >= 0 && x < mw && y < mh && mask.pixels[(y * mw + x) * 4] > 127;
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        final (u, v) = inv.apply(x + 0.5, y + 0.5);
+        final sx = (u * mw).floor();
+        final sy = (v * mh).floor();
+        if (!on(sx, sy)) continue;
+        final edge = !on(sx - 2, sy) || !on(sx + 2, sy) || !on(sx, sy - 2) || !on(sx, sy + 2);
+        final o = (y * w + x) * 4;
+        // Soft violet (#6E5FE0) tint, brighter outline.
+        out[o] = edge ? 0xB8 : 0x6E;
+        out[o + 1] = edge ? 0xB0 : 0x5F;
+        out[o + 2] = edge ? 0xFF : 0xE0;
+        out[o + 3] = edge ? 230 : 110;
+      }
+    }
+    return imageFromRgba(out, w, h);
+  }
+
+  /// Uses the current selection: erase it, cut it out, turn it into a
+  /// masked adjustment, or blur everything else.
+  Future<void> applySelection(SelectionAction action) => _busy(() async {
+    final mask = _selectionMask;
+    if (mask == null) return;
+    final raster = _currentRaster;
+    switch (action) {
+      case SelectionAction.erase:
+        final out = await ref.read(inpaintPipelineProvider).run(raster, mask);
+        update((s) => s.copyWith(rasterPath: out));
+      case SelectionAction.cutOut:
+        final src = await loadRgba(raster, maxSide: InpaintPipeline.maxSide);
+        final cut = await Isolate.run(() => applyMaskAsAlpha(src, boxBlurMask(mask, 1).resize(src.width, src.height)));
+        final path = await savePng(cut, 'cutout');
+        update((s) => s.copyWith(rasterPath: path));
+      case SelectionAction.adjust:
+      case SelectionAction.blurBackground:
+        final path = await savePng(await Isolate.run(() => boxBlurMask(mask, 2)), 'selection');
+        _dropSelection();
+        final blur = action == SelectionAction.blurBackground;
+        addMask(
+          MaskKind.subject,
+          maskPath: path,
+          adjustments: blur ? const Adjustments(blur: 0.5) : const Adjustments(exposure: 0.3),
+          invert: blur,
+        );
+        if (!blur) state = state.copyWith(tool: EditorTool.masks);
+        unawaited(_render());
+        return;
+    }
+    _dropSelection();
+    unawaited(_render());
+  }, label: 'select: ${action.name}');
+
+  // ------------------------------------------------------ depth & people
+
+  /// Depth-graded background blur ([relight] = false) or relighting: the
+  /// subject is lifted and the background dimmed, both following depth.
+  Future<void> depthEffect({bool relight = false}) => _busy(() async {
+    final depth = await ref.read(depthPipelineProvider).estimate(_currentRaster);
+    if (!relight) {
+      final path = await savePng(await Isolate.run(() => depthBlurMask(depth)), 'depth_blur');
+      addMask(MaskKind.subject, maskPath: path, adjustments: const Adjustments(blur: 0.6));
+      return;
+    }
+    final near = await savePng(await Isolate.run(() => depthNearMask(depth)), 'depth_near');
+    final idNear = _uuid.v4();
+    final idFar = _uuid.v4();
+    update(
+      (s) => s.copyWith(
+        localAdjustments: [
+          ...s.localAdjustments,
+          LocalAdjustment(
+            id: idNear,
+            kind: MaskKind.subject,
+            geometry: const [0.5, 0.5, 0.3, 0.3],
+            maskPath: near,
+            adjustments: const Adjustments(exposure: 0.3, shadows: 0.15, temperature: 0.04),
+          ),
+          LocalAdjustment(
+            id: idFar,
+            kind: MaskKind.subject,
+            geometry: const [0.5, 0.5, 0.3, 0.3],
+            maskPath: near,
+            invert: true,
+            adjustments: const Adjustments(exposure: -0.45, saturation: -0.1),
+          ),
+        ],
+      ),
+    );
+    selectMask(idNear);
+  }, label: relight ? 'depth relight' : 'depth blur');
+
+  /// Removes the main person: portrait matte → object eraser.
+  Future<void> erasePerson() => _busy(() async {
+    final raster = _currentRaster;
+    final seg = await ref.read(segmentationPipelineProvider).run(raster, portrait: true);
+    final mask = await loadRgba(seg.maskPath, maxSide: InpaintPipeline.maxSide);
+    if (maskCoverage(mask) < 0.005) throw const SmartEditException(SmartEditFailure.noPerson);
+    final out = await ref.read(inpaintPipelineProvider).run(raster, mask);
+    update((s) => s.copyWith(rasterPath: out));
+  }, label: 'erase person');
+
   // --------------------------------------------------------------- output
 
   Future<File?> export(ExportOptions options) => _busy(() async {
@@ -785,6 +1112,7 @@ class PhotoEditorController extends _$PhotoEditorController {
     _lastPreview = frame.image;
     old?.dispose();
     _previewPath = path;
+    unawaited(_analyse());
   }
 
   Future<void> _render() async {

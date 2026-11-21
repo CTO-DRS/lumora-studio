@@ -1105,4 +1105,137 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noCustomPresets => 'احفظ مظهرًا في المحرّر ليظهر هنا';
+
+  @override
+  String get toolSmart => 'ذكي';
+
+  @override
+  String get smartHint => 'اكتب التعديل… مثل «أدفأ وأزل الخلفية»';
+
+  @override
+  String smartApplied(String summary) {
+    return 'تم: $summary';
+  }
+
+  @override
+  String smartNotUnderstood(String text) {
+    return 'لم أفهم: $text';
+  }
+
+  @override
+  String get smartNothing => 'جرّب «أدفأ» أو «زد التباين» أو «أبيض وأسود» أو «أزل الخلفية».';
+
+  @override
+  String get smartSuggestions => 'مقترح لهذه الصورة';
+
+  @override
+  String get smartTryLabel => 'جرّب';
+
+  @override
+  String get smartEx1 => 'أدفأ قليلًا';
+
+  @override
+  String get smartEx2 => 'زد التباين';
+
+  @override
+  String get smartEx3 => 'أبيض وأسود';
+
+  @override
+  String get smartEx4 => 'أزل الخلفية';
+
+  @override
+  String get smartEx5 => 'سينمائي';
+
+  @override
+  String get smartEx6 => 'افتح الظلال';
+
+  @override
+  String get smartOnDevice => 'يُفهم الأمر على جهازك، ولا يُرسل أي شيء.';
+
+  @override
+  String get sugAutoFix => 'إصلاح تلقائي';
+
+  @override
+  String get sugBrighten => 'إضاءة أفضل';
+
+  @override
+  String get sugRecover => 'استعادة الإضاءات';
+
+  @override
+  String get sugFixColor => 'تصحيح الألوان';
+
+  @override
+  String get sugPortrait => 'إشراقة البورتريه';
+
+  @override
+  String get sugSky => 'سماء أعمق';
+
+  @override
+  String get sugLandscape => 'طبيعة زاهية';
+
+  @override
+  String get sugDocument => 'مستند نظيف';
+
+  @override
+  String get sugClearHaze => 'إزالة الضباب';
+
+  @override
+  String get sugVivid => 'ألوان حيّة';
+
+  @override
+  String get sugCinematic => 'سينمائي';
+
+  @override
+  String get sugMono => 'أبيض وأسود';
+
+  @override
+  String get aiSelectObject => 'تحديد بلمسة';
+
+  @override
+  String get aiDepthBlur => 'تمويه بالعمق';
+
+  @override
+  String get aiRelight => 'إعادة الإضاءة';
+
+  @override
+  String get aiErasePerson => 'إزالة شخص';
+
+  @override
+  String get selectHint => 'المس العنصر الذي تريده. المس مرة أخرى لإضافة المزيد، واختر «طرح» لاستبعاد أجزاء.';
+
+  @override
+  String get selectAdd => 'إضافة';
+
+  @override
+  String get selectSubtract => 'طرح';
+
+  @override
+  String get selectErase => 'مسح';
+
+  @override
+  String get selectCutOut => 'قصّ';
+
+  @override
+  String get selectAdjust => 'تعديل';
+
+  @override
+  String get selectBlurRest => 'تمويه الباقي';
+
+  @override
+  String get selectUndoPoint => 'تراجع عن آخر لمسة';
+
+  @override
+  String get selectNone => 'لم يُحدَّد شيء بعد';
+
+  @override
+  String get flipV => 'قلب عمودي';
+
+  @override
+  String get removeLook => 'إزالة النمط';
+
+  @override
+  String get smartErrNoPerson => 'لم يُعثر على شخص في هذه الصورة.';
+
+  @override
+  String get smartErrNoSelection => 'حدّد شيئًا أولًا.';
 }

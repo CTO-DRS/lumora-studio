@@ -22,6 +22,12 @@ lib/
       data/        ModelManager (download, verify, cache), InferenceEngine (ONNX)
       pipelines/   tensor utils + segmentation, matting, inpainting, upscale
       presentation/ model manager screen
+    smart_edit/
+      domain/      text normaliser (AR/EN), RuleIntentEngine → SmartEditPlan
+                   (AdjustOp / LookOp / ActionOp, JSON), PhotoAnalysis +
+                   suggestFixes                       (pure Dart, tested)
+      presentation/ SmartPanel (command bar, examples, suggestions),
+                   SelectionPanel, smart action runner
     projects/      Drift database + repository (save/restore/rename/duplicate)
     settings/      persisted preferences
     home/          start screen: quick tools, projects
@@ -138,3 +144,19 @@ Performance rules: `BackdropFilter` only on floating bars and the editor tool ba
 ### App shell
 `createAppRouter()` puts Home (`/`), Templates (`/templates`), Projects (`/projects`) and Settings (`/settings`) in a `StatefulShellRoute.indexedStack` whose builder (`AppShell`) adds the floating `GlassNavBar` and the Create sheet. Editors and tools stay top-level routes on the root navigator, so they cover the bar and all v1.1 paths keep working. The router is created per `LumoraApp` instance (tests start from any `initialLocation`).
 
+
+
+## Smart edit (v1.3)
+
+```
+text ──normalise──▶ phrases ──▶ clauses ──▶ intents ──▶ SmartEditPlan
+                                                   │
+         PhotoEditorController.applySmartPlan ◀────┘  instant ops: one undo step
+                         │
+                         └─▶ pending actions ──▶ runSmartAction (asks before model downloads)
+```
+
+* `EditIntentEngine` is the seam: `RuleIntentEngine` today; an on-device LLM (LiteRT-LM) can emit the same JSON plan later (`docs/SMART_EDIT.md`).
+* Suggestions are `Preset` deltas, so the existing `PresetThumbnailCache` renders their live thumbnails and `Preset.apply` layers them on the user's edit.
+* Tap to select: `ObjectSelectPipeline` keeps the MobileSAM embedding of the current raster; taps (normalised to the output image) are mapped back through `buildInverseWarp` to source space; the mask overlay is warped forward the same way so it follows crop/rotation. Masks become `MaskKind.subject` local adjustments or feed the inpainting pipeline.
+* Depth: `DepthPipeline` caches one normalised depth map per raster; `depthBlurMask` / `depthNearMask` turn it into graded masks around the subject's depth (90th percentile).

@@ -17,6 +17,7 @@ import 'package:lumora/features/photo_editor/engine/lut/lut_repository.dart';
 import 'package:lumora/features/photo_editor/presentation/photo_editor_controller.dart';
 import 'package:lumora/features/photo_editor/presentation/widgets/curves_editor.dart';
 import 'package:lumora/features/photo_editor/presentation/widgets/editor_canvas.dart';
+import 'package:lumora/features/smart_edit/presentation/smart_panel.dart';
 import 'package:lumora/l10n/app_localizations.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -1074,6 +1075,7 @@ class AiPanel extends ConsumerWidget {
     final s = ref.watch(photoEditorControllerProvider);
     final ctrl = ref.read(photoEditorControllerProvider.notifier);
     final l = context.l10n;
+    if (s.selecting) return const SelectionPanel();
     if (s.eraserMode) {
       return SingleChildScrollView(
         child: Column(
@@ -1148,6 +1150,34 @@ class AiPanel extends ConsumerWidget {
         label: l.aiUpscale,
         tool: AiTool.upscale,
         onTap: withModels(AiTool.upscale, ctrl.upscale),
+      ),
+      AiToolCard(
+        icon: Icons.touch_app_outlined,
+        color: t.blue,
+        label: l.aiSelectObject,
+        tool: AiTool.selectObject,
+        onTap: withModels(AiTool.selectObject, ctrl.startSelection),
+      ),
+      AiToolCard(
+        icon: Icons.camera_outlined,
+        color: t.teal,
+        label: l.aiDepthBlur,
+        tool: AiTool.depthBlur,
+        onTap: withModels(AiTool.depthBlur, ctrl.depthEffect),
+      ),
+      AiToolCard(
+        icon: Icons.wb_incandescent_outlined,
+        color: t.apricot,
+        label: l.aiRelight,
+        tool: AiTool.relight,
+        onTap: withModels(AiTool.relight, () => ctrl.depthEffect(relight: true)),
+      ),
+      AiToolCard(
+        icon: Icons.person_remove_outlined,
+        color: t.rose,
+        label: l.aiErasePerson,
+        tool: AiTool.erasePerson,
+        onTap: withModels(AiTool.erasePerson, ctrl.erasePerson),
       ),
     ];
     return Column(

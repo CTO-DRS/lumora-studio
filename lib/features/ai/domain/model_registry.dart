@@ -1,5 +1,5 @@
 /// What a model is used for.
-enum AiTask { segmentation, portraitMatting, upscale, inpainting }
+enum AiTask { segmentation, portraitMatting, upscale, inpainting, interactiveSegmentation, depth }
 
 /// Describes a downloadable on-device model. Every model is fetched from a
 /// public URL on demand, verified with SHA-256 and cached locally – nothing
@@ -116,7 +116,66 @@ class ModelRegistry {
     notes: 'Static 512x512, float image 0..1, float mask 1 = erase.',
   );
 
-  static const List<ModelSpec> all = [u2netp, modnet, realEsrgan, migan, lama];
+  // Revision-pinned URLs (v1.3): the file at that commit can never change;
+  // SHA-256 values are the LFS oids, verified by downloading each file and
+  // running it with ONNX Runtime (see docs/SMART_EDIT.md).
+
+  static const mobileSamEncoder = ModelSpec(
+    id: 'mobilesam_encoder',
+    task: AiTask.interactiveSegmentation,
+    displayName: 'MobileSAM – image encoder (tap to select)',
+    url:
+        'https://huggingface.co/Acly/MobileSAM/resolve/0d3b403339b4674a82493d5e97964dd78089ddc8/mobile_sam_image_encoder.onnx',
+    sha256: '580f5fb648ea1062c0aabc26217aed56921985f03f0cbbd852bba81d760cc749',
+    sizeBytes: 28157093,
+    license: 'Apache-2.0 (MobileSAM)',
+    source: 'https://github.com/ChaoningZhang/MobileSAM',
+    inputNames: ['input_image'],
+    outputName: 'image_embeddings',
+    notes: 'HWC float 0..255, long side 1024 (the graph normalises and pads) → 1x256x64x64.',
+  );
+
+  static const mobileSamDecoder = ModelSpec(
+    id: 'mobilesam_decoder',
+    task: AiTask.interactiveSegmentation,
+    displayName: 'Segment Anything – mask decoder (tap to select)',
+    url:
+        'https://huggingface.co/Acly/MobileSAM/resolve/0d3b403339b4674a82493d5e97964dd78089ddc8/sam_mask_decoder_single.onnx',
+    sha256: '93915fc7c993ab9d59ab8c9ccd3bce37f7509c81ab4150a74abd4d2abbd8570d',
+    sizeBytes: 16501323,
+    license: 'Apache-2.0 (Segment Anything / MobileSAM)',
+    source: 'https://github.com/ChaoningZhang/MobileSAM',
+    inputNames: ['image_embeddings', 'point_coords', 'point_labels', 'mask_input', 'has_mask_input', 'orig_im_size'],
+    outputName: 'masks',
+    notes:
+        'Points in the 1024-px encoder frame (label 1 = add, 0 = subtract, -1 = padding) → mask logits at orig_im_size.',
+  );
+
+  static const depthAnythingSmall = ModelSpec(
+    id: 'depth_anything_v2_small_q8',
+    task: AiTask.depth,
+    displayName: 'Depth Anything V2 Small – depth (int8)',
+    url:
+        'https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/4472b7362082ad9968fee890ca0f1e5aca36b93d/onnx/model_quantized.onnx',
+    sha256: 'fcf51f1b230362b28690bb9d1809bf0431f29cad20534e3f589bd7285547f20d',
+    sizeBytes: 27258801,
+    license: 'Apache-2.0',
+    source: 'https://github.com/DepthAnything/Depth-Anything-V2',
+    inputNames: ['pixel_values'],
+    outputName: 'predicted_depth',
+    notes: 'NCHW ImageNet-normalised, sides multiples of 14 → relative inverse depth (larger = nearer).',
+  );
+
+  static const List<ModelSpec> all = [
+    u2netp,
+    modnet,
+    realEsrgan,
+    migan,
+    lama,
+    mobileSamEncoder,
+    mobileSamDecoder,
+    depthAnythingSmall,
+  ];
 
   static ModelSpec byId(String id) => all.firstWhere((m) => m.id == id);
 
@@ -124,7 +183,18 @@ class ModelRegistry {
 }
 
 /// The model-backed tools of the photo editor's AI tab.
-enum AiTool { removeBackground, cutOutPerson, backgroundBlur, portraitRetouch, eraser, upscale }
+enum AiTool {
+  removeBackground,
+  cutOutPerson,
+  backgroundBlur,
+  portraitRetouch,
+  eraser,
+  upscale,
+  selectObject,
+  depthBlur,
+  relight,
+  erasePerson,
+}
 
 /// Models a tool needs on the device before it can run.
 List<ModelSpec> aiToolModels(AiTool tool) => switch (tool) {
@@ -132,4 +202,7 @@ List<ModelSpec> aiToolModels(AiTool tool) => switch (tool) {
   AiTool.cutOutPerson || AiTool.backgroundBlur || AiTool.portraitRetouch => const [ModelRegistry.modnet],
   AiTool.eraser => const [ModelRegistry.migan],
   AiTool.upscale => const [ModelRegistry.realEsrgan],
+  AiTool.selectObject => const [ModelRegistry.mobileSamEncoder, ModelRegistry.mobileSamDecoder],
+  AiTool.depthBlur || AiTool.relight => const [ModelRegistry.depthAnythingSmall],
+  AiTool.erasePerson => const [ModelRegistry.modnet, ModelRegistry.migan],
 };

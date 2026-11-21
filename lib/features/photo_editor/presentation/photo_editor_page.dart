@@ -17,6 +17,7 @@ import 'package:lumora/features/photo_editor/presentation/widgets/editor_canvas.
 import 'package:lumora/features/photo_editor/presentation/widgets/finish_panels.dart';
 import 'package:lumora/features/photo_editor/presentation/widgets/tool_panels.dart';
 import 'package:lumora/features/settings/data/settings_controller.dart';
+import 'package:lumora/features/smart_edit/presentation/smart_panel.dart';
 import 'package:lumora/l10n/app_localizations.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
@@ -238,6 +239,7 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
   }
 
   Widget _panel(EditorTool tool) => switch (tool) {
+    EditorTool.smart => const SmartPanel(),
     EditorTool.presets => const PresetsPanel(),
     EditorTool.adjust => const AdjustPanel(),
     EditorTool.hsl => const HslPanel(),
@@ -633,6 +635,7 @@ class _ToolBar extends StatelessWidget {
   final bool wrap;
 
   static List<(EditorTool, IconData, String)> items(AppLocalizations l) => [
+    (EditorTool.smart, Icons.tips_and_updates_outlined, l.toolSmart),
     (EditorTool.presets, Icons.auto_awesome, l.toolPresets),
     (EditorTool.adjust, Icons.tune, l.toolAdjust),
     (EditorTool.hsl, Icons.palette_outlined, l.toolHsl),

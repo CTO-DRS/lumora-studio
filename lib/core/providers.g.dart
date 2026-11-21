@@ -520,3 +520,92 @@ final class VideoEngineProvider
 }
 
 String _$videoEngineHash() => r'e5a1a04d319c277c096c6ddbf0fbb02862da76a0';
+
+@ProviderFor(objectSelectPipeline)
+final objectSelectPipelineProvider = ObjectSelectPipelineProvider._();
+
+final class ObjectSelectPipelineProvider
+    extends
+        $FunctionalProvider<
+          ObjectSelectPipeline,
+          ObjectSelectPipeline,
+          ObjectSelectPipeline
+        >
+    with $Provider<ObjectSelectPipeline> {
+  ObjectSelectPipelineProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'objectSelectPipelineProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$objectSelectPipelineHash();
+
+  @$internal
+  @override
+  $ProviderElement<ObjectSelectPipeline> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  ObjectSelectPipeline create(Ref ref) {
+    return objectSelectPipeline(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ObjectSelectPipeline value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ObjectSelectPipeline>(value),
+    );
+  }
+}
+
+String _$objectSelectPipelineHash() =>
+    r'a003dda45ba835164d9b3e8abcace62473461c92';
+
+@ProviderFor(depthPipeline)
+final depthPipelineProvider = DepthPipelineProvider._();
+
+final class DepthPipelineProvider
+    extends $FunctionalProvider<DepthPipeline, DepthPipeline, DepthPipeline>
+    with $Provider<DepthPipeline> {
+  DepthPipelineProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'depthPipelineProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$depthPipelineHash();
+
+  @$internal
+  @override
+  $ProviderElement<DepthPipeline> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  DepthPipeline create(Ref ref) {
+    return depthPipeline(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DepthPipeline value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DepthPipeline>(value),
+    );
+  }
+}
+
+String _$depthPipelineHash() => r'24c3c97446f0b93db16ddfff1ace71c32f68df6e';

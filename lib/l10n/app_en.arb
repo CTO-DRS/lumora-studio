@@ -486,5 +486,62 @@
       }
     }
   },
-  "noCustomPresets": "Save a look in the editor to see it here"
+  "noCustomPresets": "Save a look in the editor to see it here",
+  "toolSmart": "Smart",
+  "smartHint": "Describe an edit… e.g. “warmer, remove background”",
+  "smartApplied": "Done: {summary}",
+  "@smartApplied": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "smartNotUnderstood": "Didn't understand: {text}",
+  "@smartNotUnderstood": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "smartNothing": "Try “warmer”, “more contrast”, “black and white” or “remove background”.",
+  "smartSuggestions": "For this photo",
+  "smartTryLabel": "Try",
+  "smartEx1": "a bit warmer",
+  "smartEx2": "more contrast",
+  "smartEx3": "black and white",
+  "smartEx4": "remove background",
+  "smartEx5": "cinematic",
+  "smartEx6": "brighten the shadows",
+  "smartOnDevice": "Understood on your device — nothing is sent anywhere.",
+  "sugAutoFix": "Auto fix",
+  "sugBrighten": "Brighten",
+  "sugRecover": "Recover highlights",
+  "sugFixColor": "Fix colour",
+  "sugPortrait": "Portrait glow",
+  "sugSky": "Deeper sky",
+  "sugLandscape": "Vivid nature",
+  "sugDocument": "Clean document",
+  "sugClearHaze": "Clear haze",
+  "sugVivid": "Vivid colour",
+  "sugCinematic": "Cinematic",
+  "sugMono": "Black & white",
+  "aiSelectObject": "Tap to select",
+  "aiDepthBlur": "Depth blur",
+  "aiRelight": "Relight",
+  "aiErasePerson": "Remove person",
+  "selectHint": "Tap the object you want. Tap again to add more; switch to Subtract to remove parts.",
+  "selectAdd": "Add",
+  "selectSubtract": "Subtract",
+  "selectErase": "Erase",
+  "selectCutOut": "Cut out",
+  "selectAdjust": "Adjust",
+  "selectBlurRest": "Blur the rest",
+  "selectUndoPoint": "Undo last tap",
+  "selectNone": "Nothing selected yet",
+  "flipV": "Flip vertical",
+  "removeLook": "Remove look",
+  "smartErrNoPerson": "No person found in this photo.",
+  "smartErrNoSelection": "Select something first."
 }
