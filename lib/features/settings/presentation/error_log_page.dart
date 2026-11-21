@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:lumora/core/app_info.dart';
 import 'package:lumora/core/diagnostics/crash_log.dart';
+import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
@@ -74,34 +75,41 @@ class _ErrorLogPageState extends State<ErrorLogPage> {
     final l = context.l10n;
     final text = _text;
     final empty = text != null && text.isEmpty;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l.errorLog),
-        actions: [
-          IconButton(tooltip: l.copy, onPressed: empty ? null : _copy, icon: const Icon(Icons.copy_all_outlined)),
-          IconButton(tooltip: l.share, onPressed: empty ? null : _share, icon: const Icon(Icons.share_outlined)),
-          IconButton(tooltip: l.clear, onPressed: empty ? null : _clear, icon: const Icon(Icons.delete_sweep_outlined)),
-        ],
-      ),
-      body: text == null
-          ? Center(child: CircularProgressIndicator(semanticsLabel: l.loading))
-          : empty
-          ? Center(child: Text(l.errorLogEmpty))
-          : Directionality(
-              // Stack traces are always left-to-right.
-              textDirection: TextDirection.ltr,
-              child: Scrollbar(
-                controller: _scroll,
-                child: SingleChildScrollView(
+    return LumoraBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: GlassAppBar(
+          title: Text(l.errorLog),
+          actions: [
+            IconButton(tooltip: l.copy, onPressed: empty ? null : _copy, icon: const Icon(Icons.copy_all_outlined)),
+            IconButton(tooltip: l.share, onPressed: empty ? null : _share, icon: const Icon(Icons.share_outlined)),
+            IconButton(
+              tooltip: l.clear,
+              onPressed: empty ? null : _clear,
+              icon: const Icon(Icons.delete_sweep_outlined),
+            ),
+          ],
+        ),
+        body: text == null
+            ? Center(child: CircularProgressIndicator(semanticsLabel: l.loading))
+            : empty
+            ? Center(child: Text(l.errorLogEmpty))
+            : Directionality(
+                // Stack traces are always left-to-right.
+                textDirection: TextDirection.ltr,
+                child: Scrollbar(
                   controller: _scroll,
-                  padding: const EdgeInsets.all(12),
-                  child: SelectableText(
-                    text,
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11, height: 1.35),
+                  child: SingleChildScrollView(
+                    controller: _scroll,
+                    padding: const EdgeInsets.all(12),
+                    child: SelectableText(
+                      text,
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 11, height: 1.35),
+                    ),
                   ),
                 ),
               ),
-            ),
+      ),
     );
   }
 }

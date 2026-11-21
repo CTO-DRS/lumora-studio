@@ -5,7 +5,7 @@
 ```
 lib/
   app.dart, main.dart                 MaterialApp.router, theme, l10n
-  core/                               providers (DI), router, theme, shared widgets
+  core/                               providers (DI), router + app shell, theme, ui (glass design system), shared widgets
   features/
     photo_editor/
       domain/      Adjustments, GeometryState, layers, EditState, EditHistory,
@@ -127,3 +127,14 @@ Drift (SQLite via `drift_flutter`, using the `sqlite3` 3.x build hooks) keeps th
 * Stabilisation: `vidstabdetect` on the trimmed source (`-ss/-t`) writes a `.trf`, then `vidstabtransform` is inserted right after `trim,setpts` in that clip's chain (before reverse/crop/rotate), followed by a light `unsharp`.
 * GIF: the cut is rendered at 480p, then `fps,scale,split → palettegen / paletteuse`.
 * All generated command lines were run against a real FFmpeg build while developing (see `test/unit/video_v11_test.dart` for the structure checks and an evaluator for the keyframe expression).
+
+## v1.2 additions
+
+### Design system (`lib/core/ui`)
+`LumoraTokens` is a `ThemeExtension` (dark and light) holding every colour of the "calm glass" look: page background and its faint static glows, glass fills, the hairline border gradient, the primary gradient, the glow colour and the muted accent palette. `AppTheme` builds the Material `ColorScheme` and component themes from it, so plain Material widgets already match; the glass widgets (`GlassContainer`, `GlowButton`, `GlassIconButton`, `GlowIconOrb`, `GlassTopBar`/`GlassAppBar`, `GlassNavBar`, `GlassToolTile`, slider shapes) read `context.lumora`.
+
+Performance rules: `BackdropFilter` only on floating bars and the editor tool bar (never in scrolling lists, which use the pre-tinted translucent fill), background glows are painted once behind a `RepaintBoundary`, and glow shadows are limited to the selected element and the main call to action. Press-scale and indicator animations are skipped when the OS asks to reduce motion.
+
+### App shell
+`createAppRouter()` puts Home (`/`), Templates (`/templates`), Projects (`/projects`) and Settings (`/settings`) in a `StatefulShellRoute.indexedStack` whose builder (`AppShell`) adds the floating `GlassNavBar` and the Create sheet. Editors and tools stay top-level routes on the root navigator, so they cover the bar and all v1.1 paths keep working. The router is created per `LumoraApp` instance (tests start from any `initialLocation`).
+

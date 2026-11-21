@@ -456,5 +456,35 @@
         "type": "String"
       }
     }
-  }
+  },
+  "navHome": "Home",
+  "navTemplates": "Templates",
+  "navProjects": "Projects",
+  "create": "Create",
+  "createTitle": "Create something new",
+  "createPhotoSub": "Open a photo from your gallery",
+  "createVideoSub": "Trim, filter and join clips",
+  "createCollageSub": "Arrange several photos in one layout",
+  "createScanSub": "Turn paper into a clean PDF",
+  "createBatchSub": "Apply one look to many photos",
+  "aiToolsTitle": "AI tools",
+  "aiToolsShort": "AI tools",
+  "onDevice": "Runs on your device",
+  "docScanner": "Document scanner",
+  "search": "Search",
+  "searchProjects": "Search projects",
+  "clearSearch": "Clear search",
+  "seeAll": "See all",
+  "allProjects": "All projects",
+  "noMatchingProjects": "No projects match your search",
+  "templatesSubtitle": "Pick a look, then choose a photo to apply it to",
+  "modelNotInstalled": "Model download needed: {size}",
+  "@modelNotInstalled": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "noCustomPresets": "Save a look in the editor to see it here"
 }

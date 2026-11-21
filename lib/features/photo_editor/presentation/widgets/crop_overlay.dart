@@ -125,7 +125,7 @@ class _CropPainter extends CustomPainter {
         ..drawLine(Offset(rect.left, y), Offset(rect.right, y), line);
     }
     final handle = Paint()
-      ..color = const Color(0xFFFFB547)
+      ..color = const Color(0xFFB4A9FF)
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round;
     const k = 18.0;

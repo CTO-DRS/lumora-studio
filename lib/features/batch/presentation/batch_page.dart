@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lumora/core/providers.dart';
+import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/core/widgets/labeled_slider.dart';
@@ -140,165 +141,168 @@ class _BatchPageState extends ConsumerState<BatchPage> {
     final settings = ref.watch(settingsControllerProvider);
     final presets = [...kBuiltInPresets, ...lib.custom];
     final canRun = _paths.isNotEmpty && !_running && (_presetId != null || (_useCopied && hasCopied) || _autoEnhance);
-    return Scaffold(
-      appBar: AppBar(title: Text(l.batchEdit)),
-      floatingActionButton: _paths.isEmpty
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: _running ? () => setState(() => _cancel = true) : (canRun ? _run : null),
-              icon: Icon(_running ? Icons.stop : Icons.play_arrow),
-              label: Text(_running ? l.cancel : l.batchStart(_paths.length)),
-            ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-        children: [
-          if (_running || _done > 0)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: LinearProgressIndicator(value: _paths.isEmpty ? 0 : _done / _paths.length),
-            ),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l.batchLook, style: Theme.of(context).textTheme.titleSmall),
-                  DropdownButton<String?>(
-                    isExpanded: true,
-                    value: _presetId,
-                    items: [
-                      DropdownMenuItem(child: Text(l.none)),
-                      for (final p in presets) DropdownMenuItem(value: p.id, child: Text(p.name(lang))),
-                    ],
-                    onChanged: _running ? null : (v) => setState(() => _presetId = v),
-                  ),
-                  if (_presetId != null)
-                    LabeledSlider(
-                      label: l.intensity,
-                      value: _intensity,
-                      min: 0,
-                      max: 1,
-                      onChanged: (v) => setState(() => _intensity = v),
-                    ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(l.batchUseCopied),
-                    subtitle: hasCopied ? null : Text(l.batchNoCopied),
-                    value: _useCopied && hasCopied,
-                    onChanged: hasCopied && !_running ? (v) => setState(() => _useCopied = v) : null,
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(l.aiAutoEnhance),
-                    value: _autoEnhance,
-                    onChanged: _running ? null : (v) => setState(() => _autoEnhance = v),
-                  ),
-                  const Divider(),
-                  Text(l.exportSize, style: Theme.of(context).textTheme.titleSmall),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final s in SocialSize.values)
-                        ChoiceChip(
-                          label: Text(socialLabel(l, s)),
-                          selected: _size == s,
-                          onSelected: _running ? null : (_) => setState(() => _size = s),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<ExportFormat>(
-                    segments: [
-                      for (final f in ExportFormat.values)
-                        ButtonSegment(value: f, label: Text(f.extension.toUpperCase())),
-                    ],
-                    selected: {_format ?? settings.exportFormat},
-                    onSelectionChanged: _running ? null : (v) => setState(() => _format = v.first),
-                  ),
-                ],
+    return LumoraBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: GlassAppBar(title: Text(l.batchEdit)),
+        floatingActionButton: _paths.isEmpty
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: _running ? () => setState(() => _cancel = true) : (canRun ? _run : null),
+                icon: Icon(_running ? Icons.stop : Icons.play_arrow),
+                label: Text(_running ? l.cancel : l.batchStart(_paths.length)),
               ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: Text(l.batchPhotos(_paths.length), style: Theme.of(context).textTheme.titleMedium)),
-              TextButton.icon(
-                onPressed: _running ? null : _pick,
-                icon: const Icon(Icons.add_photo_alternate_outlined),
-                label: Text(l.batchAdd),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+          children: [
+            if (_running || _done > 0)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: LinearProgressIndicator(value: _paths.isEmpty ? 0 : _done / _paths.length),
               ),
-            ],
-          ),
-          if (_paths.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                children: [
-                  const Icon(Icons.burst_mode_outlined, size: 64),
-                  const SizedBox(height: 12),
-                  Text(l.batchIntro, textAlign: TextAlign.center),
-                ],
-              ),
-            )
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 110,
-                mainAxisSpacing: 6,
-                crossAxisSpacing: 6,
-              ),
-              itemCount: _paths.length,
-              itemBuilder: (context, i) {
-                final path = _paths[i];
-                final status = _status[path] ?? BatchItemStatus.pending;
-                return Stack(
-                  fit: StackFit.expand,
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.file(File(path), fit: BoxFit.cover, cacheWidth: 240),
+                    Text(l.batchLook, style: Theme.of(context).textTheme.titleSmall),
+                    DropdownButton<String?>(
+                      isExpanded: true,
+                      value: _presetId,
+                      items: [
+                        DropdownMenuItem(child: Text(l.none)),
+                        for (final p in presets) DropdownMenuItem(value: p.id, child: Text(p.name(lang))),
+                      ],
+                      onChanged: _running ? null : (v) => setState(() => _presetId = v),
                     ),
-                    if (status != BatchItemStatus.pending)
-                      Center(
-                        child: CircleAvatar(
-                          radius: 16,
-                          backgroundColor: Colors.black54,
-                          child: switch (status) {
-                            BatchItemStatus.running => const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                            BatchItemStatus.done => const Icon(Icons.check, color: Colors.greenAccent, size: 18),
-                            _ => const Icon(Icons.error_outline, color: Colors.redAccent, size: 18),
-                          },
-                        ),
+                    if (_presetId != null)
+                      LabeledSlider(
+                        label: l.intensity,
+                        value: _intensity,
+                        min: 0,
+                        max: 1,
+                        onChanged: (v) => setState(() => _intensity = v),
                       ),
-                    if (!_running)
-                      PositionedDirectional(
-                        top: 0,
-                        end: 0,
-                        child: IconButton(
-                          tooltip: l.remove,
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(Icons.close, size: 16, color: Colors.white),
-                          onPressed: () => setState(() {
-                            _paths.removeAt(i);
-                            _status.remove(path);
-                          }),
-                        ),
-                      ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l.batchUseCopied),
+                      subtitle: hasCopied ? null : Text(l.batchNoCopied),
+                      value: _useCopied && hasCopied,
+                      onChanged: hasCopied && !_running ? (v) => setState(() => _useCopied = v) : null,
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l.aiAutoEnhance),
+                      value: _autoEnhance,
+                      onChanged: _running ? null : (v) => setState(() => _autoEnhance = v),
+                    ),
+                    const Divider(),
+                    Text(l.exportSize, style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final s in SocialSize.values)
+                          ChoiceChip(
+                            label: Text(socialLabel(l, s)),
+                            selected: _size == s,
+                            onSelected: _running ? null : (_) => setState(() => _size = s),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<ExportFormat>(
+                      segments: [
+                        for (final f in ExportFormat.values)
+                          ButtonSegment(value: f, label: Text(f.extension.toUpperCase())),
+                      ],
+                      selected: {_format ?? settings.exportFormat},
+                      onSelectionChanged: _running ? null : (v) => setState(() => _format = v.first),
+                    ),
                   ],
-                );
-              },
+                ),
+              ),
             ),
-        ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: Text(l.batchPhotos(_paths.length), style: Theme.of(context).textTheme.titleMedium)),
+                TextButton.icon(
+                  onPressed: _running ? null : _pick,
+                  icon: const Icon(Icons.add_photo_alternate_outlined),
+                  label: Text(l.batchAdd),
+                ),
+              ],
+            ),
+            if (_paths.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  children: [
+                    const Icon(Icons.burst_mode_outlined, size: 64),
+                    const SizedBox(height: 12),
+                    Text(l.batchIntro, textAlign: TextAlign.center),
+                  ],
+                ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 110,
+                  mainAxisSpacing: 6,
+                  crossAxisSpacing: 6,
+                ),
+                itemCount: _paths.length,
+                itemBuilder: (context, i) {
+                  final path = _paths[i];
+                  final status = _status[path] ?? BatchItemStatus.pending;
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(File(path), fit: BoxFit.cover, cacheWidth: 240),
+                      ),
+                      if (status != BatchItemStatus.pending)
+                        Center(
+                          child: CircleAvatar(
+                            radius: 16,
+                            backgroundColor: Colors.black54,
+                            child: switch (status) {
+                              BatchItemStatus.running => const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              BatchItemStatus.done => Icon(Icons.check, color: context.lumora.mint, size: 18),
+                              _ => Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, size: 18),
+                            },
+                          ),
+                        ),
+                      if (!_running)
+                        PositionedDirectional(
+                          top: 0,
+                          end: 0,
+                          child: IconButton(
+                            tooltip: l.remove,
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.close, size: 16, color: Colors.white),
+                            onPressed: () => setState(() {
+                              _paths.removeAt(i);
+                              _status.remove(path);
+                            }),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -2065,6 +2065,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Faster on some phones (XNNPACK). Turn it off if AI tools close the app.'**
   String get aiAccelerationHint;
+
+  /// No description provided for @navHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get navHome;
+
+  /// No description provided for @navTemplates.
+  ///
+  /// In en, this message translates to:
+  /// **'Templates'**
+  String get navTemplates;
+
+  /// No description provided for @navProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get navProjects;
+
+  /// No description provided for @create.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get create;
+
+  /// No description provided for @createTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create something new'**
+  String get createTitle;
+
+  /// No description provided for @createPhotoSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a photo from your gallery'**
+  String get createPhotoSub;
+
+  /// No description provided for @createVideoSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Trim, filter and join clips'**
+  String get createVideoSub;
+
+  /// No description provided for @createCollageSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrange several photos in one layout'**
+  String get createCollageSub;
+
+  /// No description provided for @createScanSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn paper into a clean PDF'**
+  String get createScanSub;
+
+  /// No description provided for @createBatchSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply one look to many photos'**
+  String get createBatchSub;
+
+  /// No description provided for @aiToolsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI tools'**
+  String get aiToolsTitle;
+
+  /// No description provided for @aiToolsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'AI tools'**
+  String get aiToolsShort;
+
+  /// No description provided for @onDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Runs on your device'**
+  String get onDevice;
+
+  /// No description provided for @docScanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Document scanner'**
+  String get docScanner;
+
+  /// No description provided for @search.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get search;
+
+  /// No description provided for @searchProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Search projects'**
+  String get searchProjects;
+
+  /// No description provided for @clearSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get clearSearch;
+
+  /// No description provided for @seeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get seeAll;
+
+  /// No description provided for @allProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'All projects'**
+  String get allProjects;
+
+  /// No description provided for @noMatchingProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects match your search'**
+  String get noMatchingProjects;
+
+  /// No description provided for @templatesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a look, then choose a photo to apply it to'**
+  String get templatesSubtitle;
+
+  /// No description provided for @modelNotInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Model download needed: {size}'**
+  String modelNotInstalled(String size);
+
+  /// No description provided for @noCustomPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Save a look in the editor to see it here'**
+  String get noCustomPresets;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/features/photo_editor/domain/layers.dart';
@@ -12,6 +13,9 @@ import 'package:material_ui/material_ui.dart';
 
 /// The central preview: shows the GPU render, the original while comparing,
 /// and the interactive overlay of the active tool.
+/// Corner radius of the photo frame (squared off while a tool edits on it).
+const _frameRadius = 22.0;
+
 class EditorCanvas extends ConsumerStatefulWidget {
   const EditorCanvas({super.key});
 
@@ -83,14 +87,20 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
             Positioned.fromRect(
               rect: rect,
               child: DecoratedBox(
-                decoration: const BoxDecoration(boxShadow: [BoxShadow(blurRadius: 24, color: Color(0x66000000))]),
-                child: Semantics(
-                  image: true,
-                  label: context.l10n.photoPreview,
-                  child: RawImage(
-                    image: image,
-                    fit: BoxFit.fill,
-                    filterQuality: _zoomed ? FilterQuality.none : FilterQuality.medium,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(_frameRadius),
+                  boxShadow: const [BoxShadow(blurRadius: 22, color: Color(0x55000000), offset: Offset(0, 8))],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(s.interactive ? 4 : _frameRadius),
+                  child: Semantics(
+                    image: true,
+                    label: context.l10n.photoPreview,
+                    child: RawImage(
+                      image: image,
+                      fit: BoxFit.fill,
+                      filterQuality: _zoomed ? FilterQuality.none : FilterQuality.medium,
+                    ),
                   ),
                 ),
               ),
@@ -100,6 +110,15 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
                 rect: rect,
                 child: IgnorePointer(
                   child: RawImage(image: clip, fit: BoxFit.fill),
+                ),
+              ),
+            if (!s.interactive)
+              Positioned.fromRect(
+                rect: rect,
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: GradientBorderPainter(colors: context.lumora.borderColors, radius: _frameRadius),
+                  ),
                 ),
               ),
             if (!s.comparing) Positioned.fromRect(rect: rect, child: _interaction(s, rect.size)),
@@ -362,7 +381,7 @@ class _HealSourcePainter extends CustomPainter {
     final ring = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
-      ..color = const Color(0xFF3FC5F0);
+      ..color = const Color(0xFF86CCD3);
     canvas
       ..drawCircle(c, 14, ring)
       ..drawLine(c - const Offset(20, 0), c + const Offset(20, 0), ring)
@@ -424,7 +443,7 @@ class _SelectionPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5
-          ..color = const Color(0xFFFFB547),
+          ..color = const Color(0xFFB4A9FF),
       )
       ..restore();
   }
@@ -443,8 +462,8 @@ class _MaskGuidePainter extends CustomPainter {
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
-      ..color = const Color(0xFFFFB547);
-    final dot = Paint()..color = const Color(0xFFFFB547);
+      ..color = const Color(0xFFB4A9FF);
+    final dot = Paint()..color = const Color(0xFFB4A9FF);
     if (mask.kind == MaskKind.radial) {
       final aspect = size.width / size.height;
       canvas
@@ -457,7 +476,7 @@ class _MaskGuidePainter extends CustomPainter {
         ..drawOval(Rect.fromCenter(center: Offset.zero, width: rx * 2, height: ry * 2), paint)
         ..drawOval(
           Rect.fromCenter(center: Offset.zero, width: rx * 2 * (1 - mask.feather), height: ry * 2 * (1 - mask.feather)),
-          paint..color = const Color(0x88FFB547),
+          paint..color = const Color(0x88B4A9FF),
         )
         ..drawCircle(Offset.zero, 6, dot)
         ..restore();
@@ -468,7 +487,7 @@ class _MaskGuidePainter extends CustomPainter {
       final n = Offset(-d.dy, d.dx) / (d.distance == 0 ? 1 : d.distance) * size.longestSide;
       canvas
         ..drawLine(a - n, a + n, paint)
-        ..drawLine(b - n, b + n, paint..color = const Color(0x88FFB547))
+        ..drawLine(b - n, b + n, paint..color = const Color(0x88B4A9FF))
         ..drawLine(a, b, paint)
         ..drawCircle(a, 6, dot);
     }

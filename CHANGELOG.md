@@ -2,6 +2,39 @@
 
 All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
+## [1.2.0] - 2026-11-21
+
+### Added
+- **Design system "calm glass"** (`lib/core/ui`): `LumoraTokens` theme extension (dark + light), `GlassContainer` with a hairline gradient border (`GradientBorderPainter`), `LumoraBackground` (static, very faint glows), `GlowButton`, `GlassIconButton`, `GlowIconOrb`, `GlassChip`, `GlassTopBar` / `GlassAppBar`, `GlassNavBar`, `GlassToolTile`, `PressScale`, and gradient slider track / orb thumb shapes. All Material components (buttons, chips, segmented buttons, switches, sliders, tabs, dialogs, sheets, menus, snackbars, inputs) are themed from the tokens.
+- **App shell with a floating glass bottom bar** (go_router `StatefulShellRoute`): Home, Templates, Projects, Settings and a raised **Create** button (photo, video, collage, scanner, batch). Animated selection indicator; every v1.1 route and deep link still works (`/photo`, `/video`, `/scan`, `/collage`, `/batch`, `/models`, `/errors`, `/welcome` open full screen above the bar).
+- **Templates tab**: every look by category with live previews rendered by the real pipeline on a drawn sample scene; tapping one opens a picked photo with that look applied.
+- **Projects tab** (all projects, search, filter) and project search on Home.
+- **AI tools sheet** ("Runs on your device") with a 2-column grid of glass cards; cards of tools whose model is not installed show the download size and a live progress ring. Also used by the editor's AI tab. New quick actions: portrait cut-out, background blur, portrait retouch.
+- New app icon on Android (all densities + adaptive icon on #07061A) and iOS (all AppIcon sizes, no alpha); `tool/generate_icons.py` regenerates them. The icon is also shown in the Home top bar, Settings and onboarding.
+- Screenshot harness `test/screenshots/` (skipped unless `LUMORA_SCREENSHOTS` is set) renders real PNGs of the redesigned screens; README screenshots now come from it.
+
+### Changed
+- Colours are deliberately calm: navy background `#0E1022`, background glows ≤ 12 % opacity, borders soft violet→blue at ~40 % opacity, primary gradient `#6E5FE0 → #4C7BD8` (white text ≥ 4.5:1), muted accent tones (blue, teal, rose, mint, apricot, violet). Glow only on the selected element and the main call to action. The old amber/orange/brown accents are gone everywhere, including crop handles and brush cursors.
+- Home: glass top bar with the app icon, hero card with **Edit photo / Edit video**, quick tools as round orbs (scrollable), recent projects as a 2-column glass grid (with "See all").
+- Photo editor: glass top bar (back, more, history, compare, undo, redo, gradient **Export** pill), photo in a rounded frame, presets strip with a glowing selected border, gradient sliders (bipolar sliders fill from the neutral point), floating glass tool bar with an active glowing tile.
+- Video editor, settings, scanner, collage, batch, onboarding, models and error log use the same components.
+- Android launch screen and window background `#0E1022` (Android 12+ splash included); iOS launch screen background matches.
+- Motion respects the system "reduce motion" setting (press scale, nav indicator, onboarding).
+- Version 1.2.0 (build 4).
+
+### Fixed
+- Preset thumbnails now fill their tile (they were letterboxed by the cross-fade).
+
+### العربية
+- **نظام تصميم جديد "زجاج هادئ"**: أسطح زجاجية بحدود متدرجة رفيعة، خلفية كحلية هادئة (`#0E1022`) بتوهجات خافتة جدًا، تدرّج أساسي ناعم من البنفسجي إلى الأزرق، وألوان أدوات هادئة. التوهج فقط للعنصر المحدد والزر الرئيسي، مع تباين نصوص مطابق لمعيار WCAG AA. أُزيلت الألوان البرتقالية والبنية القديمة من كل مكان.
+- **شريط تنقّل سفلي زجاجي عائم**: الرئيسية، القوالب، المشاريع، الإعدادات، وزر **إنشاء** بارز (صورة، فيديو، تجميعة، ماسح، دفعة). كل الروابط السابقة ما زالت تعمل.
+- **تبويب القوالب** بمعاينات حيّة لكل نمط، و**تبويب المشاريع** مع البحث والتصفية.
+- **لوحة أدوات الذكاء الاصطناعي** "يعمل على جهازك": بطاقات زجاجية تعرض حجم التنزيل وحلقة التقدّم للأدوات التي لم يُنزَّل نموذجها بعد.
+- **محرر الصور** بتصميم جديد: شريط علوي زجاجي، صورة بإطار مستدير، شريط أنماط بتحديد متوهّج، منزلقات متدرجة، وشريط أدوات عائم.
+- **أيقونة جديدة** للتطبيق على Android (بكل الكثافات والأيقونة التكيّفية) وiOS، وشاشة بدء كحلية.
+- احترام إعداد "تقليل الحركة" في النظام.
+- الإصدار 1.2.0 (البناء 4).
+
 ## [1.1.1] - 2026-11-21
 
 ### Fixed
