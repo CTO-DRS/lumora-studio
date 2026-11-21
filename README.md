@@ -8,7 +8,7 @@
 
 [![CI](https://github.com/CTO-DRS/lumora-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/CTO-DRS/lumora-studio/actions/workflows/ci.yml)
 [![Release](https://github.com/CTO-DRS/lumora-studio/actions/workflows/release.yml/badge.svg)](https://github.com/CTO-DRS/lumora-studio/releases/latest)
-![Version](https://img.shields.io/badge/version-1.2.0-7C6CF2)
+![Version](https://img.shields.io/badge/version-1.3.0-7C6CF2)
 ![Flutter](https://img.shields.io/badge/Flutter-3.50-02569B?logo=flutter)
 ![Dart](https://img.shields.io/badge/Dart-3.14-0175C2?logo=dart)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
@@ -32,6 +32,16 @@
 ### Download
 
 Get the latest APK (Android) or unsigned iOS build from **[Releases](https://github.com/CTO-DRS/lumora-studio/releases/latest)**. Most phones need the `arm64-v8a` APK.
+
+### What's new in 1.3 — the smart release
+
+- **Smart edit by typing (Arabic & English)**: a new **Smart** tab (now the first tab of the editor). Type what you want — “make it warmer”, “زد السطوع قليلاً”, “black and white”, “سينمائي”, “remove the background”, “brighten the shadows and add a vignette” — and Lumora turns it into real edits **on your device**, in one undo step. Understands intensities (“a bit”, “كثيرًا”, “+20”, “exposure +1”), several instructions in one sentence, rotate/flip, looks, and every AI tool. No cloud, no account, nothing sent anywhere.
+- **Suggestions for this photo**: Lumora looks at the photo (exposure, highlights, colour cast, skin tones, sky, foliage, documents, haze) and offers 3–5 one-tap fixes with live previews — e.g. *Brighten*, *Recover highlights*, *Fix colour*, *Portrait glow*, *Deeper sky*, *Clean document*.
+- **Tap to select (MobileSAM)**: tap any object to select it (tap more to add, switch to *Subtract* to remove parts), then **erase** it, **cut it out**, **adjust** only it, or **blur everything else**.
+- **Depth blur & Relight (Depth Anything V2)**: a depth map of the scene gives a lens-like background blur that grows with distance, or relights the subject and dims the background.
+- **Remove person**: finds the main person and erases them in one tap.
+- **iOS release build fixed**: the build no longer depends on the unreachable `download.onnxruntime.ai` host (see `tool/ios_fix_onnxruntime_spm.sh`).
+- A **[world-class roadmap](ROADMAP.md)** (Arabic: [docs/ROADMAP.ar.md](docs/ROADMAP.ar.md)) and a one-page **[vision](docs/VISION.md)**.
 
 ### What's new in 1.2
 
@@ -101,6 +111,11 @@ Full list in [CHANGELOG.md](CHANGELOG.md).
 | Object eraser | MI-GAN (28 MB, default) or LaMa (208 MB, highest quality) | mask dilation → context crop around the strokes → model → feathered composite at full resolution |
 | Upscale 4× | Real-ESRGAN General x4v3 (4.9 MB) | 128 px tiles with 16 px overlap → feather-blended stitching |
 | Auto enhance | Deterministic | histogram percentiles, gray-world white balance, adaptive vibrance |
+| **Tap to select** (1.3) | MobileSAM encoder (28.2 MB) + SAM mask decoder (16.5 MB) | image encoded once (long side 1024) → each tap runs only the decoder → mask → erase / cut out / adjust / blur the rest |
+| **Depth blur & relight** (1.3) | Depth Anything V2 Small int8 (27.3 MB) | 518 px (multiples of 14) → robust-normalised relative depth → depth-graded masks |
+| **Remove person** (1.3) | MODNet + MI-GAN | person matte → object eraser |
+| **Smart edit by typing** (1.3) | none (deterministic intent engine) | Arabic/English normalisation → clauses → intents → one-step edit plan ([docs/SMART_EDIT.md](docs/SMART_EDIT.md)) |
+| **Suggestions** (1.3) | none (image statistics) | histogram, colour cast, skin/sky/foliage/paper heuristics → ranked one-tap fixes |
 
 Models are listed in `lib/features/ai/domain/model_registry.dart` with their URL, SHA-256, size and license. Downloads are streamed, hashed on the fly and only kept if the checksum matches. Accelerated execution providers (CoreML on iOS, XNNPACK on Android) are used when available, with fallback to CPU.
 
@@ -199,8 +214,11 @@ flutter test                      # unit + widget + real GPU shader tests
 
 flutter run                       # device or emulator
 flutter build apk --release --split-per-abi
+bash tool/ios_fix_onnxruntime_spm.sh   # once after pub get on macOS (see below)
 flutter build ios --release --no-codesign
 ```
+
+**iOS note:** `flutter_onnxruntime`'s Swift package pulls an `onnxruntime-extensions` archive from `download.onnxruntime.ai`, which currently serves an invalid TLS certificate (CocoaPods uses the same host for `onnxruntime-c`). `tool/ios_fix_onnxruntime_spm.sh` points the plugin at a local checkout of the pinned Swift package whose archive URL uses Microsoft's origin storage — the same file, still verified by its SHA-256 checksum. CI and the release workflow run it automatically.
 
 Requirements: Android 8.0+ (API 26; HEIC export needs API 28+) and iOS 16+. Shader effects need Impeller, which is the default on both platforms.
 
@@ -223,6 +241,16 @@ Lumora's source code is MIT. The default video engine package, `ffmpeg_kit_flutt
 ### التحميل
 
 حمّل أحدث نسخة APK للأندرويد أو نسخة iOS غير الموقّعة من صفحة **[الإصدارات](https://github.com/CTO-DRS/lumora-studio/releases/latest)**. أغلب الهواتف تحتاج ملف `arm64-v8a`.
+
+### الجديد في الإصدار 1.3 — إصدار الذكاء
+
+- **التعديل الذكي بالكتابة (عربي وإنجليزي)**: تبويب جديد **«ذكي»** أصبح أول تبويب في المحرر. اكتب ما تريد — «اجعلها أدفأ»، «زد السطوع قليلاً»، «أبيض وأسود»، «سينمائي»، «أزل الخلفية»، «افتح الظلال وأضف تظليلًا للحواف» — فيحوّله لومورا إلى تعديلات حقيقية **على جهازك** في خطوة تراجع واحدة. يفهم الشدة («قليلًا»، «كثيرًا»، «+20»)، وعدة أوامر في جملة واحدة، والتدوير والقلب، والأنماط، وكل أدوات الذكاء الاصطناعي. بلا سحابة ولا حساب، ولا يُرسل أي شيء.
+- **مقترحات لهذه الصورة**: يحلّل لومورا الصورة (التعريض، الإضاءات المحروقة، انحراف الألوان، لون البشرة، السماء، الخضرة، المستندات، الضباب) ويقترح من 3 إلى 5 إصلاحات بلمسة واحدة مع معاينات حيّة، مثل *إضاءة أفضل* و*استعادة الإضاءات* و*تصحيح الألوان* و*إشراقة البورتريه* و*سماء أعمق* و*مستند نظيف*.
+- **التحديد بلمسة (MobileSAM)**: المس أي عنصر لتحديده (المس مرة أخرى للإضافة، واختر «طرح» لاستبعاد أجزاء)، ثم **امسحه** أو **قصّه** أو **عدّله وحده** أو **موّه الباقي**.
+- **تمويه بالعمق وإعادة الإضاءة (Depth Anything V2)**: خريطة عمق للمشهد تعطي تمويهًا للخلفية يزداد مع المسافة كالعدسات الاحترافية، أو تضيء الموضوع وتخفّض إضاءة الخلفية.
+- **إزالة شخص**: يعثر على الشخص الرئيسي ويمسحه بلمسة واحدة.
+- **إصلاح بناء iOS**: لم يعد البناء يعتمد على خادم `download.onnxruntime.ai` المتعذّر الوصول إليه.
+- **[خارطة طريق عالمية](docs/ROADMAP.ar.md)** و**[رؤية في صفحة واحدة](docs/VISION.md)**.
 
 ### الجديد في الإصدار 1.2
 
@@ -283,6 +311,9 @@ Lumora's source code is MIT. The default video engine package, `ffmpeg_kit_flutt
 - ممحاة العناصر (MI-GAN أو LaMa)
 - تكبير الصور 4× (Real-ESRGAN)
 - التحسين التلقائي
+- **التعديل الذكي بالكتابة** بالعربية والإنجليزية، و**المقترحات الذكية** لكل صورة (1.3)
+- **التحديد بلمسة** (MobileSAM) ثم المسح أو القص أو التعديل أو تمويه الباقي (1.3)
+- **تمويه بالعمق** و**إعادة الإضاءة** (Depth Anything V2) و**إزالة شخص** (1.3)
 
 **الفيديو:**
 - خط زمني متعدد المقاطع مع صور مصغرة

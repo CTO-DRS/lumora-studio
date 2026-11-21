@@ -32,6 +32,7 @@ import 'package:lumora/features/photo_editor/presentation/photo_editor_page.dart
 import 'package:lumora/features/photo_editor/presentation/widgets/presets_panel.dart';
 import 'package:lumora/features/projects/data/app_database.dart';
 import 'package:lumora/features/projects/data/project_repository.dart';
+import 'package:lumora/features/smart_edit/domain/photo_analysis.dart';
 import 'package:lumora/l10n/app_localizations.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -124,9 +125,10 @@ Future<void> _capture(WidgetTester tester, String name) async {
 }
 
 class _ShotEditor extends PhotoEditorController {
-  _ShotEditor(this.image, this.tool);
+  _ShotEditor(this.image, this.tool, {this.suggestions = const []});
   final ui.Image image;
   final EditorTool tool;
+  final List<Suggestion> suggestions;
 
   @override
   PhotoEditorState build() => PhotoEditorState(
@@ -134,6 +136,7 @@ class _ShotEditor extends PhotoEditorController {
     preview: image,
     rendered: image,
     tool: tool,
+    suggestions: suggestions,
   );
 }
 
@@ -236,6 +239,36 @@ void main() {
     );
     await _settle(tester);
     await _capture(tester, 'actual_editor${_locale == 'ar' ? '' : '_$_locale'}');
+  });
+
+  testWidgets('smart', skip: skip != null, timeout: _timeout, (tester) async {
+    _device(tester);
+    SharedPreferences.setMockInitialValues({});
+    final (photo, suggestions, thumbs) = (await tester.runAsync(() async {
+      final photo = await _decode('$_assets/city.jpg');
+      final small = await _decode('$_assets/pt_none.png');
+      final data = await small.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+      final suggestions = suggestFixes(PhotoAnalysis.fromRgba(data!.buffer.asUint8List(), small.width, small.height));
+      final files = ['pt_vivid', 'pt_warm', 'pt_cool', 'pt_cine', 'pt_mono'];
+      final thumbs = <String, ui.Image>{'none': small};
+      for (var i = 0; i < suggestions.length; i++) {
+        thumbs[suggestions[i].preset.id] = await _decode('$_assets/${files[i % files.length]}.png');
+      }
+      return (photo, suggestions, thumbs);
+    }))!;
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: _shotKey,
+        child: _editorApp([
+          photoEditorControllerProvider.overrideWith(
+            () => _ShotEditor(photo, EditorTool.smart, suggestions: suggestions),
+          ),
+          presetThumbnailCacheProvider.overrideWith((ref) => _ShotThumbs(thumbs)),
+        ]),
+      ),
+    );
+    await _settle(tester);
+    await _capture(tester, 'actual_smart${_locale == 'ar' ? '' : '_$_locale'}');
   });
 
   testWidgets('ai sheet', skip: skip != null, timeout: _timeout, (tester) async {

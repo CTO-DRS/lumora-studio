@@ -149,7 +149,7 @@ class _PresetsPanelState extends ConsumerState<PresetsPanel> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             children: [
-              _PresetTile(
+              PresetTile(
                 label: l.none,
                 image: cache.thumbnail(null),
                 selected: s.edit.presetId == null,
@@ -164,7 +164,7 @@ class _PresetsPanelState extends ConsumerState<PresetsPanel> {
                   onTap: () => importPresets(context, ref),
                 ),
               for (final preset in presets)
-                _PresetTile(
+                PresetTile(
                   label: preset.name(lang),
                   image: cache.thumbnail(preset),
                   fallback: presetSwatch(preset),
@@ -316,9 +316,10 @@ Future<void> sharePresets(BuildContext context, WidgetRef ref, {Iterable<String>
 Future<void> copyPresetsToClipboard(WidgetRef ref) =>
     Clipboard.setData(ClipboardData(text: ref.read(presetLibraryControllerProvider.notifier).exportFile()));
 
-class _PresetTile extends StatelessWidget {
-  const _PresetTile({
+class PresetTile extends StatelessWidget {
+  const PresetTile({
     required this.label,
+    super.key,
     required this.image,
     required this.selected,
     required this.onTap,

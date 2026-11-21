@@ -1104,4 +1104,137 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noCustomPresets => 'Save a look in the editor to see it here';
+
+  @override
+  String get toolSmart => 'Smart';
+
+  @override
+  String get smartHint => 'Describe an edit… e.g. “warmer, remove background”';
+
+  @override
+  String smartApplied(String summary) {
+    return 'Done: $summary';
+  }
+
+  @override
+  String smartNotUnderstood(String text) {
+    return 'Didn\'t understand: $text';
+  }
+
+  @override
+  String get smartNothing => 'Try “warmer”, “more contrast”, “black and white” or “remove background”.';
+
+  @override
+  String get smartSuggestions => 'For this photo';
+
+  @override
+  String get smartTryLabel => 'Try';
+
+  @override
+  String get smartEx1 => 'a bit warmer';
+
+  @override
+  String get smartEx2 => 'more contrast';
+
+  @override
+  String get smartEx3 => 'black and white';
+
+  @override
+  String get smartEx4 => 'remove background';
+
+  @override
+  String get smartEx5 => 'cinematic';
+
+  @override
+  String get smartEx6 => 'brighten the shadows';
+
+  @override
+  String get smartOnDevice => 'Understood on your device — nothing is sent anywhere.';
+
+  @override
+  String get sugAutoFix => 'Auto fix';
+
+  @override
+  String get sugBrighten => 'Brighten';
+
+  @override
+  String get sugRecover => 'Recover highlights';
+
+  @override
+  String get sugFixColor => 'Fix colour';
+
+  @override
+  String get sugPortrait => 'Portrait glow';
+
+  @override
+  String get sugSky => 'Deeper sky';
+
+  @override
+  String get sugLandscape => 'Vivid nature';
+
+  @override
+  String get sugDocument => 'Clean document';
+
+  @override
+  String get sugClearHaze => 'Clear haze';
+
+  @override
+  String get sugVivid => 'Vivid colour';
+
+  @override
+  String get sugCinematic => 'Cinematic';
+
+  @override
+  String get sugMono => 'Black & white';
+
+  @override
+  String get aiSelectObject => 'Tap to select';
+
+  @override
+  String get aiDepthBlur => 'Depth blur';
+
+  @override
+  String get aiRelight => 'Relight';
+
+  @override
+  String get aiErasePerson => 'Remove person';
+
+  @override
+  String get selectHint => 'Tap the object you want. Tap again to add more; switch to Subtract to remove parts.';
+
+  @override
+  String get selectAdd => 'Add';
+
+  @override
+  String get selectSubtract => 'Subtract';
+
+  @override
+  String get selectErase => 'Erase';
+
+  @override
+  String get selectCutOut => 'Cut out';
+
+  @override
+  String get selectAdjust => 'Adjust';
+
+  @override
+  String get selectBlurRest => 'Blur the rest';
+
+  @override
+  String get selectUndoPoint => 'Undo last tap';
+
+  @override
+  String get selectNone => 'Nothing selected yet';
+
+  @override
+  String get flipV => 'Flip vertical';
+
+  @override
+  String get removeLook => 'Remove look';
+
+  @override
+  String get smartErrNoPerson => 'No person found in this photo.';
+
+  @override
+  String get smartErrNoSelection => 'Select something first.';
 }

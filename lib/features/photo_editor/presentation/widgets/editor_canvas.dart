@@ -140,6 +140,7 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
   }
 
   Widget _interaction(PhotoEditorState s, Size size) {
+    if (s.selecting) return _selector(s, size);
     if (s.hslPicking) return _hslPicker(size);
     if (s.tool == EditorTool.heal && s.healSettingSource) return _healSourcePicker(s, size);
     final brushTool =
@@ -218,6 +219,31 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
   }
 
   static final List<Stroke> _pendingEraser = [];
+
+  // ------------------------------------------------------ tap to select
+
+  Widget _selector(PhotoEditorState s, Size size) {
+    final overlay = s.selectOverlay;
+    return GestureDetector(
+      key: const ValueKey('select-canvas'),
+      behavior: HitTestBehavior.opaque,
+      onTapUp: s.busy
+          ? null
+          : (d) {
+              Haptics.selection();
+              _ctrl.selectAt(
+                Offset((d.localPosition.dx / size.width).clamp(0, 1), (d.localPosition.dy / size.height).clamp(0, 1)),
+              );
+            },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (overlay != null) RawImage(image: overlay, fit: BoxFit.fill),
+          CustomPaint(painter: _SelectPointsPainter(s, context.lumora.violet)),
+        ],
+      ),
+    );
+  }
 
   // ------------------------------------------------------ colour picker
 
@@ -499,3 +525,36 @@ class _MaskGuidePainter extends CustomPainter {
 
 /// Helper used by tests and the export sheet to snapshot a [ui.Image].
 Future<ui.Image> cloneImage(ui.Image image) async => image.clone();
+
+/// Markers for the prompt points of tap-to-select (drawn where the user
+/// tapped; points are stored in source space, so they are mapped back
+/// through the crop when one is active).
+class _SelectPointsPainter extends CustomPainter {
+  _SelectPointsPainter(this.state, this.color);
+
+  final PhotoEditorState state;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final g = state.edit.geometry;
+    if (!g.isIdentity) return;
+    for (final p in state.selectPoints) {
+      final c = Offset(p.x * size.width, p.y * size.height);
+      canvas
+        ..drawCircle(c, 9, Paint()..color = const Color(0xCC0E1022))
+        ..drawCircle(c, 7, Paint()..color = p.positive ? color : const Color(0xFFE07A8F))
+        ..drawCircle(
+          c,
+          9,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5
+            ..color = Colors.white,
+        );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SelectPointsPainter old) => old.state.selectPoints != state.selectPoints;
+}

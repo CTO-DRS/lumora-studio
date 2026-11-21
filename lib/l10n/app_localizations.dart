@@ -2203,6 +2203,264 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save a look in the editor to see it here'**
   String get noCustomPresets;
+
+  /// No description provided for @toolSmart.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart'**
+  String get toolSmart;
+
+  /// No description provided for @smartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe an edit… e.g. “warmer, remove background”'**
+  String get smartHint;
+
+  /// No description provided for @smartApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Done: {summary}'**
+  String smartApplied(String summary);
+
+  /// No description provided for @smartNotUnderstood.
+  ///
+  /// In en, this message translates to:
+  /// **'Didn\'t understand: {text}'**
+  String smartNotUnderstood(String text);
+
+  /// No description provided for @smartNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Try “warmer”, “more contrast”, “black and white” or “remove background”.'**
+  String get smartNothing;
+
+  /// No description provided for @smartSuggestions.
+  ///
+  /// In en, this message translates to:
+  /// **'For this photo'**
+  String get smartSuggestions;
+
+  /// No description provided for @smartTryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Try'**
+  String get smartTryLabel;
+
+  /// No description provided for @smartEx1.
+  ///
+  /// In en, this message translates to:
+  /// **'a bit warmer'**
+  String get smartEx1;
+
+  /// No description provided for @smartEx2.
+  ///
+  /// In en, this message translates to:
+  /// **'more contrast'**
+  String get smartEx2;
+
+  /// No description provided for @smartEx3.
+  ///
+  /// In en, this message translates to:
+  /// **'black and white'**
+  String get smartEx3;
+
+  /// No description provided for @smartEx4.
+  ///
+  /// In en, this message translates to:
+  /// **'remove background'**
+  String get smartEx4;
+
+  /// No description provided for @smartEx5.
+  ///
+  /// In en, this message translates to:
+  /// **'cinematic'**
+  String get smartEx5;
+
+  /// No description provided for @smartEx6.
+  ///
+  /// In en, this message translates to:
+  /// **'brighten the shadows'**
+  String get smartEx6;
+
+  /// No description provided for @smartOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Understood on your device — nothing is sent anywhere.'**
+  String get smartOnDevice;
+
+  /// No description provided for @sugAutoFix.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto fix'**
+  String get sugAutoFix;
+
+  /// No description provided for @sugBrighten.
+  ///
+  /// In en, this message translates to:
+  /// **'Brighten'**
+  String get sugBrighten;
+
+  /// No description provided for @sugRecover.
+  ///
+  /// In en, this message translates to:
+  /// **'Recover highlights'**
+  String get sugRecover;
+
+  /// No description provided for @sugFixColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix colour'**
+  String get sugFixColor;
+
+  /// No description provided for @sugPortrait.
+  ///
+  /// In en, this message translates to:
+  /// **'Portrait glow'**
+  String get sugPortrait;
+
+  /// No description provided for @sugSky.
+  ///
+  /// In en, this message translates to:
+  /// **'Deeper sky'**
+  String get sugSky;
+
+  /// No description provided for @sugLandscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Vivid nature'**
+  String get sugLandscape;
+
+  /// No description provided for @sugDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Clean document'**
+  String get sugDocument;
+
+  /// No description provided for @sugClearHaze.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear haze'**
+  String get sugClearHaze;
+
+  /// No description provided for @sugVivid.
+  ///
+  /// In en, this message translates to:
+  /// **'Vivid colour'**
+  String get sugVivid;
+
+  /// No description provided for @sugCinematic.
+  ///
+  /// In en, this message translates to:
+  /// **'Cinematic'**
+  String get sugCinematic;
+
+  /// No description provided for @sugMono.
+  ///
+  /// In en, this message translates to:
+  /// **'Black & white'**
+  String get sugMono;
+
+  /// No description provided for @aiSelectObject.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to select'**
+  String get aiSelectObject;
+
+  /// No description provided for @aiDepthBlur.
+  ///
+  /// In en, this message translates to:
+  /// **'Depth blur'**
+  String get aiDepthBlur;
+
+  /// No description provided for @aiRelight.
+  ///
+  /// In en, this message translates to:
+  /// **'Relight'**
+  String get aiRelight;
+
+  /// No description provided for @aiErasePerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove person'**
+  String get aiErasePerson;
+
+  /// No description provided for @selectHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the object you want. Tap again to add more; switch to Subtract to remove parts.'**
+  String get selectHint;
+
+  /// No description provided for @selectAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get selectAdd;
+
+  /// No description provided for @selectSubtract.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtract'**
+  String get selectSubtract;
+
+  /// No description provided for @selectErase.
+  ///
+  /// In en, this message translates to:
+  /// **'Erase'**
+  String get selectErase;
+
+  /// No description provided for @selectCutOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut out'**
+  String get selectCutOut;
+
+  /// No description provided for @selectAdjust.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust'**
+  String get selectAdjust;
+
+  /// No description provided for @selectBlurRest.
+  ///
+  /// In en, this message translates to:
+  /// **'Blur the rest'**
+  String get selectBlurRest;
+
+  /// No description provided for @selectUndoPoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo last tap'**
+  String get selectUndoPoint;
+
+  /// No description provided for @selectNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing selected yet'**
+  String get selectNone;
+
+  /// No description provided for @flipV.
+  ///
+  /// In en, this message translates to:
+  /// **'Flip vertical'**
+  String get flipV;
+
+  /// No description provided for @removeLook.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove look'**
+  String get removeLook;
+
+  /// No description provided for @smartErrNoPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'No person found in this photo.'**
+  String get smartErrNoPerson;
+
+  /// No description provided for @smartErrNoSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Select something first.'**
+  String get smartErrNoSelection;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

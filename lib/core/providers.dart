@@ -1,6 +1,7 @@
 import 'package:lumora/features/ai/data/model_manager.dart';
 import 'package:lumora/features/ai/data/onnx_engine.dart';
 import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
+import 'package:lumora/features/ai/pipelines/smart_pipelines.dart';
 import 'package:lumora/features/photo_editor/engine/lut/lut_repository.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
 import 'package:lumora/features/photo_editor/engine/shader_library.dart';
@@ -77,3 +78,9 @@ InpaintPipeline inpaintPipeline(Ref ref) => InpaintPipeline(ref.watch(inferenceE
 
 @Riverpod(keepAlive: true)
 VideoEngine videoEngine(Ref ref) => VideoEngine();
+
+@Riverpod(keepAlive: true)
+ObjectSelectPipeline objectSelectPipeline(Ref ref) => ObjectSelectPipeline(ref.watch(inferenceEngineProvider));
+
+@Riverpod(keepAlive: true)
+DepthPipeline depthPipeline(Ref ref) => DepthPipeline(ref.watch(inferenceEngineProvider));

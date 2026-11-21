@@ -2,6 +2,34 @@
 
 All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
+## [1.3.0] - 2026-11-21
+
+### Added
+- **Smart edit by typing** (`lib/features/smart_edit`): a new **Smart** tab, now the editor's first and default tab, with a command bar that understands Arabic and English instructions on the device. A deterministic intent engine (`RuleIntentEngine`) normalises Arabic (diacritics, hamza/alef forms, tatweel, Arabic-Indic digits, attached و/ف/ب/ل/ال), splits a sentence into clauses ("زد التباين وقلل التشبع", "warmer, more contrast, then black and white"), and maps each clause to sliders (with direction, intensity words, signed numbers, percentages and EV), looks, rotate/flip, reset/undo, or AI tools. The instant part of a plan is applied as **one undo step**; model-backed actions ask before downloading. Unknown fragments are reported, never guessed. Plans serialise to JSON (`SmartEditPlan.toJson`), the contract for a future on-device LLM engine (`EditIntentEngine`). See `docs/SMART_EDIT.md`.
+- **Suggestions for this photo**: `PhotoAnalysis` (histogram, clipping, gray-world colour cast, YCbCr skin tones in the centre, sky in the top third, foliage, paper/ink for documents, haze) and `suggestFixes` rank 3–5 one-tap fixes (auto fix, brighten, recover highlights, fix colour, portrait glow, deeper sky, vivid nature, clean document, clear haze, vivid colour, cinematic, black & white) shown with live thumbnails rendered by the real GPU pipeline.
+- **Tap to select** (MobileSAM, `ObjectSelectPipeline`): the photo is encoded once, every tap runs only the decoder; add/subtract points, undo the last tap, and use the selection to **erase** (MI-GAN), **cut out**, **adjust** (as a subject mask) or **blur the rest**. The selection overlay follows crop and rotation.
+- **Depth blur** and **Relight** (Depth Anything V2 Small int8, `DepthPipeline`): depth-graded background blur, or a subject lift + background dim, both as editable subject masks.
+- **Remove person**: MODNet person matte → object eraser, with a clear message when no person is found.
+- New models (revision-pinned Hugging Face URLs, SHA-256 verified, each downloaded and run with ONNX Runtime before being added): `mobilesam_encoder` (28.2 MB), `mobilesam_decoder` (16.5 MB), `depth_anything_v2_small_q8` (27.3 MB).
+- `tool/ios_fix_onnxruntime_spm.sh` and a world roadmap (`ROADMAP.md`, `docs/ROADMAP.ar.md`) plus `docs/VISION.md`.
+- 180+ new tests: 140+ Arabic/English command phrases, analysis on synthetic photos, SAM/depth tensor contracts, the Smart panel end to end.
+
+### Fixed
+- **iOS release build**: SwiftPM resolves every binary target of `onnxruntime-swift-package-manager`, including `onnxruntime_extensions` hosted on `download.onnxruntime.ai`, whose TLS certificate is for `*.azureedge.net` (hostname mismatch), so the build failed although the plugin never links it. Switching to CocoaPods would not help (the `onnxruntime-c` / `onnxruntime-objc` pods use the same host). CI and the release workflow now run `tool/ios_fix_onnxruntime_spm.sh`, which makes the plugin depend on a local checkout of the pinned package whose extensions URL points at Microsoft's origin storage (`onnxruntimepackages.z14.web.core.windows.net`) — the same file, still verified by the original SHA-256 checksum. iOS stays best-effort in both workflows.
+
+### Changed
+- The editor opens on the **Smart** tab. `PresetTile` is public (shared by Looks and Smart).
+- Version 1.3.0 (build 5).
+
+### العربية
+- **التعديل الذكي بالكتابة**: تبويب «ذكي» جديد أصبح التبويب الأول في المحرر. اكتب أمرك بالعربية أو الإنجليزية («اجعلها أدفأ»، «زد السطوع قليلاً»، «أبيض وأسود»، «أزل الخلفية») فيُنفَّذ على جهازك في خطوة تراجع واحدة. المحرّك حتمي ويعمل دون إنترنت، ويفهم الشدة والأرقام وعدة أوامر في جملة واحدة، ويُبلغك بما لم يفهمه بدل التخمين. صيغة الخطة JSON جاهزة لنموذج لغوي محلي مستقبلًا.
+- **مقترحات لهذه الصورة**: تحليل سريع للتعريض والإضاءات والألوان والبشرة والسماء والمستندات، ثم 3–5 إصلاحات بلمسة واحدة بمعاينات حيّة.
+- **التحديد بلمسة** (MobileSAM): حدّد أي عنصر ثم امسحه أو قصّه أو عدّله وحده أو موّه الباقي.
+- **تمويه بالعمق** و**إعادة الإضاءة** (Depth Anything V2)، و**إزالة شخص** بلمسة واحدة.
+- **إصلاح بناء iOS**: تجاوز خادم `download.onnxruntime.ai` ذي الشهادة غير الصالحة بجلب الملف نفسه من مخزن Microsoft الأصلي مع التحقق من بصمته.
+- خارطة طريق عالمية ورؤية المشروع بالعربية والإنجليزية.
+- الإصدار 1.3.0 (البناء 5).
+
 ## [1.2.0] - 2026-11-21
 
 ### Added
