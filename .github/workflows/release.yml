@@ -108,6 +108,8 @@ jobs:
     name: iOS (unsigned)
     needs: [meta, test]
     runs-on: macos-latest
+    # iOS is best-effort: a failure here must not block the Android release.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
@@ -116,7 +118,16 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - run: flutter pub get
-      - run: flutter build ios --release --no-codesign
+      - name: Build iOS (retries for flaky SPM binary downloads)
+        shell: bash
+        run: |
+          for i in 1 2 3; do
+            if flutter build ios --release --no-codesign; then exit 0; fi
+            echo "iOS build attempt $i failed; retrying in 60s"
+            rm -rf ~/Library/Caches/org.swift.swiftpm ~/Library/Developer/Xcode/DerivedData/*/SourcePackages || true
+            sleep 60
+          done
+          exit 1
       - name: Package Runner.app
         run: |
           mkdir -p dist
@@ -132,6 +143,7 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs: [meta, android, ios]
+    if: ${{ always() && needs.android.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -166,7 +178,7 @@ jobs:
           body_path: notes.md
           generate_release_notes: true
           prerelease: ${{ inputs.prerelease == true }}
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
           files: |
             dist/*.apk
             dist/*.zip
