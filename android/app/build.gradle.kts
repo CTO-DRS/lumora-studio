@@ -1,8 +1,21 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Release signing: android/key.properties + the keystore it names (kept in the
+// private repo / CI secrets, never committed here). Without them, release
+// builds fall back to the debug key so `flutter build apk --release` still works.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+val hasReleaseKey = keystoreProperties.getProperty("storeFile")?.let { file(it).exists() } == true
 
 android {
     namespace = "com.ctodrs.lumora"
@@ -29,11 +42,26 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storeType = keystoreProperties.getProperty("storeType", "pkcs12")
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Debug signing keeps `flutter build apk --release` working in CI.
-            // Configure your own keystore before publishing to a store.
-            signingConfig = signingConfigs.getByName("debug")
+            // Official upload key when present (CI release), debug key otherwise.
+            signingConfig = if (hasReleaseKey) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             // R8 stays on (smaller APK), but with explicit keep rules: ONNX
             // Runtime and FFmpegKit call back into Java classes by name from
             // JNI, and stripping/renaming them aborts the process natively.
