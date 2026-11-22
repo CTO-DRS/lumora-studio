@@ -2,6 +2,15 @@
 
 All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
+## [1.3.1] - 2026-11-23
+
+### Changed
+- **Official release signing**: Android release APKs are now signed with Lumora's own upload key (RSA 4096, SHA-256 `B7:1C:9F:6B:BB:B9:1B:22:D4:1A:A9:8F:9C:87:2B:2F:22:A0:E1:37:81:B6:C2:D0:7A:95:2A:86:83:F4:C6:91`) instead of the debug key. The key is kept outside this public repository; the release workflow verifies every APK against this fingerprint. Builds without the key (forks, local) still fall back to the debug key.
+- **التوقيع الرسمي**: أصبحت ملفات APK موقّعة بمفتاح Lumora الرسمي بدل مفتاح التصحيح. **مرة واحدة فقط**: احذف النسخة القديمة من جوالك ثم ثبّت هذه النسخة (لاختلاف التوقيع). بعدها ستعمل التحديثات فوق بعضها مباشرة.
+
+### Note
+- Because the signature changed, Android will refuse to update an older debug-signed install: uninstall Lumora once, then install 1.3.1. Future updates install over it normally.
+
 ## [1.3.0] - 2026-11-21
 
 ### Added
