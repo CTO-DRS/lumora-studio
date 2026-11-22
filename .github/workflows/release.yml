@@ -86,7 +86,40 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - run: flutter pub get
+      # The official upload key lives in the private repo CTO-DRS/lumora-studio-private.
+      # With the LUMORA_PRIVATE_TOKEN secret set, release APKs are signed with it;
+      # without it they fall back to the debug key (forks, first-time setups).
+      - name: Fetch release signing key (private repo)
+        id: signing
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.LUMORA_PRIVATE_TOKEN }}
+        run: |
+          if [[ -z "$TOKEN" ]]; then
+            echo "::warning::LUMORA_PRIVATE_TOKEN not set; APKs will be debug-signed."
+            echo "signed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/CTO-DRS/lumora-studio-private.git" "$RUNNER_TEMP/lumora-private"
+          cp "$RUNNER_TEMP/lumora-private/android/lumora-upload.p12" android/app/lumora-upload.p12
+          cp "$RUNNER_TEMP/lumora-private/android/key.properties" android/key.properties
+          cp "$RUNNER_TEMP/lumora-private/android/cert-sha256.txt" "$RUNNER_TEMP/cert-sha256.txt"
+          rm -rf "$RUNNER_TEMP/lumora-private"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
       - run: flutter build apk --release --split-per-abi
+      - name: Verify APK signature
+        if: steps.signing.outputs.signed == 'true'
+        shell: bash
+        run: |
+          expected=$(grep -oE '([0-9A-F]{2}:){31}[0-9A-F]{2}' "$RUNNER_TEMP/cert-sha256.txt" | head -1 | tr -d ':' | tr 'A-F' 'a-f')
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          for f in build/app/outputs/flutter-apk/app-*-release.apk; do
+            got=$("$apksigner" verify --print-certs "$f" | grep -m1 'SHA-256 digest' | awk '{print $NF}')
+            echo "$f -> $got"
+            [[ "$got" == "$expected" ]] || { echo "::error::$f is not signed with the Lumora upload key"; exit 1; }
+          done
+      - name: Remove signing material
+        if: always()
+        run: rm -f android/app/lumora-upload.p12 android/key.properties
       - name: Name APKs after the release
         shell: bash
         run: |
