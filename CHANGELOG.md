@@ -2,6 +2,12 @@
 
 All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
+## [1.3.2] - 2026-11-23
+
+### Fixed
+- **iOS build**: the `onnxruntime_extensions` archive that SwiftPM insisted on downloading is now gone from Microsoft's origin storage too (HTTP 404), after `download.onnxruntime.ai` started serving a wrong TLS certificate. Lumora never links it, so `tool/ios_fix_onnxruntime_spm.sh` now removes that product and its targets from the pinned local copy of `onnxruntime-swift-package-manager` 1.28.0. Only the `onnxruntime` binary (a GitHub release asset, checksum-verified) is downloaded. No app code changed.
+- **إصلاح بناء iOS**: حُذفت حزمة `onnxruntime_extensions` غير المستخدمة التي لم تعد متاحة للتحميل، فلم يعد البناء يعتمد عليها.
+
 ## [1.3.1] - 2026-11-23
 
 ### Changed
