@@ -12,18 +12,17 @@
 # whole iOS build. Switching to CocoaPods does not help: the onnxruntime-c /
 # onnxruntime-objc pods are fetched from the same host.
 #
-# What: clone the package at the pinned tag, point the extensions archive at
-# Microsoft's origin storage (the very same file - SwiftPM still verifies the
-# original SHA-256 checksum), and make the plugin depend on that local
-# checkout instead of the remote URL. Idempotent; safe to run repeatedly.
+# What: clone the package at the pinned tag, remove the unused
+# onnxruntime_extensions product/targets (its archive is no longer downloadable
+# anywhere: v1.3.0 used Microsoft's origin storage, which now returns 404), and
+# make the plugin depend on that local checkout instead of the remote URL.
+# Idempotent; safe to run repeatedly.
 #
 # Usage (macOS, after `flutter pub get`):  bash tool/ios_fix_onnxruntime_spm.sh
 set -euo pipefail
 
 ORT_SPM_REPO="https://github.com/masicai/onnxruntime-swift-package-manager"
 ORT_SPM_TAG="${ORT_SPM_TAG:-1.28.0}"
-BROKEN_HOST="https://download.onnxruntime.ai/"
-MIRROR_HOST="${ORT_MIRROR_HOST:-https://onnxruntimepackages.z14.web.core.windows.net/}"
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cfg="$root/.dart_tool/package_config.json"
@@ -64,10 +63,26 @@ if [[ ! -f "$dest/Package.swift" ]]; then
 fi
 [[ -f "$dest/Package.swift" ]] || { echo "ios_fix_onnxruntime_spm: clone failed" >&2; exit 1; }
 
-# 1) Same archive, reachable host (checksum in Package.swift is unchanged).
-perl -pi -e "s#\Q${BROKEN_HOST}\E#${MIRROR_HOST}#g" "$dest/Package.swift"
-if grep -q "download.onnxruntime.ai" "$dest/Package.swift"; then
-  echo "ios_fix_onnxruntime_spm: could not rewrite the extensions URL" >&2
+# 1) Drop onnxruntime_extensions entirely. flutter_onnxruntime only links the
+#    `onnxruntime` product, but SwiftPM downloads every binary target while
+#    resolving. The extensions archive has moved/vanished from both
+#    download.onnxruntime.ai (bad TLS cert) and Microsoft's origin storage (404),
+#    so we remove its product, targets and binary target from the local copy.
+python3 - "$dest/Package.swift" <<'PY'
+import re, sys
+p = sys.argv[1]
+s = open(p).read()
+s = re.sub(r'\s*\.library\(name:\s*"onnxruntime_extensions",.*?\]\),', '', s, flags=re.S)
+s = re.sub(r'\s*\.target\(name:\s*"OnnxRuntimeExtensions",.*?\]\),', '', s, flags=re.S)
+s = re.sub(r'\s*\.testTarget\(name:\s*"OnnxRuntimeExtensionsTests",.*?\]\),', '', s, flags=re.S)
+i = s.find('if let ext_pod_archive_path')
+if i != -1:
+    s = s[:i].rstrip() + "\n// onnxruntime_extensions removed by Lumora (unused, archive unavailable).\n"
+open(p, 'w').write(s)
+PY
+if grep -qE 'onnxruntime_extensions"|OnnxRuntimeExtensions|pod-archive-onnxruntime-extensions' "$dest/Package.swift"; then
+  echo "ios_fix_onnxruntime_spm: could not strip onnxruntime_extensions from Package.swift" >&2
+  grep -nE 'extensions|Extensions' "$dest/Package.swift" >&2 || true
   exit 1
 fi
 
@@ -84,4 +99,4 @@ fi
 rm -rf "$root/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved" \
        "$root/ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.resolved" 2>/dev/null || true
 
-echo "ios_fix_onnxruntime_spm: flutter_onnxruntime now uses $dest (extensions from ${MIRROR_HOST})"
+echo "ios_fix_onnxruntime_spm: flutter_onnxruntime now uses $dest (onnxruntime_extensions removed)"
