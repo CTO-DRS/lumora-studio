@@ -167,7 +167,14 @@ void main() {
     });
 
     test('featherSelection softens the boundary of a binary mask', () {
-      final mask = logitsToMask([for (var y = 0; y < 6; y++) for (var x = 0; x < 6; x++) x < 3 ? 1.0 : -1.0], 6, 6);
+      final mask = logitsToMask(
+        [
+          for (var y = 0; y < 6; y++)
+            for (var x = 0; x < 6; x++) x < 3 ? 1.0 : -1.0,
+        ],
+        6,
+        6,
+      );
       final soft = featherSelection(mask, 1);
       int at(int x, int y) => soft.pixels[(y * 6 + x) * 4];
       expect(at(0, 0), 255); // interior stays solid
@@ -311,9 +318,7 @@ class _SamFakeEngine implements InferenceEngine {
         for (var x = 0; x < w; x++) x < w / 2 ? 1.0 : -1.0,
     ];
     return {
-      'masks': [
-        for (var k = 0; k < 4; k++) ...mask,
-      ],
+      'masks': [for (var k = 0; k < 4; k++) ...mask],
       'iou_predictions': const [0.9, 0.5, 0.3, 0.1],
     };
   }

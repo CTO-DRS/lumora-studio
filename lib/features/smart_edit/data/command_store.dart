@@ -51,7 +51,8 @@ const _kRecentsKey = 'smart.commandHistory';
 const _kFavouritesKey = 'smart.commandFavourites';
 
 List<String> _readList(SharedPreferences prefs, String key) => [
-  for (final v in (prefs.getStringList(key) ?? const <String>[])) if (v.trim().isNotEmpty) v.trim(),
+  for (final v in (prefs.getStringList(key) ?? const <String>[]))
+    if (v.trim().isNotEmpty) v.trim(),
 ];
 
 /// Holds and persists [SmartCommandBook]. The UI watches
@@ -70,18 +71,18 @@ class SmartCommandBookNotifier extends Notifier<SmartCommandBook> {
     final prefs = _prefs = await SharedPreferences.getInstance();
     // Keep the newest entries only, in case an older version stored more.
     final recents = _readList(prefs, _kRecentsKey).take(kSmartHistoryMax).toList();
-    state = SmartCommandBook(
-      recents: recents,
-      favourites: _readList(prefs, _kFavouritesKey),
-      loaded: true,
-    );
+    state = SmartCommandBook(recents: recents, favourites: _readList(prefs, _kFavouritesKey), loaded: true);
   }
 
   /// Adds [command] to the top of the history (and removes a duplicate).
   Future<void> record(String command) async {
     final text = command.trim();
     if (text.isEmpty) return;
-    final recents = [text, for (final c in state.recents) if (c != text) c].take(kSmartHistoryMax).toList();
+    final recents = [
+      text,
+      for (final c in state.recents)
+        if (c != text) c,
+    ].take(kSmartHistoryMax).toList();
     state = state.copyWith(recents: recents);
     await _prefs?.setStringList(_kRecentsKey, recents);
   }
@@ -103,7 +104,10 @@ class SmartCommandBookNotifier extends Notifier<SmartCommandBook> {
 
   /// Drops one entry from the history (favourites are kept).
   Future<void> forget(String command) async {
-    final recents = [for (final c in state.recents) if (c != command) c];
+    final recents = [
+      for (final c in state.recents)
+        if (c != command) c,
+    ];
     state = state.copyWith(recents: recents);
     await _prefs?.setStringList(_kRecentsKey, recents);
   }
