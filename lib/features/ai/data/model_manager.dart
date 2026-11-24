@@ -89,10 +89,7 @@ class ModelManager {
     final file = await fileFor(spec);
     if (await isInstalled(spec)) return file;
 
-    final urls = [
-      spec.url,
-      if (spec.mirrorUrl != null && spec.mirrorUrl != spec.url) spec.mirrorUrl!,
-    ];
+    final urls = [spec.url, if (spec.mirrorUrl != null && spec.mirrorUrl != spec.url) spec.mirrorUrl!];
     Exception? lastError;
     for (final url in urls) {
       try {

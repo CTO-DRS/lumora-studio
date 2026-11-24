@@ -113,10 +113,7 @@ void main() {
     test('both sources failing reports the last error', () async {
       final client = MockClient.streaming((req, _) async => http.StreamedResponse(const Stream.empty(), 500));
       final m = ModelManager(client: client, baseDir: () async => tmp);
-      await expectLater(
-        m.ensure(_spec([1], mirror: 'https://mirror.example/m.onnx')),
-        throwsA(isA<HttpException>()),
-      );
+      await expectLater(m.ensure(_spec([1], mirror: 'https://mirror.example/m.onnx')), throwsA(isA<HttpException>()));
       expect(Directory('${tmp.path}/models').listSync(), isEmpty);
     });
 
@@ -126,7 +123,10 @@ void main() {
         return http.StreamedResponse(Stream.value(bytes), 200);
       });
       final m = ModelManager(client: client, baseDir: () async => tmp);
-      await expectLater(m.ensure(_spec(bytes, sha: 'f' * 64, mirror: 'https://mirror.example/m.onnx')), throwsA(isA<ModelChecksumException>()));
+      await expectLater(
+        m.ensure(_spec(bytes, sha: 'f' * 64, mirror: 'https://mirror.example/m.onnx')),
+        throwsA(isA<ModelChecksumException>()),
+      );
     });
   });
 }

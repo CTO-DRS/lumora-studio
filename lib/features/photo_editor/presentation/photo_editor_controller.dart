@@ -896,7 +896,12 @@ class PhotoEditorController extends _$PhotoEditorController {
     _selectionMask = null;
     _candidateMasks = const [];
     _setOverlay(null);
-    state = state.copyWith(selectPoints: const [], hasSelection: false, selectCandidates: const [], selectCandidateIndex: 0);
+    state = state.copyWith(
+      selectPoints: const [],
+      hasSelection: false,
+      selectCandidates: const [],
+      selectCandidateIndex: 0,
+    );
   }
 
   /// Leaves tap-to-select without applying anything.
@@ -958,11 +963,7 @@ class PhotoEditorController extends _$PhotoEditorController {
     _selectionMask = featherSelection(mask);
     final overlay = await _selectionOverlay(_selectionMask!);
     _setOverlay(overlay);
-    state = state.copyWith(
-      hasSelection: maskCoverage(mask) > 0,
-      selectCandidates: ious,
-      selectCandidateIndex: i,
-    );
+    state = state.copyWith(hasSelection: maskCoverage(mask) > 0, selectCandidates: ious, selectCandidateIndex: i);
   }
 
   /// Box prompt: the drag rectangle selects the object it encloses (and

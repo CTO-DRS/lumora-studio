@@ -24,7 +24,9 @@ void main() {
       if (ok) {
         passed[entry.lang] = passed[entry.lang]! + 1;
       } else {
-        failures.add('${entry.lang}: "${entry.text}"\n   expected $expected\n   actual   ${plan.ops} ?${plan.unrecognized}');
+        failures.add(
+          '${entry.lang}: "${entry.text}"\n   expected $expected\n   actual   ${plan.ops} ?${plan.unrecognized}',
+        );
       }
     }
     // The benchmark summary must be visible in CI logs; printing is intentional.
@@ -65,8 +67,7 @@ void main() {
 bool _sameOps(List<EditOp> actual, List<EditOp> expected) {
   if (actual.length != expected.length) return false;
   String key(EditOp op) => switch (op) {
-    AdjustOp(:final param, :final amount, :final absolute) =>
-      'a|${param.name}|${amount.toStringAsFixed(6)}|$absolute',
+    AdjustOp(:final param, :final amount, :final absolute) => 'a|${param.name}|${amount.toStringAsFixed(6)}|$absolute',
     LookOp(:final presetId, :final intensity) => 'l|$presetId|${intensity.toStringAsFixed(6)}',
     ActionOp(:final action) => 'o|${action.name}',
   };

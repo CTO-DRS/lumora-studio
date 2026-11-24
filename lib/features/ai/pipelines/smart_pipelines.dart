@@ -79,9 +79,7 @@ Float32List rgbaToHwcFloat(RgbaImage img) {
 /// the two corners are appended with labels 2 (top-left) and 3
 /// (bottom-right) and no padding point.
 (Float32List, Float32List, int) samPrompt(List<SelectPoint> points, int rw, int rh, {SelectBox? box}) {
-  final corners = box == null
-      ? 0
-      : 2;
+  final corners = box == null ? 0 : 2;
   final n = points.length + (box == null ? 1 : corners);
   final coords = Float32List(n * 2);
   final labels = Float32List(n);
