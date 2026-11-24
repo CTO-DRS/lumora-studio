@@ -7,8 +7,9 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:lumora/features/ai/data/model_manager.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
+import 'package:path/path.dart' as p;
 
-ModelSpec _spec(List<int> bytes, {String? sha}) => ModelSpec(
+ModelSpec _spec(List<int> bytes, {String? sha, String? mirror}) => ModelSpec(
   id: 'test_model',
   task: AiTask.segmentation,
   displayName: 'test',
@@ -19,6 +20,7 @@ ModelSpec _spec(List<int> bytes, {String? sha}) => ModelSpec(
   source: '',
   inputNames: const ['x'],
   outputName: 'y',
+  mirrorUrl: mirror,
 );
 
 void main() {
@@ -31,10 +33,13 @@ void main() {
     for (final m in ModelRegistry.all) {
       expect(ids.add(m.id), isTrue);
       expect(m.url, startsWith('https://huggingface.co/'));
+      expect(m.mirrorUrl, startsWith('https://github.com/CTO-DRS/lumora-studio/releases/download/'), reason: m.id);
+      expect(m.mirrorUrl, endsWith('${m.id}.onnx'), reason: m.id);
       expect(RegExp(r'^[0-9a-f]{64}$').hasMatch(m.sha256), isTrue, reason: m.id);
       expect(m.sizeBytes, greaterThan(1000000));
     }
     expect(ModelRegistry.forTask(AiTask.inpainting).length, 2);
+    expect(ModelRegistry.forTask(AiTask.interactiveSegmentation).length, 3);
   });
 
   test('downloads, verifies and caches', () async {
@@ -72,5 +77,56 @@ void main() {
     final client = MockClient.streaming((req, _) async => http.StreamedResponse(const Stream.empty(), 404));
     final m = ModelManager(client: client, baseDir: () async => tmp);
     await expectLater(m.ensure(_spec([1, 2, 3])), throwsA(isA<HttpException>()));
+  });
+
+  group('mirror fallback', () {
+    test('falls back to the mirror when the primary host fails', () async {
+      final bytes = utf8.encode('mirror-copy' * 500);
+      final requested = <String>[];
+      final client = MockClient.streaming((req, _) async {
+        requested.add(req.url.toString());
+        if (req.url.host == 'example.com') return http.StreamedResponse(const Stream.empty(), 503);
+        return http.StreamedResponse(Stream.value(bytes), 200, contentLength: bytes.length);
+      });
+      final m = ModelManager(client: client, baseDir: () async => tmp);
+      final f = await m.ensure(_spec(bytes, mirror: 'https://mirror.example/m.onnx'));
+      expect(f.readAsBytesSync(), bytes);
+      expect(requested, hasLength(2));
+      expect(requested.last, 'https://mirror.example/m.onnx');
+    });
+
+    test('falls back to the mirror on a checksum mismatch', () async {
+      final good = utf8.encode('good-model-bytes' * 100);
+      final bad = utf8.encode('tampered-bytes' * 100);
+      final client = MockClient.streaming((req, _) async {
+        final body = req.url.host == 'example.com' ? bad : good;
+        return http.StreamedResponse(Stream.value(body), 200, contentLength: body.length);
+      });
+      final m = ModelManager(client: client, baseDir: () async => tmp);
+      final spec = _spec(good, mirror: 'https://mirror.example/m.onnx');
+      final f = await m.ensure(spec);
+      expect(f.readAsBytesSync(), good);
+      expect(await m.isInstalled(spec), isTrue);
+      expect(Directory('${tmp.path}/models').listSync().map((e) => p.basename(e.path)), ['test_model.onnx']);
+    });
+
+    test('both sources failing reports the last error', () async {
+      final client = MockClient.streaming((req, _) async => http.StreamedResponse(const Stream.empty(), 500));
+      final m = ModelManager(client: client, baseDir: () async => tmp);
+      await expectLater(
+        m.ensure(_spec([1], mirror: 'https://mirror.example/m.onnx')),
+        throwsA(isA<HttpException>()),
+      );
+      expect(Directory('${tmp.path}/models').listSync(), isEmpty);
+    });
+
+    test('checksum mismatch on both sources throws', () async {
+      final bytes = utf8.encode('garbage');
+      final client = MockClient.streaming((req, _) async {
+        return http.StreamedResponse(Stream.value(bytes), 200);
+      });
+      final m = ModelManager(client: client, baseDir: () async => tmp);
+      await expectLater(m.ensure(_spec(bytes, sha: 'f' * 64, mirror: 'https://mirror.example/m.onnx')), throwsA(isA<ModelChecksumException>()));
+    });
   });
 }
