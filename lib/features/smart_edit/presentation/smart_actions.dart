@@ -102,6 +102,7 @@ Future<bool> runSmartAction(BuildContext context, WidgetRef ref, SmartAction act
     case SmartAction.heal:
       ctrl.setTool(EditorTool.heal);
     case SmartAction.autoEnhance ||
+        SmartAction.autoStraighten ||
         SmartAction.clearLook ||
         SmartAction.reset ||
         SmartAction.undo ||
@@ -142,6 +143,7 @@ String formatParamValue(AdjustmentParam param, double v, {bool absolute = false}
 
 String smartActionLabel(AppLocalizations l, SmartAction a) => switch (a) {
   SmartAction.autoEnhance => l.aiAutoEnhance,
+  SmartAction.autoStraighten => l.autoStraighten,
   SmartAction.clearLook => l.removeLook,
   SmartAction.reset => l.resetAll,
   SmartAction.undo => l.undo,
