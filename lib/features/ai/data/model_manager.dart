@@ -72,6 +72,11 @@ class ModelManager {
   }
 
   /// Returns the local model file, downloading it first when needed.
+  ///
+  /// Sources are tried in order: [ModelSpec.url], then [ModelSpec.mirrorUrl]
+  /// (a project-hosted copy with the same SHA-256). A broken host (HTTP
+  /// error, TLS failure, corrupted bytes) therefore only costs one extra
+  /// request instead of failing the tool – see ROADMAP §14.
   Future<File> ensure(ModelSpec spec, {void Function(DownloadProgress)? onProgress}) {
     // Note: the callback must not return the removed future, otherwise
     // whenComplete would wait for itself.
@@ -84,13 +89,32 @@ class ModelManager {
     final file = await fileFor(spec);
     if (await isInstalled(spec)) return file;
 
+    final urls = [
+      spec.url,
+      if (spec.mirrorUrl != null && spec.mirrorUrl != spec.url) spec.mirrorUrl!,
+    ];
+    Exception? lastError;
+    for (final url in urls) {
+      try {
+        return await _download(spec, url, file, onProgress);
+      } on Exception catch (e) {
+        // A checksum mismatch or HTTP/network failure on one host is not
+        // final: the mirror holds the identical file.
+        lastError = e;
+      }
+    }
+    if (lastError != null) throw lastError;
+    throw StateError('No download source available for ${spec.id}');
+  }
+
+  Future<File> _download(ModelSpec spec, String url, File file, void Function(DownloadProgress)? onProgress) async {
     final part = File('${file.path}.part');
     if (part.existsSync()) await part.delete();
 
-    final request = http.Request('GET', Uri.parse(spec.url));
+    final request = http.Request('GET', Uri.parse(url));
     final response = await _client.send(request);
     if (response.statusCode != 200) {
-      throw HttpException('HTTP ${response.statusCode} for ${spec.url}');
+      throw HttpException('HTTP ${response.statusCode} for $url');
     }
     final total = response.contentLength ?? spec.sizeBytes;
     final digestSink = _DigestSink();
