@@ -114,12 +114,11 @@ void main() {
     await tester.longPress(find.byIcon(Icons.history_rounded));
     await tester.pump();
     expect(find.text('Favourites'), findsOneWidget);
-    _container(tester).read(smartCommandBookProvider.notifier).clearHistory();
+    await _container(tester).read(smartCommandBookProvider.notifier).clearHistory();
     await tester.pump();
     expect(find.text('Recent'), findsNothing);
     expect(find.text('Favourites'), findsOneWidget);
   });
-
   testWidgets('next-command suggestions appear after an edit and run', (tester) async {
     await tester.pumpWidget(_wrap(const SmartPanel()));
     await tester.pump();
