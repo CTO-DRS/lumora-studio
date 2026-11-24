@@ -238,6 +238,7 @@ class _ClipTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final wave = waveform;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -258,7 +259,7 @@ class _ClipTile extends StatelessWidget {
                     Expanded(child: Image.file(File(t), fit: BoxFit.cover, gaplessPlayback: true)),
                 ],
               ),
-            if (waveform != null && clip.hasAudio)
+            if (wave != null && clip.hasAudio)
               Positioned(
                 left: 0,
                 right: 0,
@@ -266,8 +267,8 @@ class _ClipTile extends StatelessWidget {
                 height: 18,
                 child: CustomPaint(
                   painter: _WaveformPainter(
-                    waveform!.peaks,
-                    waveform.bucketMs,
+                    wave.peaks,
+                    wave.bucketMs,
                     Colors.white.withValues(alpha: 0.85),
                     pxPerSecond: pxPerSecond,
                   ),
@@ -275,7 +276,7 @@ class _ClipTile extends StatelessWidget {
               ),
             PositionedDirectional(
               start: 4,
-              bottom: waveform != null && clip.hasAudio ? 20 : 2,
+              bottom: wave != null && clip.hasAudio ? 20 : 2,
               child: Text(
                 [
                   if (clip.speed != 1) '${clip.speed}×',

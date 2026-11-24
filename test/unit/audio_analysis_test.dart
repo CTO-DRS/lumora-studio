@@ -22,7 +22,7 @@ Int16List clickTrack({required int bpm, int seconds = 6, double amplitude = 0.9}
   final rnd = math.Random(11);
   final n = rate * seconds;
   final out = Int16List(n);
-  final clickLen = rate * 60 ~/ 1000;
+  const clickLen = rate * 60 ~/ 1000;
   for (final t in positions(bpm: bpm, seconds: seconds)) {
     final start = t * rate ~/ 1000;
     for (var i = 0; i < clickLen && start + i < n; i++) {
@@ -95,7 +95,7 @@ void main() {
     });
 
     test('empty grid snaps nowhere; JSON round trip', () {
-      const g = BeatGrid(beatMs: [], bpm: null);
+      const g = BeatGrid(beatMs: []);
       expect(g.snap(500), isNull);
       final withBeats = BeatGrid.fromJson(const BeatGrid(beatMs: [250, 750], bpm: 240).toJson());
       expect(withBeats.beatMs, [250, 750]);

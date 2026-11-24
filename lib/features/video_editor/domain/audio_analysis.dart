@@ -18,6 +18,14 @@ class AudioWaveform {
     required this.durationMs,
   });
 
+  factory AudioWaveform.fromJson(Map<String, dynamic> json) => AudioWaveform(
+    peaks: [for (final v in json['peaks'] as List) (v as num).toDouble()],
+    rms: [for (final v in json['rms'] as List) (v as num).toDouble()],
+    bucketMs: json['bucketMs'] as int,
+    sampleRate: json['sampleRate'] as int,
+    durationMs: json['durationMs'] as int,
+  );
+
   /// Largest absolute sample per bucket, 0..1.
   final List<double> peaks;
 
@@ -54,19 +62,14 @@ class AudioWaveform {
     'sampleRate': sampleRate,
     'durationMs': durationMs,
   };
-
-  factory AudioWaveform.fromJson(Map<String, dynamic> json) => AudioWaveform(
-    peaks: [for (final v in json['peaks'] as List) (v as num).toDouble()],
-    rms: [for (final v in json['rms'] as List) (v as num).toDouble()],
-    bucketMs: json['bucketMs'] as int,
-    sampleRate: json['sampleRate'] as int,
-    durationMs: json['durationMs'] as int,
-  );
 }
 
 /// Detected beats (onsets) and a tempo estimate for one audio track.
 class BeatGrid {
   const BeatGrid({required this.beatMs, this.bpm});
+
+  factory BeatGrid.fromJson(Map<String, dynamic> json) =>
+      BeatGrid(beatMs: [for (final v in json['beatMs'] as List) (v as num).toInt()], bpm: json['bpm'] as int?);
 
   /// Beat/onset timestamps in milliseconds, sorted ascending.
   final List<int> beatMs;
@@ -96,16 +99,16 @@ class BeatGrid {
   }
 
   Map<String, dynamic> toJson() => {'beatMs': beatMs, 'bpm': bpm};
-
-  factory BeatGrid.fromJson(Map<String, dynamic> json) =>
-      BeatGrid(beatMs: [for (final v in json['beatMs'] as List) (v as num).toInt()], bpm: json['bpm'] as int?);
 }
 
 /// Waveform + beat grid for one file, produced by a single FFmpeg decode.
 class ClipAudio {
   const ClipAudio({required this.waveform, required this.beats});
 
+  /// Level buckets of the whole file (0..1).
   final AudioWaveform waveform;
+
+  /// Detected beats and the tempo estimate.
   final BeatGrid beats;
 }
 
