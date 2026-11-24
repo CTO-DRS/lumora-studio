@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumora/features/smart_edit/domain/edit_ops.dart';
-import 'package:lumora/features/smart_edit/domain/next_commands.dart';
 import 'package:lumora/features/smart_edit/domain/intent_engine.dart';
+import 'package:lumora/features/smart_edit/domain/next_commands.dart';
 
 const _engine = RuleIntentEngine();
 

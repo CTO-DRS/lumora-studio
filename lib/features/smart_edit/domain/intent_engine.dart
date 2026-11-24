@@ -124,11 +124,16 @@ const Map<String, String> _phrasesRaw = {
   'a tad': '@slight',
   'بشكل بسيط': '@slight',
   'بشكل خفيف': '@slight',
+  'شوي شوي': '@slight',
+  'شويه شويه': '@slight',
   'a lot': '@strong',
   'way more': '@strong',
   'بشكل كبير': '@strong',
   'بشكل واضح': '@strong',
   'tone down': '@dec',
+  // dialect (v1.3.x pass)
+  'على السريع': '@auto',
+  'ع السريع': '@auto',
 };
 
 final Map<String, _E> _lexiconRaw = {
@@ -151,6 +156,7 @@ final Map<String, _E> _lexiconRaw = {
   '@slight': const _E(_K.slight),
   '@strong': const _E(_K.strong),
   '@dec': const _E(_K.dec),
+  '@auto': _act(SmartAction.autoEnhance),
 
   // ---- direction
   'زد': const _E(_K.inc),
@@ -228,6 +234,18 @@ final Map<String, _E> _lexiconRaw = {
   'extrem': const _E(_K.strong),
   'heavi': const _E(_K.strong),
   'super': const _E(_K.strong, exact: true),
+
+  // ---- dialect intensity (v1.3.x pass: Gulf, Egyptian, Levantine,
+  // Maghrebi). Feminine forms are caught by the Arabic prefix matcher.
+  'وايد': const _E(_K.strong), // Gulf
+  'حيل': const _E(_K.strong, exact: true), // Gulf
+  'كلش': const _E(_K.strong, exact: true), // Gulf/Iraqi
+  'اوي': const _E(_K.strong), // Egyptian
+  'خالص': const _E(_K.strong), // Egyptian
+  'مره': const _E(_K.strong, exact: true), // Levantine
+  'بزاف': const _E(_K.strong), // Maghrebi
+  'برشا': const _E(_K.strong, exact: true), // Tunisian
+  'شويه': const _E(_K.slight), // Egyptian/Levantine/Maghrebi
 
   // ---- removal verbs
   'ازل': const _E(_K.remove),
@@ -580,6 +598,13 @@ final Map<String, _E> _lexiconRaw = {
   'اختر': _act(SmartAction.selectObject),
   'heal': _act(SmartAction.heal),
   'عالج': _act(SmartAction.heal),
+  // dialect "make it nice" → auto enhance
+  'زين': _act(SmartAction.autoEnhance), // Gulf
+  'حلو': _act(SmartAction.autoEnhance), // Egyptian
+  'منيح': _act(SmartAction.autoEnhance), // Levantine
+  'مليح': _act(SmartAction.autoEnhance), // Moroccan
+  'باهي': _act(SmartAction.autoEnhance), // Tunisian
+  'دير': _act(SmartAction.autoEnhance), // Maghrebi ("ديرها زوينة")
   'rotat': const _E(_K.rotate),
   'دور': const _E(_K.rotate),
   'تدوير': const _E(_K.rotate),
@@ -641,6 +666,8 @@ final Map<String, _E> _lexiconRaw = {
   'ستايل': const _E(_K.filler),
   'مظهر': const _E(_K.filler),
   'طابع': const _E(_K.filler),
+  'زينه': const _E(_K.filler),
+  'زوينه': const _E(_K.filler), // Maghrebi ("ديرها زوينه")
   'percent': const _E(_K.filler),
   'degrees': const _E(_K.filler),
   'درجات': const _E(_K.filler),
