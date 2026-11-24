@@ -1128,6 +1128,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get smartSuggestions => 'For this photo';
 
   @override
+  String get smartNext => 'Next';
+
+  @override
+  String get smartSaved => 'Saved';
+
+  @override
+  String get smartRecent => 'Recent';
+
+  @override
   String get smartTryLabel => 'Try';
 
   @override
@@ -1201,6 +1210,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selectHint => 'Tap the object you want. Tap again to add more; switch to Subtract to remove parts.';
+
+  @override
+  String get selectModeTap => 'Tap';
+
+  @override
+  String get selectModeBox => 'Box';
+
+  @override
+  String get selectModeBrush => 'Brush';
+
+  @override
+  String get selectHintBox => 'Drag a rectangle around the object.';
+
+  @override
+  String get selectHintBrush => 'Paint over the selection to refine it; with Subtract you erase parts of it.';
+
+  @override
+  String get selectCandidates => 'Candidates';
+
+  @override
+  String get selectSoftEdges => 'Soft edges';
 
   @override
   String get selectAdd => 'Add';

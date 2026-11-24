@@ -17,6 +17,16 @@ class FakeEngine implements InferenceEngine {
   }
 
   @override
+  Future<Map<String, List<num>>> runNamed(
+    ModelSpec model,
+    Map<String, (TypedData, List<int>)> inputs, {
+    Set<String> outputs = const {},
+  }) async {
+    final out = await run(model, inputs);
+    return {model.outputName: out};
+  }
+
+  @override
   Future<void> release() async {}
 }
 

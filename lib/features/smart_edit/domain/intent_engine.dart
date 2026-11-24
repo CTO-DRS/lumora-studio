@@ -229,6 +229,22 @@ final Map<String, _E> _lexiconRaw = {
   'heavi': const _E(_K.strong),
   'super': const _E(_K.strong, exact: true),
 
+  // ---- dialect pass (v1.3.x): Gulf, Egyptian, Levantine, Maghrebi.
+  // Every entry here is a word people actually type; the 1,000-phrase
+  // benchmark (test/unit/smart_intent_benchmark_test.dart) keeps them
+  // covered.
+  'مره': const _E(_K.strong), // Gulf "very" (سخن مره)
+  'اوي': const _E(_K.strong, exact: true), // Egyptian "very" (غامق اوي)
+  'خالص': const _E(_K.strong, exact: true), // Egyptian intensifier (داكن خالص)
+  'بزاف': const _E(_K.strong), // Maghrebi "a lot"
+  'اطفي': const _E(_K.remove, exact: true), // turn off (اطفي الحبيبات)
+  'اشيل': const _E(_K.remove), // Egyptian/Levantine "take away"
+  'حط': const _E(_K.filler, exact: true), // Egyptian "put" (حط تشبع)
+  'زين': _act(SmartAction.autoEnhance), // Gulf "make it good"
+  'حلو': _act(SmartAction.autoEnhance), // Egyptian/Levantine "nice"
+  'منيح': _act(SmartAction.autoEnhance), // Levantine/Maghrebi "good"
+  'وضح': _p(AdjustmentParam.clarity), // Levantine "وضحها"
+  'moins': const _E(_K.dec, exact: true), // Maghrebi French code-switching
   // ---- removal verbs
   'ازل': const _E(_K.remove),
   'ازاله': const _E(_K.remove),

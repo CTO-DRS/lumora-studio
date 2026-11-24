@@ -14,8 +14,18 @@ import 'package:lumora/features/ai/domain/model_registry.dart';
 /// with a fake and the runtime can be swapped (e.g. LiteRT) later.
 abstract class InferenceEngine {
   /// Runs [model] with named inputs. Each input is a typed list
-  /// ([Float32List] or [Uint8List]) and its shape.
+  /// ([Float32List] or [Uint8List]) and its shape. Returns the flat values of
+  /// [ModelSpec.outputName].
   Future<List<num>> run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs);
+
+  /// Runs [model] and returns the flat values of the named outputs (the
+  /// spec's own output when [outputs] is omitted). Used by graphs that emit
+  /// several tensors (e.g. the SAM decoder's masks + IoU predictions).
+  Future<Map<String, List<num>>> runNamed(
+    ModelSpec model,
+    Map<String, (TypedData, List<int>)> inputs, {
+    Set<String> outputs = const {},
+  });
 
   Future<void> release();
 }
@@ -182,24 +192,45 @@ class OnnxInferenceEngine implements InferenceEngine {
   }
 
   @override
-  Future<List<num>> run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) =>
-      _serialized(() => _run(model, inputs));
+  Future<List<num>> run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
+    final out = await runNamed(model, inputs);
+    return out[model.outputName] ?? out.values.first;
+  }
 
-  Future<List<num>> _run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
+  @override
+  Future<Map<String, List<num>>> runNamed(
+    ModelSpec model,
+    Map<String, (TypedData, List<int>)> inputs, {
+    Set<String> outputs = const {},
+  }) => _serialized(() => _run(model, inputs, outputs));
+
+  Future<Map<String, List<num>>> _run(
+    ModelSpec model,
+    Map<String, (TypedData, List<int>)> inputs,
+    Set<String> outputs,
+  ) async {
     final session = await _sessionFor(model);
     final shapes = {for (final e in inputs.entries) e.key: e.value.$2};
     CrashLog.instance.breadcrumb('AI: run ${model.id} inputs $shapes');
+    final wanted = outputs.isEmpty ? {model.outputName} : outputs;
     final values = <String, OrtValue>{};
-    Map<String, OrtValue>? outputs;
+    Map<String, OrtValue>? runOutputs;
     try {
       for (final e in inputs.entries) {
         values[e.key] = await OrtValue.fromList(e.value.$1, e.value.$2);
       }
-      outputs = await session.run(values);
-      final out = outputs[model.outputName] ?? outputs.values.first;
-      final flat = await out.asFlattenedList();
-      CrashLog.instance.breadcrumb('AI: run ${model.id} done (${flat.length} values)');
-      return flat.cast<num>();
+      runOutputs = await session.run(values);
+      final result = <String, List<num>>{};
+      for (final name in wanted) {
+        final out = runOutputs[name] ?? (name == model.outputName ? runOutputs.values.firstOrNull : null);
+        if (out == null) {
+          throw AiException(AiErrorKind.inference, model: model, detail: 'missing output $name');
+        }
+        final flat = await out.asFlattenedList();
+        result[name] = flat.cast<num>();
+      }
+      CrashLog.instance.breadcrumb('AI: run ${model.id} done (${result.values.first.length} values)');
+      return result;
     } on AiException {
       rethrow;
     } on Object catch (e) {
@@ -208,7 +239,7 @@ class OnnxInferenceEngine implements InferenceEngine {
       throw AiException(oom ? AiErrorKind.memory : AiErrorKind.inference, model: model, detail: detail);
     } finally {
       // Outputs first (they may reference session memory), then inputs.
-      for (final o in outputs?.values ?? const <OrtValue>[]) {
+      for (final o in runOutputs?.values ?? const <OrtValue>[]) {
         await _safeDispose(o);
       }
       for (final v in values.values) {

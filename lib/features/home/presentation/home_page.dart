@@ -72,6 +72,11 @@ class _HomePageState extends ConsumerState<HomePage> {
       card(Icons.person_outline, t.teal, l.aiPortraitBg, QuickAction.cutOutPerson, AiTool.cutOutPerson),
       card(Icons.cleaning_services_outlined, t.mint, l.aiEraser, QuickAction.eraser, AiTool.eraser),
       card(Icons.face_retouching_natural, t.rose, l.aiRetouch, QuickAction.retouch, AiTool.portraitRetouch),
+      // Tools added in 1.3, now reachable from Home too.
+      card(Icons.photo_size_select_large, t.violet, l.aiSelectObject, QuickAction.selectObject, AiTool.selectObject),
+      card(Icons.layers_clear_outlined, t.blue, l.aiDepthBlur, QuickAction.depthBlur, AiTool.depthBlur),
+      card(Icons.wb_incandescent_outlined, t.apricot, l.aiRelight, QuickAction.relight, AiTool.relight),
+      card(Icons.person_remove_outlined, t.rose, l.aiErasePerson, QuickAction.erasePerson, AiTool.erasePerson),
       AiToolCard(
         icon: Icons.document_scanner_outlined,
         color: t.teal,

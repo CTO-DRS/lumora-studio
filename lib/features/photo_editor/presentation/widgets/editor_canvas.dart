@@ -224,22 +224,69 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
 
   Widget _selector(PhotoEditorState s, Size size) {
     final overlay = s.selectOverlay;
+    Offset norm(Offset p) => Offset((p.dx / size.width).clamp(0, 1), (p.dy / size.height).clamp(0, 1));
+    if (s.selectMode == SelectMode.brush) {
+      Stroke current() => Stroke(
+        points: List.of(_livePoints),
+        width: 0.035,
+        color: s.selectAdd ? 0xAAFF3B5C : 0xFFE07A8F,
+        eraser: !s.selectAdd,
+      );
+      return GestureDetector(
+        key: const ValueKey('select-canvas'),
+        behavior: HitTestBehavior.opaque,
+        onPanStart: s.busy
+            ? null
+            : (d) => setState(() {
+                _livePoints
+                  ..clear()
+                  ..addAll([norm(d.localPosition).dx, norm(d.localPosition).dy]);
+              }),
+        onPanUpdate: s.busy
+            ? null
+            : (d) => setState(() {
+                final n = norm(d.localPosition);
+                _livePoints.addAll([n.dx, n.dy]);
+              }),
+        onPanEnd: s.busy
+            ? null
+            : (_) {
+                if (_livePoints.length >= 4) _ctrl.addRefineStroke(current());
+                setState(_livePoints.clear);
+                _ctrl.endRefineStroke();
+              },
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (overlay != null) RawImage(image: overlay, fit: BoxFit.fill),
+            CustomPaint(
+              painter: _StrokesPainter([
+                for (final e in s.selectBrushStrokes) e.copyWith(color: s.selectAdd ? 0x88FF3B5C : 0x88E07A8F),
+                if (_livePoints.isNotEmpty) current(),
+              ]),
+            ),
+          ],
+        ),
+      );
+    }
+    final boxMode = s.selectMode == SelectMode.box;
     return GestureDetector(
       key: const ValueKey('select-canvas'),
       behavior: HitTestBehavior.opaque,
-      onTapUp: s.busy
-          ? null
-          : (d) {
+      onTapUp: !boxMode && !s.busy
+          ? (d) {
               Haptics.selection();
-              _ctrl.selectAt(
-                Offset((d.localPosition.dx / size.width).clamp(0, 1), (d.localPosition.dy / size.height).clamp(0, 1)),
-              );
-            },
+              _ctrl.selectAt(norm(d.localPosition));
+            }
+          : null,
+      onPanStart: boxMode && !s.busy ? (d) => _ctrl.selectBoxStart(norm(d.localPosition)) : null,
+      onPanUpdate: boxMode && !s.busy ? (d) => _ctrl.selectBoxMove(norm(d.localPosition)) : null,
+      onPanEnd: boxMode && !s.busy ? (_) => _ctrl.selectBoxEnd() : null,
       child: Stack(
         fit: StackFit.expand,
         children: [
           if (overlay != null) RawImage(image: overlay, fit: BoxFit.fill),
-          CustomPaint(painter: _SelectPointsPainter(s, context.lumora.violet)),
+          CustomPaint(painter: _SelectPromptPainter(s, context.lumora.violet)),
         ],
       ),
     );
@@ -526,11 +573,11 @@ class _MaskGuidePainter extends CustomPainter {
 /// Helper used by tests and the export sheet to snapshot a [ui.Image].
 Future<ui.Image> cloneImage(ui.Image image) async => image.clone();
 
-/// Markers for the prompt points of tap-to-select (drawn where the user
-/// tapped; points are stored in source space, so they are mapped back
-/// through the crop when one is active).
-class _SelectPointsPainter extends CustomPainter {
-  _SelectPointsPainter(this.state, this.color);
+/// Markers for the tap-to-select prompt (drawn where the user tapped;
+/// points are stored in source space, so they are mapped back through the
+/// crop when one is active) plus the committed and in-flight box.
+class _SelectPromptPainter extends CustomPainter {
+  _SelectPromptPainter(this.state, this.color);
 
   final PhotoEditorState state;
   final Color color;
@@ -539,6 +586,26 @@ class _SelectPointsPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final g = state.edit.geometry;
     if (!g.isIdentity) return;
+    final drag = state.selectBoxDrag;
+    if (drag != null) {
+      final rect = Rect.fromPoints(drag.$1.scale(size.width, size.height), drag.$2.scale(size.width, size.height));
+      canvas
+        ..drawRect(rect, Paint()..color = color.withValues(alpha: 0.16))
+        ..drawRect(
+          rect,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5
+            ..color = Colors.white,
+        )
+        ..drawRect(
+          rect,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.5
+            ..color = color,
+        );
+    }
     for (final p in state.selectPoints) {
       final c = Offset(p.x * size.width, p.y * size.height);
       canvas
@@ -556,5 +623,6 @@ class _SelectPointsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_SelectPointsPainter old) => old.state.selectPoints != state.selectPoints;
+  bool shouldRepaint(_SelectPromptPainter old) =>
+      old.state.selectPoints != state.selectPoints || old.state.selectBoxDrag != state.selectBoxDrag;
 }

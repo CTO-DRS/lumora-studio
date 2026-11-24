@@ -2240,6 +2240,24 @@ abstract class AppLocalizations {
   /// **'For this photo'**
   String get smartSuggestions;
 
+  /// No description provided for @smartNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get smartNext;
+
+  /// No description provided for @smartSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get smartSaved;
+
+  /// No description provided for @smartRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent'**
+  String get smartRecent;
+
   /// No description provided for @smartTryLabel.
   ///
   /// In en, this message translates to:
@@ -2389,6 +2407,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tap the object you want. Tap again to add more; switch to Subtract to remove parts.'**
   String get selectHint;
+
+  /// No description provided for @selectModeTap.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap'**
+  String get selectModeTap;
+
+  /// No description provided for @selectModeBox.
+  ///
+  /// In en, this message translates to:
+  /// **'Box'**
+  String get selectModeBox;
+
+  /// No description provided for @selectModeBrush.
+  ///
+  /// In en, this message translates to:
+  /// **'Brush'**
+  String get selectModeBrush;
+
+  /// No description provided for @selectHintBox.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag a rectangle around the object.'**
+  String get selectHintBox;
+
+  /// No description provided for @selectHintBrush.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint over the selection to refine it; with Subtract you erase parts of it.'**
+  String get selectHintBrush;
+
+  /// No description provided for @selectCandidates.
+  ///
+  /// In en, this message translates to:
+  /// **'Candidates'**
+  String get selectCandidates;
+
+  /// No description provided for @selectSoftEdges.
+  ///
+  /// In en, this message translates to:
+  /// **'Soft edges'**
+  String get selectSoftEdges;
 
   /// No description provided for @selectAdd.
   ///

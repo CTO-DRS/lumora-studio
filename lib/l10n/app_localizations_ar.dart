@@ -1129,6 +1129,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get smartSuggestions => 'مقترح لهذه الصورة';
 
   @override
+  String get smartNext => 'التالي';
+
+  @override
+  String get smartSaved => 'المحفوظة';
+
+  @override
+  String get smartRecent => 'الأخيرة';
+
+  @override
   String get smartTryLabel => 'جرّب';
 
   @override
@@ -1202,6 +1211,27 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get selectHint => 'المس العنصر الذي تريده. المس مرة أخرى لإضافة المزيد، واختر «طرح» لاستبعاد أجزاء.';
+
+  @override
+  String get selectModeTap => 'لمسة';
+
+  @override
+  String get selectModeBox => 'إطار';
+
+  @override
+  String get selectModeBrush => 'فرشاة';
+
+  @override
+  String get selectHintBox => 'اسحب مستطيلًا حول العنصر الذي تريده.';
+
+  @override
+  String get selectHintBrush => 'لوّن فوق التحديد لتدقيقه، ومع «طرح» تمسح أجزاءً منه.';
+
+  @override
+  String get selectCandidates => 'المرشّحات';
+
+  @override
+  String get selectSoftEdges => 'حواف ناعمة';
 
   @override
   String get selectAdd => 'إضافة';

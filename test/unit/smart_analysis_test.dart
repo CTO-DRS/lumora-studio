@@ -126,6 +126,7 @@ void main() {
     test('samPrompt scales points and appends the padding point', () {
       final (coords, labels, n) = samPrompt(
         const [SelectPoint(0.5, 0.25), SelectPoint(1.2, 0, positive: false)],
+        null,
         1024,
         768,
       );
@@ -134,10 +135,35 @@ void main() {
       expect(labels, [1, 0, -1]);
     });
 
+    test('samPrompt box: corners carry labels 2/3 and no padding point', () {
+      final (coords, labels, n) = samPrompt(
+        const [SelectPoint(0.5, 0.5)],
+        const SelectBox(0.1, 0.2, 0.9, 0.8),
+        1024,
+        768,
+      );
+      expect(n, 3);
+      expect(coords.sublist(0, 2), [512, 384]);
+      // Box corners: TL then BR, as 32-bit floats in the 1024x768 frame.
+      const corners = {2: 102.4, 3: 153.6, 4: 921.6, 5: 614.4};
+      corners.forEach((i, v) => expect(coords[i], closeTo(v, 0.01)));
+      expect(labels, [1, 2, 3]);
+    });
+
     test('logitsToMask thresholds at zero and coverage counts it', () {
       final m = logitsToMask([-1, 0.5, 2, -3], 2, 2);
       expect([for (var i = 0; i < 4; i++) m.pixels[i * 4]], [0, 255, 255, 0]);
       expect(maskCoverage(m), 0.5);
+    });
+
+    test('featherMask keeps the interior and softens the border', () {
+      // Left half selected, right half empty.
+      final m = logitsToMask([for (var i = 0; i < 64; i++) i % 8 < 4 ? 1.0 : -1.0], 8, 8);
+      final f = featherMask(m, 1);
+      expect(f.pixels[(4 * 8 + 1) * 4], 255, reason: 'interior stays selected');
+      expect(f.pixels[(4 * 8 + 7) * 4], 0, reason: 'outside stays empty');
+      expect(f.pixels[(4 * 8 + 4) * 4], inInclusiveRange(1, 254), reason: 'border is soft');
+      expect(featherMask(m, 0), same(m), reason: 'radius 0 is a no-op');
     });
 
     test('rgbaToHwcFloat keeps 0..255 values in HWC order', () {
@@ -148,7 +174,7 @@ void main() {
     test('pipeline: encoder once, decoder per tap, with the right tensors', () async {
       final engine = _SamFakeEngine();
       final p = ObjectSelectPipeline(engine);
-      expect(() => p.maskFor(const [SelectPoint(0.5, 0.5)]), throwsStateError);
+      expect(() => p.decode(points: const [SelectPoint(0.5, 0.5)]), throwsStateError);
       await p.prepareRgba('img', RgbaImage(64, 48));
       expect(p.isPreparedFor('img'), isTrue);
       expect(engine.encoderShapes.single, [768, 1024, 3]);
@@ -156,12 +182,54 @@ void main() {
       expect(mask.width, 1024);
       expect(mask.height, 768);
       final call = engine.calls.single;
-      expect(call.$1, ModelRegistry.mobileSamDecoder.id);
+      expect(call.$1, ModelRegistry.mobileSamDecoderMulti.id);
       expect(call.$2['point_coords'], [1, 2, 2]);
       expect(call.$2['point_labels'], [1, 2]);
+      expect(engine.labelValues.single, [1, -1], reason: 'tap + SAM padding point');
       expect(call.$2['orig_im_size'], [2]);
       expect(call.$2['image_embeddings'], [1, 256, 64, 64]);
+      expect(call.$2['has_mask_input'], [1]);
       expect(maskCoverage(mask), closeTo(0.5, 0.01));
+    });
+
+    test('decode returns three candidates ranked by IoU, best first', () async {
+      final engine = _SamFakeEngine();
+      final p = ObjectSelectPipeline(engine);
+      await p.prepareRgba('img', RgbaImage(64, 48));
+      final c = await p.decode(points: const [SelectPoint(0.5, 0.5)]);
+      expect(c.count, 3);
+      expect(c.scores, orderedEquals([0.95, 0.9, 0.85]), reason: 'sorted best first');
+      expect(maskCoverage(c.best), closeTo(0.5, 0.01));
+    });
+
+    test('box prompt: two corner points with labels 2/3', () async {
+      final engine = _SamFakeEngine();
+      final p = ObjectSelectPipeline(engine);
+      await p.prepareRgba('img', RgbaImage(64, 48));
+      await p.decode(box: const SelectBox(0.1, 0.2, 0.9, 0.8));
+      final call = engine.calls.single;
+      expect(call.$2['point_coords'], [1, 2, 2]);
+      expect(engine.labelValues.single, [2, 3], reason: 'SAM box corners, no padding point');
+    });
+
+    test('brush refine: 256 px mask input and has_mask_input = 1', () async {
+      final engine = _SamFakeEngine();
+      final p = ObjectSelectPipeline(engine);
+      await p.prepareRgba('img', RgbaImage(64, 48));
+      final input = Float32List(256 * 256)..fillRange(0, 256 * 256, 0.5);
+      await p.decode(points: const [SelectPoint(0.5, 0.5)], maskInput: input);
+      final call = engine.calls.single;
+      expect(call.$2['has_mask_input'], [1]);
+      expect(call.$2['mask_input'], [1, 1, 256, 256]);
+    });
+
+    test('single-channel graph still yields one candidate', () async {
+      final engine = _SamFakeEngine(channels: 1);
+      final p = ObjectSelectPipeline(engine);
+      await p.prepareRgba('img', RgbaImage(64, 48));
+      final c = await p.decode(box: const SelectBox(0, 0, 1, 1));
+      expect(c.count, 1);
+      expect(c.scores, [1]);
     });
   });
 
@@ -205,7 +273,7 @@ void main() {
     test('model specs for the new tools are pinned and verified', () {
       for (final m in [
         ModelRegistry.mobileSamEncoder,
-        ModelRegistry.mobileSamDecoder,
+        ModelRegistry.mobileSamDecoderMulti,
         ModelRegistry.depthAnythingSmall,
       ]) {
         expect(m.sha256, hasLength(64));
@@ -220,25 +288,46 @@ void main() {
   });
 }
 
-/// Returns a left-half-selected mask for the decoder.
+/// Fake SAM engine: the encoder returns zeros; the multi-mask decoder
+/// returns left-half-selected masks for channels 0..2 and a full mask for
+/// channel 3, with descending IoU predictions (configurable channel count).
 class _SamFakeEngine implements InferenceEngine {
+  _SamFakeEngine({this.channels = 4});
+
+  final int channels;
   final calls = <(String, Map<String, List<int>>)>[];
   final encoderShapes = <List<int>>[];
+  final labelValues = <List<double>>[];
 
   @override
   Future<List<num>> run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
+    final out = await runNamed(model, inputs);
+    return out[model.outputName] ?? out.values.first;
+  }
+
+  @override
+  Future<Map<String, List<num>>> runNamed(
+    ModelSpec model,
+    Map<String, (TypedData, List<int>)> inputs, {
+    Set<String> outputs = const {},
+  }) async {
     if (model.id == ModelRegistry.mobileSamEncoder.id) {
       encoderShapes.add(inputs.values.single.$2);
-      return Float32List(256 * 64 * 64);
+      return {'image_embeddings': Float32List(256 * 64 * 64)};
     }
     calls.add((model.id, {for (final e in inputs.entries) e.key: e.value.$2}));
     final size = inputs['orig_im_size']!.$1 as Float32List;
+    final labels = inputs['point_labels']!.$1 as Float32List;
+    labelValues.add(labels.toList());
     final h = size[0].toInt();
     final w = size[1].toInt();
-    return [
-      for (var y = 0; y < h; y++)
-        for (var x = 0; x < w; x++) x < w / 2 ? 1.0 : -1.0,
+    final per = w * h;
+    final masks = <num>[
+      for (var c = 0; c < channels; c++)
+        for (var i = 0; i < per; i++) c == 3 ? 1.0 : (i % w < w / 2 ? 1.0 : -1.0),
     ];
+    final iou = [for (var c = 0; c < channels; c++) (1.0 - c * 0.05)];
+    return {'masks': masks, if (outputs.contains('iou_predictions')) 'iou_predictions': iou};
   }
 
   @override

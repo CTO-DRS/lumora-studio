@@ -9,6 +9,7 @@ import 'package:gal/gal.dart';
 import 'package:image/image.dart' as img;
 import 'package:lumora/core/diagnostics/crash_log.dart';
 import 'package:lumora/core/providers.dart';
+import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
 import 'package:lumora/features/ai/pipelines/smart_pipelines.dart';
 import 'package:lumora/features/ai/pipelines/tensor_utils.dart';
@@ -60,6 +61,10 @@ enum EditorTool {
 
 /// What to do with a tap-to-select selection.
 enum SelectionAction { erase, cutOut, adjust, blurBackground }
+
+/// How the user prompts tap-to-select: taps (default), a drag box, or a
+/// brush that refines the current selection (v1.3.x).
+enum SelectMode { point, box, brush }
 
 /// Tools whose on-canvas gestures work in un-framed image coordinates.
 const Set<EditorTool> _interactiveTools = {
@@ -128,7 +133,14 @@ class PhotoEditorState {
     this.healSettingSource = false,
     this.selecting = false,
     this.selectAdd = true,
+    this.selectMode = SelectMode.point,
     this.selectPoints = const [],
+    this.selectBox,
+    this.selectBoxDrag,
+    this.selectBrushStrokes = const [],
+    this.selectCandidates,
+    this.selectChosen = 0,
+    this.selectFeather = 0.5,
     this.selectOverlay,
     this.hasSelection = false,
     this.suggestions = const [],
@@ -182,10 +194,25 @@ class PhotoEditorState {
   final bool healSettingSource;
 
   /// Tap-to-select mode (MobileSAM): taps add ([selectAdd]) or subtract
-  /// regions; [selectOverlay] tints the selection on the canvas.
+  /// regions; [selectOverlay] tints the selection on the canvas. The
+  /// prompt is [selectPoints] and/or [selectBox]; [selectCandidates] holds
+  /// the decoder's three answers with [selectChosen] the one in use.
+  /// [selectBrushStrokes] are the refine strokes not yet decoded.
   final bool selecting;
   final bool selectAdd;
+  final SelectMode selectMode;
   final List<SelectPoint> selectPoints;
+  final SelectBox? selectBox;
+
+  /// Box being dragged right now, normalised to the displayed image
+  /// (start corner, current corner).
+  final (Offset, Offset)? selectBoxDrag;
+  final List<Stroke> selectBrushStrokes;
+  final SelectCandidates? selectCandidates;
+  final int selectChosen;
+
+  /// Feather of the selection edges (0..1 → blur radius 0..4 px).
+  final double selectFeather;
   final ui.Image? selectOverlay;
   final bool hasSelection;
 
@@ -225,7 +252,14 @@ class PhotoEditorState {
     bool? healSettingSource,
     bool? selecting,
     bool? selectAdd,
+    SelectMode? selectMode,
     List<SelectPoint>? selectPoints,
+    SelectBox? Function()? selectBox,
+    (Offset, Offset)? Function()? selectBoxDrag,
+    List<Stroke>? selectBrushStrokes,
+    SelectCandidates? Function()? selectCandidates,
+    int? selectChosen,
+    double? selectFeather,
     ui.Image? Function()? selectOverlay,
     bool? hasSelection,
     List<Suggestion>? suggestions,
@@ -256,7 +290,14 @@ class PhotoEditorState {
     healSettingSource: healSettingSource ?? this.healSettingSource,
     selecting: selecting ?? this.selecting,
     selectAdd: selectAdd ?? this.selectAdd,
+    selectMode: selectMode ?? this.selectMode,
     selectPoints: selectPoints ?? this.selectPoints,
+    selectBox: selectBox != null ? selectBox() : this.selectBox,
+    selectBoxDrag: selectBoxDrag != null ? selectBoxDrag() : this.selectBoxDrag,
+    selectBrushStrokes: selectBrushStrokes ?? this.selectBrushStrokes,
+    selectCandidates: selectCandidates != null ? selectCandidates() : this.selectCandidates,
+    selectChosen: selectChosen ?? this.selectChosen,
+    selectFeather: selectFeather ?? this.selectFeather,
     selectOverlay: selectOverlay != null ? selectOverlay() : this.selectOverlay,
     hasSelection: hasSelection ?? this.hasSelection,
     suggestions: suggestions ?? this.suggestions,
@@ -845,27 +886,174 @@ class PhotoEditorController extends _$PhotoEditorController {
 
   void setSelectAdd({required bool value}) => state = state.copyWith(selectAdd: value);
 
+  /// Switches between tap, drag-box and refine-brush prompting.
+  void setSelectMode(SelectMode mode) {
+    if (state.selectMode == mode) return;
+    state = state.copyWith(selectMode: mode, selectBoxDrag: () => null);
+  }
+
+  /// Soft edges of the selection when it is applied (0..1 → radius 0..4 px).
+  void setSelectFeather(double v) => state = state.copyWith(selectFeather: v.clamp(0, 1));
+
+  /// Starts a box drag (normalised to the displayed image). A fresh box
+  /// replaces taps and any previous box prompt.
+  void selectBoxStart(Offset normalized) {
+    if (state.busy || state.selectMode != SelectMode.box) return;
+    Haptics.selection();
+    _selectionMask = null;
+    _setOverlay(null);
+    state = state.copyWith(
+      selectPoints: const [],
+      selectBox: () => null,
+      selectBrushStrokes: const [],
+      selectCandidates: () => null,
+      selectChosen: 0,
+      hasSelection: false,
+      selectBoxDrag: () => (normalized, normalized),
+    );
+  }
+
+  void selectBoxMove(Offset normalized) {
+    final drag = state.selectBoxDrag;
+    if (drag == null || state.busy) return;
+    state = state.copyWith(selectBoxDrag: () => (drag.$1, normalized));
+  }
+
+  /// Finishes a box drag: decodes with the box as the prompt.
+  Future<void> selectBoxEnd() async {
+    final drag = state.selectBoxDrag;
+    state = state.copyWith(selectBoxDrag: () => null);
+    if (drag == null || state.busy) return;
+    final (a, b) = drag;
+    if ((a.dx - b.dx).abs() < 0.01 || (a.dy - b.dy).abs() < 0.01) return; // accidental drag
+    final preview = state.preview;
+    if (preview == null) return;
+    final (u1, v1) = _toSource(a, preview.width, preview.height);
+    final (u2, v2) = _toSource(b, preview.width, preview.height);
+    final box = SelectBox(
+      math.min(u1, u2) / preview.width,
+      math.min(v1, v2) / preview.height,
+      math.max(u1, u2) / preview.width,
+      math.max(v1, v2) / preview.height,
+    );
+    state = state.copyWith(selectBox: () => box);
+    await _decodeSelection(points: const [], box: box);
+  }
+
   /// Adds a prompt point at [normalized] (0..1 on the displayed, un-framed
-  /// output image) and refreshes the selection.
+  /// output image) and refreshes the selection. Points and the box can be
+  /// combined (SAM supports both at once).
   Future<void> selectAt(Offset normalized) async {
     final preview = state.preview;
     if (!state.selecting || preview == null) return;
     final (u, v) = _toSource(normalized, preview.width, preview.height);
     final point = SelectPoint(u / preview.width, v / preview.height, positive: state.selectAdd);
-    await _updateSelection([...state.selectPoints, point]);
+    final points = [...state.selectPoints, point];
+    state = state.copyWith(selectPoints: points);
+    await _decodeSelection(points: points, box: state.selectBox);
   }
 
   /// Removes the last prompt point.
   Future<void> undoSelectPoint() async {
     final pts = state.selectPoints;
     if (pts.isEmpty) return;
-    await _updateSelection(pts.sublist(0, pts.length - 1));
+    final points = pts.sublist(0, pts.length - 1);
+    state = state.copyWith(selectPoints: points);
+    await _decodeSelection(points: points, box: state.selectBox);
+  }
+
+  /// Appends a refine stroke (brush mode). The decode runs on
+  /// [endRefineStroke] so a whole gesture is one decoder run.
+  void addRefineStroke(Stroke stroke) {
+    if (state.selectMode != SelectMode.brush || state.busy) return;
+    state = state.copyWith(selectBrushStrokes: [...state.selectBrushStrokes, stroke]);
+  }
+
+  /// Decodes again with the painted strokes merged into the selection
+  /// (SAM's 256 px mask input). Add strokes extend it, eraser strokes cut
+  /// parts away.
+  Future<void> endRefineStroke() async {
+    if (state.busy || state.selectBrushStrokes.isEmpty) return;
+    await _busy(() async {
+      final maskInput = await _buildRefineMask();
+      state = state.copyWith(selectBrushStrokes: const []);
+      if (maskInput == null) return;
+      await _decodeSelection(points: state.selectPoints, box: state.selectBox, maskInput: maskInput);
+    }, label: 'select: refine');
+  }
+
+  /// The refine strokes + the current selection, as SAM's low-res input.
+  Future<Float32List?> _buildRefineMask() async {
+    final strokes = state.selectBrushStrokes;
+    final prior = _selectionMask;
+    if (strokes.isEmpty) return null;
+    final add = [for (final s in strokes) if (!s.eraser) s];
+    final sub = [for (final s in strokes) if (s.eraser) s];
+    if (add.isEmpty && sub.isEmpty) return null;
+    if (prior == null && add.isEmpty) return null; // nothing to subtract from
+    final pipeline = ref.read(objectSelectPipelineProvider);
+    final (rw, rh) = pipeline.frameSize;
+    final base = prior == null ? null : await Isolate.run(() => prior.resize(256, 256));
+    final addMask = add.isEmpty ? null : await _strokesToSourceMask(add, rw, rh, maxSide: 256);
+    final subMask = sub.isEmpty ? null : await _strokesToSourceMask(sub, rw, rh, maxSide: 256);
+    return Isolate.run(() {
+      final out = Float32List(256 * 256);
+      for (var i = 0; i < out.length; i++) {
+        var v = base == null ? 0.0 : base.pixels[i * 4] / 255;
+        if (addMask != null) v = math.max(v, addMask.pixels[i * 4] / 255);
+        if (subMask != null) v *= 1 - subMask.pixels[i * 4] / 255;
+        out[i] = v.clamp(0, 1).toDouble();
+      }
+      return out;
+    });
+  }
+
+  /// Switches to another of the decoder's three candidates (no decode).
+  Future<void> pickCandidate(int index) async {
+    final c = state.selectCandidates;
+    if (c == null || index < 0 || index >= c.count || index == state.selectChosen || state.busy) return;
+    state = state.copyWith(selectChosen: index);
+    await _applyChosen(c.masks[index]);
+  }
+
+  Future<void> _applyChosen(RgbaImage mask) async {
+    _selectionMask = mask;
+    final overlay = await _selectionOverlay(mask);
+    _setOverlay(overlay);
+    state = state.copyWith(hasSelection: maskCoverage(mask) > 0);
+  }
+
+  /// Runs the decoder for the current prompt and stores the candidates.
+  Future<void> _decodeSelection({
+    required List<SelectPoint> points,
+    SelectBox? box,
+    Float32List? maskInput,
+  }) async {
+    if (points.isEmpty && box == null) {
+      clearSelection();
+      return;
+    }
+    await _busy(() async {
+      final pipeline = ref.read(objectSelectPipelineProvider);
+      await pipeline.prepare(_currentRaster);
+      final candidates = await pipeline.decode(points: points, box: box, maskInput: maskInput);
+      state = state.copyWith(selectCandidates: () => candidates, selectChosen: 0);
+      await _applyChosen(candidates.best);
+    }, label: maskInput != null ? 'select: refine decode' : (box != null ? 'select: decode box' : 'select: decode'));
   }
 
   void clearSelection() {
     _selectionMask = null;
     _setOverlay(null);
-    state = state.copyWith(selectPoints: const [], hasSelection: false);
+    state = state.copyWith(
+      selectPoints: const [],
+      selectBox: () => null,
+      selectBoxDrag: () => null,
+      selectBrushStrokes: const [],
+      selectCandidates: () => null,
+      selectChosen: 0,
+      hasSelection: false,
+    );
   }
 
   /// Leaves tap-to-select without applying anything.
@@ -878,7 +1066,16 @@ class PhotoEditorController extends _$PhotoEditorController {
     if (!state.selecting && _selectionMask == null) return;
     _selectionMask = null;
     _setOverlay(null);
-    state = state.copyWith(selecting: false, selectPoints: const [], hasSelection: false);
+    state = state.copyWith(
+      selecting: false,
+      selectPoints: const [],
+      selectBox: () => null,
+      selectBoxDrag: () => null,
+      selectBrushStrokes: const [],
+      selectCandidates: () => null,
+      selectChosen: 0,
+      hasSelection: false,
+    );
   }
 
   void _setOverlay(ui.Image? img) {
@@ -886,23 +1083,6 @@ class PhotoEditorController extends _$PhotoEditorController {
     _lastSelectOverlay = img;
     state = state.copyWith(selectOverlay: () => img);
     if (old != null) WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
-  }
-
-  Future<void> _updateSelection(List<SelectPoint> points) async {
-    state = state.copyWith(selectPoints: points);
-    if (points.isEmpty) {
-      clearSelection();
-      return;
-    }
-    await _busy(() async {
-      final pipeline = ref.read(objectSelectPipelineProvider);
-      await pipeline.prepare(_currentRaster);
-      final mask = await pipeline.maskFor(points);
-      _selectionMask = mask;
-      final overlay = await _selectionOverlay(mask);
-      _setOverlay(overlay);
-      state = state.copyWith(hasSelection: maskCoverage(mask) > 0);
-    }, label: 'select: decode');
   }
 
   /// Tinted overlay of a source-space [mask] warped into the output frame
@@ -936,23 +1116,27 @@ class PhotoEditorController extends _$PhotoEditorController {
   }
 
   /// Uses the current selection: erase it, cut it out, turn it into a
-  /// masked adjustment, or blur everything else.
+  /// masked adjustment, or blur everything else. The edges are feathered
+  /// by [PhotoEditorState.selectFeather] before use.
   Future<void> applySelection(SelectionAction action) => _busy(() async {
     final mask = _selectionMask;
     if (mask == null) return;
     final raster = _currentRaster;
+    final radius = (state.selectFeather * 4).round();
     switch (action) {
       case SelectionAction.erase:
         final out = await ref.read(inpaintPipelineProvider).run(raster, mask);
         update((s) => s.copyWith(rasterPath: out));
       case SelectionAction.cutOut:
         final src = await loadRgba(raster, maxSide: InpaintPipeline.maxSide);
-        final cut = await Isolate.run(() => applyMaskAsAlpha(src, boxBlurMask(mask, 1).resize(src.width, src.height)));
+        final cut = await Isolate.run(
+          () => applyMaskAsAlpha(src, featherMask(mask, math.max(1, radius ~/ 2)).resize(src.width, src.height)),
+        );
         final path = await savePng(cut, 'cutout');
         update((s) => s.copyWith(rasterPath: path));
       case SelectionAction.adjust:
       case SelectionAction.blurBackground:
-        final path = await savePng(await Isolate.run(() => boxBlurMask(mask, 2)), 'selection');
+        final path = await savePng(await Isolate.run(() => featherMask(mask, radius)), 'selection');
         _dropSelection();
         final blur = action == SelectionAction.blurBackground;
         addMask(

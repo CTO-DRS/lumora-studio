@@ -125,6 +125,11 @@ void main() {
     expect(find.text('يعمل على جهازك'), findsOneWidget);
     expect(find.text('إزالة الخلفية'), findsWidgets);
     expect(find.text('ماسح المستندات'), findsOneWidget);
+    // The 1.3 tools are reachable from Home too.
+    expect(find.text('تحديد بلمسة'), findsOneWidget);
+    expect(find.text('تمويه بالعمق'), findsOneWidget);
+    expect(find.text('إعادة الإضاءة'), findsOneWidget);
+    expect(find.text('إزالة شخص'), findsOneWidget);
     expect(Directionality.of(tester.element(find.text('يعمل على جهازك'))), TextDirection.rtl);
     await _dispose(tester);
   });

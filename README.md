@@ -111,13 +111,13 @@ Full list in [CHANGELOG.md](CHANGELOG.md).
 | Object eraser | MI-GAN (28 MB, default) or LaMa (208 MB, highest quality) | mask dilation → context crop around the strokes → model → feathered composite at full resolution |
 | Upscale 4× | Real-ESRGAN General x4v3 (4.9 MB) | 128 px tiles with 16 px overlap → feather-blended stitching |
 | Auto enhance | Deterministic | histogram percentiles, gray-world white balance, adaptive vibrance |
-| **Tap to select** (1.3) | MobileSAM encoder (28.2 MB) + SAM mask decoder (16.5 MB) | image encoded once (long side 1024) → each tap runs only the decoder → mask → erase / cut out / adjust / blur the rest |
+| **Tap to select** (1.3) | MobileSAM encoder (28.2 MB) + SAM multi-mask decoder (16.5 MB) | image encoded once (long side 1024) → each tap/box runs only the decoder → three candidates ranked by IoU, box prompt, brush refine, soft edges → erase / cut out / adjust / blur the rest |
 | **Depth blur & relight** (1.3) | Depth Anything V2 Small int8 (27.3 MB) | 518 px (multiples of 14) → robust-normalised relative depth → depth-graded masks |
 | **Remove person** (1.3) | MODNet + MI-GAN | person matte → object eraser |
 | **Smart edit by typing** (1.3) | none (deterministic intent engine) | Arabic/English normalisation → clauses → intents → one-step edit plan ([docs/SMART_EDIT.md](docs/SMART_EDIT.md)) |
 | **Suggestions** (1.3) | none (image statistics) | histogram, colour cast, skin/sky/foliage/paper heuristics → ranked one-tap fixes |
 
-Models are listed in `lib/features/ai/domain/model_registry.dart` with their URL, SHA-256, size and license. Downloads are streamed, hashed on the fly and only kept if the checksum matches. Accelerated execution providers (CoreML on iOS, XNNPACK on Android) are used when available, with fallback to CPU.
+Models are listed in `lib/features/ai/domain/model_registry.dart` with their URL, SHA-256, size and license, plus a project-hosted mirror (GitHub Release `models-1.3`) with identical bytes that is used automatically when the primary URL fails. Downloads are streamed, hashed on the fly and only kept if the checksum matches. Accelerated execution providers (CoreML on iOS, XNNPACK on Android) are used when available, with fallback to CPU.
 
 #### Video
 - Multi-clip timeline with filmstrip thumbnails, pinch-to-zoom and a centre playhead (scrolling scrubs the video)

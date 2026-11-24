@@ -7,13 +7,15 @@ import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/engine/preset_thumbnails.dart';
 import 'package:lumora/features/photo_editor/presentation/photo_editor_controller.dart';
 import 'package:lumora/features/photo_editor/presentation/widgets/presets_panel.dart';
+import 'package:lumora/features/smart_edit/data/command_store.dart';
+import 'package:lumora/features/smart_edit/domain/next_commands.dart';
 import 'package:lumora/features/smart_edit/presentation/smart_actions.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// "Smart" tab of the photo editor: a command bar that understands Arabic
-/// and English instructions on the device, example commands, and one-tap
-/// fixes suggested for this photo (live thumbnails rendered by the real
-/// pipeline).
+/// and English instructions on the device, example commands, recent and
+/// starred commands, and one-tap fixes suggested for this photo (live
+/// thumbnails rendered by the real pipeline).
 class SmartPanel extends ConsumerStatefulWidget {
   const SmartPanel({super.key});
 
@@ -26,6 +28,7 @@ class _SmartPanelState extends ConsumerState<SmartPanel> {
   final FocusNode _focus = FocusNode();
   late final PresetThumbnailCache _cache;
   bool _running = false;
+  List<String> _next = const [];
 
   @override
   void initState() {
@@ -53,11 +56,63 @@ class _SmartPanelState extends ConsumerState<SmartPanel> {
     setState(() => _running = true);
     try {
       final plan = await runSmartCommand(context, ref, text);
-      if (mounted && !plan.isEmpty && plan.unrecognized.isEmpty) _text.clear();
+      if (plan.isEmpty) return;
+      ref.read(commandMemoryProvider).value?.record(text);
+      ref.invalidate(commandMemoryProvider);
+      if (mounted) {
+        setState(() {
+          _next = plan.unrecognized.isEmpty
+              ? nextCommands(lang: Localizations.localeOf(context).languageCode, plan: plan)
+              : const [];
+        });
+        if (plan.unrecognized.isEmpty) _text.clear();
+      }
     } finally {
       if (mounted) setState(() => _running = false);
     }
   }
+
+  void _toggleStar(String command) {
+    Haptics.selection();
+    ref.read(commandMemoryProvider).value?.toggleFavourite(command);
+    ref.invalidate(commandMemoryProvider);
+  }
+
+  /// A row of command chips: tap runs the command, long press stars it.
+  Widget _chips(List<String> commands, {required bool starred, required bool busy, Key? key}) => SizedBox(
+    height: 42,
+    child: ListView(
+      key: key,
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+      children: [
+        for (final c in commands)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 6),
+            child: GestureDetector(
+              onLongPress: () => _toggleStar(c),
+              child: ActionChip(
+                visualDensity: VisualDensity.compact,
+                avatar: starred ? const Icon(Icons.star_rounded, size: 15) : null,
+                label: Text(c),
+                onPressed: busy ? null : () => _submit(c),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+
+  Widget _rowLabel(IconData icon, String label, ThemeData theme) => Padding(
+    padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 0),
+    child: Row(
+      children: [
+        Icon(icon, size: 15, color: context.lumora.violet),
+        const SizedBox(width: 6),
+        Text(label, style: theme.textTheme.labelLarge),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +124,9 @@ class _SmartPanelState extends ConsumerState<SmartPanel> {
     final theme = Theme.of(context);
     cache.update(preview: s.preview, base: ctrl.adjustmentsWithoutPreset(s.edit), geometry: s.edit.geometry);
     final examples = [l.smartEx1, l.smartEx2, l.smartEx3, l.smartEx4, l.smartEx5, l.smartEx6];
+    final memory = ref.watch(commandMemoryProvider).value;
+    final favourites = memory?.favourites() ?? const <String>[];
+    final history = memory?.history() ?? const <String>[];
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 8),
@@ -125,6 +183,18 @@ class _SmartPanelState extends ConsumerState<SmartPanel> {
             ),
           ),
         ),
+        if (_next.isNotEmpty) ...[
+          _rowLabel(Icons.bolt_rounded, l.smartNext, theme),
+          _chips(_next, key: const ValueKey('smart-next'), starred: false, busy: s.busy || _running),
+        ],
+        if (favourites.isNotEmpty) ...[
+          _rowLabel(Icons.star_rounded, l.smartSaved, theme),
+          _chips(favourites, key: const ValueKey('smart-favourites'), starred: true, busy: s.busy || _running),
+        ],
+        if (history.isNotEmpty) ...[
+          _rowLabel(Icons.history_rounded, l.smartRecent, theme),
+          _chips(history, key: const ValueKey('smart-history'), starred: false, busy: s.busy || _running),
+        ],
         SizedBox(
           height: 42,
           child: ListView(
@@ -195,7 +265,9 @@ class _SmartPanelState extends ConsumerState<SmartPanel> {
   }
 }
 
-/// Tap-to-select controls (shown in the AI tab while selecting).
+/// Tap-to-select controls (shown in the AI tab while selecting): prompt
+/// mode (tap / box / refine brush), the decoder's three candidates, soft
+/// edges, and what to do with the selection.
 class SelectionPanel extends ConsumerWidget {
   const SelectionPanel({super.key});
 
@@ -205,6 +277,7 @@ class SelectionPanel extends ConsumerWidget {
     final ctrl = ref.read(photoEditorControllerProvider.notifier);
     final l = context.l10n;
     final t = context.lumora;
+    final theme = Theme.of(context);
     final ready = s.hasSelection && !s.busy;
 
     Future<void> erase() async {
@@ -246,13 +319,38 @@ class SelectionPanel extends ConsumerWidget {
       ),
     );
 
+    final hint = switch (s.selectMode) {
+      SelectMode.box => l.selectHintBox,
+      SelectMode.brush => l.selectHintBrush,
+      SelectMode.point => s.selectPoints.isNotEmpty && !s.hasSelection ? l.selectNone : l.selectHint,
+    };
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       children: [
-        Text(
-          s.selectPoints.isNotEmpty && !s.hasSelection ? l.selectNone : l.selectHint,
-          style: Theme.of(context).textTheme.bodySmall,
+        SegmentedButton<SelectMode>(
+          segments: [
+            ButtonSegment(
+              value: SelectMode.point,
+              label: Text(l.selectModeTap),
+              icon: const Icon(Icons.touch_app_outlined),
+            ),
+            ButtonSegment(
+              value: SelectMode.box,
+              label: Text(l.selectModeBox),
+              icon: const Icon(Icons.crop_free_rounded),
+            ),
+            ButtonSegment(
+              value: SelectMode.brush,
+              label: Text(l.selectModeBrush),
+              icon: const Icon(Icons.brush_outlined),
+            ),
+          ],
+          selected: {s.selectMode},
+          onSelectionChanged: (v) => ctrl.setSelectMode(v.first),
         ),
+        const SizedBox(height: 8),
+        Text(hint, style: theme.textTheme.bodySmall),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -282,7 +380,55 @@ class SelectionPanel extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        if (s.selectCandidates != null && s.selectCandidates!.count > 1) ...[
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(4, 10, 4, 4),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome_mosaic, size: 15, color: t.violet),
+                const SizedBox(width: 6),
+                Text(l.selectCandidates, style: theme.textTheme.labelLarge),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 40,
+            child: ListView(
+              key: const ValueKey('select-candidates'),
+              scrollDirection: Axis.horizontal,
+              children: [
+                for (var i = 0; i < s.selectCandidates!.count; i++)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 6),
+                    child: ChoiceChip(
+                      key: ValueKey('select-candidate-$i'),
+                      visualDensity: VisualDensity.compact,
+                      selected: s.selectChosen == i,
+                      label: Text(
+                        '${i + 1} · ${(s.selectCandidates!.scores[i] * 100).round()}%',
+                        textDirection: TextDirection.ltr,
+                      ),
+                      onSelected: (_) => ctrl.pickCandidate(i),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(4, 8, 4, 0),
+          child: Row(
+            children: [
+              Icon(Icons.border_style_outlined, size: 15, color: t.textMuted),
+              const SizedBox(width: 6),
+              Text(l.selectSoftEdges, style: theme.textTheme.labelMedium),
+              Expanded(
+                child: Slider(value: s.selectFeather, min: 0, max: 1, onChanged: s.busy ? null : ctrl.setSelectFeather),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
         Row(
           children: [
             action(

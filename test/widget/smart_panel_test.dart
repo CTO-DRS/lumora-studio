@@ -70,6 +70,48 @@ void main() {
     expect(find.textContaining("Didn't understand"), findsOneWidget);
   });
 
+  testWidgets('next commands appear after an edit and run on tap', (tester) async {
+    await tester.pumpWidget(_wrap(const SmartPanel()));
+    await tester.pump();
+    await tester.enterText(find.byKey(const ValueKey('smart-command')), 'brighter');
+    await tester.tap(find.byKey(const ValueKey('smart-send')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('smart-next')), findsOneWidget);
+    expect(find.text('Next'), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(of: find.byKey(const ValueKey('smart-next')), matching: find.text('more contrast')),
+    );
+    await tester.pumpAndSettle();
+    expect(_container(tester).read(photoEditorControllerProvider).edit.adjustments.contrast, closeTo(0.2, 1e-9));
+  });
+
+  testWidgets('commands land in the history; long press stars them', (tester) async {
+    await tester.pumpWidget(_wrap(const SmartPanel()));
+    await tester.pump();
+    await tester.enterText(find.byKey(const ValueKey('smart-command')), 'warmer');
+    await tester.tap(find.byKey(const ValueKey('smart-send')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('smart-history')), findsOneWidget);
+    expect(find.text('Recent'), findsOneWidget);
+
+    await tester.longPress(
+      find.descendant(of: find.byKey(const ValueKey('smart-history')), matching: find.text('warmer')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('smart-favourites')), findsOneWidget);
+    expect(find.text('Saved'), findsOneWidget);
+
+    // The starred chip runs too.
+    await tester.tap(
+      find.descendant(of: find.byKey(const ValueKey('smart-favourites')), matching: find.text('warmer')),
+    );
+    await tester.pumpAndSettle();
+    expect(_container(tester).read(photoEditorControllerProvider).edit.adjustments.temperature, closeTo(0.4, 1e-9));
+  });
+
   testWidgets('rotate, flip and reset are instant', (tester) async {
     await tester.pumpWidget(_wrap(const SmartPanel()));
     final ctrl = _container(tester).read(photoEditorControllerProvider.notifier);

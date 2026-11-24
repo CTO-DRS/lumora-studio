@@ -85,12 +85,34 @@ class ModelManager {
     if (await isInstalled(spec)) return file;
 
     final part = File('${file.path}.part');
-    if (part.existsSync()) await part.delete();
+    // Try the primary URL, then the project-hosted mirror (identical bytes,
+    // same SHA-256). Only if every source fails does the error surface.
+    final urls = [spec.url, if (spec.mirrorUrl.isNotEmpty) spec.mirrorUrl];
+    assert(urls.isNotEmpty, 'a model always has at least a primary URL');
+    for (final (i, url) in urls.indexed) {
+      if (part.existsSync()) await part.delete();
+      try {
+        return await _download(spec, url, file, part, onProgress);
+      } catch (e) {
+        // A source that serves different bytes than advertised is just as
+        // broken as one that cannot be reached – fall through to the mirror.
+        if (i == urls.length - 1) rethrow;
+      }
+    }
+    throw StateError('unreachable'); // urls is never empty
+  }
 
-    final request = http.Request('GET', Uri.parse(spec.url));
+  Future<File> _download(
+    ModelSpec spec,
+    String url,
+    File file,
+    File part,
+    void Function(DownloadProgress)? onProgress,
+  ) async {
+    final request = http.Request('GET', Uri.parse(url));
     final response = await _client.send(request);
     if (response.statusCode != 200) {
-      throw HttpException('HTTP ${response.statusCode} for ${spec.url}');
+      throw HttpException('HTTP ${response.statusCode} for $url');
     }
     final total = response.contentLength ?? spec.sizeBytes;
     final digestSink = _DigestSink();

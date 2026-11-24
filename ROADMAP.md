@@ -5,7 +5,7 @@
 > Arabic version: [docs/ROADMAP.ar.md](docs/ROADMAP.ar.md) · One-page vision: [docs/VISION.md](docs/VISION.md)
 
 Status legend: ✅ shipped · 🚧 partial / in progress · 🔜 planned · 🧪 research spike (may change)
-Last updated: 2026-11-21 (v1.3.0). Dates are targets, not promises; quality gates decide releases.
+Last updated: 2026-11-25 (v1.3.3). Dates are targets, not promises; quality gates decide releases.
 
 ---
 
@@ -77,12 +77,12 @@ Each phase has themes, features, models (with size/latency targets on a **mid-ra
 - ✅ Remove person (MODNet + MI-GAN); iOS build no longer depends on `download.onnxruntime.ai`.
 - Acceptance met: `flutter analyze` clean; 350+ tests green incl. 140+ AR/EN command phrases; models SHA-256 verified and executed before shipping.
 
-### v1.3.x — polish (2026-12)
-- 🔜 Home "AI tools" sheet & quick actions for the new tools; Smart bar suggestions of *next* commands after each edit.
-- 🔜 Command history & favourites; dialect lexicon pass (Gulf, Egyptian, Levantine, Maghrebi) with a 1,000-phrase benchmark.
-- 🔜 Tap-to-select: multi-mask decoder (choose among 3 candidates), box prompt, brush refine, feathered edges.
-- 🔜 Mirror every model on a project-controlled host (GitHub Releases) with identical SHA-256 as an automatic fallback.
-- **Acceptance:** intent benchmark ≥ 95 % exact plans (AR & EN separately); select-tap p95 ≤ 150 ms on the reference phone.
+### v1.3.x — polish (2026-12) ✅ (shipped as 1.3.3, 2026-11-25)
+- ✅ Home "AI tools" sheet & quick actions for the new tools; Smart bar suggestions of *next* commands after each edit.
+- ✅ Command history & favourites; dialect lexicon pass (Gulf, Egyptian, Levantine, Maghrebi) with a 1,000-phrase benchmark.
+- ✅ Tap-to-select: multi-mask decoder (choose among 3 candidates), box prompt, brush refine, feathered edges.
+- ✅ Mirror every model on a project-controlled host (GitHub Releases) with identical SHA-256 as an automatic fallback.
+- **Acceptance:** intent benchmark ≥ 95 % exact plans (AR & EN separately) — **met at 100 % / 100 %** (1,527 phrases; `test/unit/smart_intent_benchmark_test.dart`); select-tap p95 ≤ 150 ms on the reference phone — decoder measured at 96–105 ms per run on the 2-core x86 sandbox; device-farm confirmation pending.
 
 ### v1.4 — "Pro foundations" (2027 Q1)
 | Theme | Features | Models / tech | Targets |

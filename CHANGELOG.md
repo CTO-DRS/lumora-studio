@@ -2,6 +2,25 @@
 
 All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
+## [1.3.3] - 2026-11-25
+
+### Added
+- **Model mirror** (v1.3.x roadmap): every model is also published as a GitHub Release asset of this repository (`models-1.3`) with **identical bytes and the same SHA-256**. `ModelManager` now tries the pinned primary URL first and falls back to the mirror automatically — on HTTP errors, TLS problems and checksum mismatches alike. `tool/mirror_models.dart` reads the registry (single source of truth), `tool/mirror_models.py` downloads and verifies, and the new `Mirror models` workflow uploads the verified assets.
+- **Tap to select upgraded**: the SAM **multi-mask decoder** (16.5 MB, `8976b90a…22ffe`, verified by downloading, hashing and running it with ONNX Runtime: ≈ 96–105 ms per decode on the 2-core x86 sandbox) replaces the single-mask decoder. Every decode now returns **three candidates** ranked by the decoder's IoU predictions and switchable with one tap. New prompt modes: **drag a box** (SAM corners, labels 2/3, combinable with taps), a **refine brush** (painted strokes become SAM's 256 px mask input — add strokes extend the selection, eraser strokes cut parts away), and a **soft-edges slider** (0–4 px feather) applied when the selection is used for erase / cut out / adjust / blur-the-rest.
+- **Smart bar: command history & favourites & next commands**: the last 24 unique commands persist on the device with a "Recent" row; long-press stars a command into "Saved" (up to 12). After every applied command the panel suggests up to three **next** commands chained to what just happened ("more contrast" after "brighter", "more blur" after background blur) — every suggestion is guaranteed to parse into a non-empty plan.
+- **Home AI tools sheet**: the 1.3 tools are now quick actions from Home too — tap-to-select, depth blur, relight and remove person join the existing cards.
+- **Dialect lexicon pass** (Gulf, Egyptian, Levantine, Maghrebi): intensifiers `مره / اوي / خالص / بزاف` (alongside MSA `كثيرًا` and Levantine `كتير`), removal verbs `شيل / اشيل / اطفي`, "make it good" `زين / حلو / منيح`, clarity `وضح`, Egyptian `حط`, and the French code-switch `moins`.
+- **Intent benchmark** (`test/unit/smart_intent_benchmark_test.dart`): **1,527 commands** — MSA and the four dialect groups, numbers (incl. Arabic-Indic digits and percentages), looks, actions and Arabic/English code-switching — each with its exact expected plan. Measured accuracy: **Arabic 1089/1089 = 100 %, English 438/438 = 100 %** (release gate: ≥ 95 % per language). Failures are lexicon gaps by construction: fix the lexicon, never the expectation.
+- `InferenceEngine.runNamed` returns several named outputs so pipelines can read the decoder's `iou_predictions`; the ONNX implementation, session handling and safe CPU defaults are unchanged.
+
+### العربية
+- **مرآة النماذج** (خارطة 1.3.x): كل نموذج يُنشر أيضًا كملف في إصدار GitHub للمشروع (`models-1.3`) بالبايتات نفسها وبصمة SHA-256 نفسها، وعند فشل الرابط الأساسي (خطأ شبكة أو TLS أو بصمة) يتحوّل التنزيل تلقائيًا إلى المرآة. أدوات `tool/mirror_models.dart` و`tool/mirror_models.py` وسير عمل «Mirror models» تنشرها وتتحقق منها.
+- **ترقية التحديد بلمسة**: مُفكّك SAM متعدد الأقنعة (16.5 ميغابايت، تم جلبها والتحقق من بصمتها وتشغيلها فعليًا: ≈ 96–105 مللي ثانية لكل فكّ) يُعيد **ثلاثة مرشّحين** مرتبين بتنبؤ IoU مع تبديل بلمسة، وطرق تحديد جديدة: **سحب إطار** حول العنصر، و**فرشاة تدقيق** تحوّل التلوين إلى مدخل القناع (الإضافة توسّع و«الطرح» يستبعد)، ومنزلق **حواف ناعمة** يُطبَّق عند استخدام التحديد.
+- **الشريط الذكي**: سجل آخر 24 أمرًا فريدًا + مفضلة بالضغط المطوّل، وبعد كل أمر تظهر حتى ثلاثة **أوامر تالية** مبنية على ما نُفّذ للتو، وكلها مضمونة الفهم.
+- **أدوات الذكاء في الرئيسية**: تحديد بلمسة وتمويه بالعمق وإعادة الإضاءة وإزالة شخص أصبحت إجراءات سريعة من الشاشة الرئيسية.
+- **معجم اللهجات** (الخليجية والمصرية والشامية والمغاربية): شدّات `مره/اوي/خالص/بزاف`، أفعال الإزالة `شيل/اشيل/اطفي`، التحسين `زين/حلو/منيح`، الوضوح `وضح`، المصرية `حط`، والخلط بالفرنسية `moins`.
+- **معيار الأوامر**: **1,527 عبارة** بالفصحى واللهجات والأرقام والنسب والأنماط والإجراءات والخلط بين اللغتين، كلٌّ بخطتها المتوقعة بالضبط: **العربية 1089/1089 = 100٪ والإنجليزية 438/438 = 100٪** (بوابة الإصدار ≥ 95٪ لكل لغة).
+
 ## [1.3.2] - 2026-11-23
 
 ### Fixed

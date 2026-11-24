@@ -3,7 +3,10 @@ enum AiTask { segmentation, portraitMatting, upscale, inpainting, interactiveSeg
 
 /// Describes a downloadable on-device model. Every model is fetched from a
 /// public URL on demand, verified with SHA-256 and cached locally – nothing
-/// is bundled in the app and no image ever leaves the device.
+/// is bundled in the app and no image ever leaves the device. Every file is
+/// also mirrored on the project's own host (a GitHub Release asset) with the
+/// identical SHA-256; the mirror is used automatically when the primary
+/// download fails (see [ModelManager]).
 class ModelSpec {
   const ModelSpec({
     required this.id,
@@ -18,6 +21,7 @@ class ModelSpec {
     required this.outputName,
     this.fixedInputSize,
     this.notes = '',
+    this.mirrorUrl = '',
   });
 
   final String id;
@@ -30,6 +34,12 @@ class ModelSpec {
   final String source;
   final List<String> inputNames;
   final String outputName;
+
+  /// Project-hosted copy with the same bytes (empty when there is none).
+  final String mirrorUrl;
+
+  /// The asset name used by the project mirror.
+  String get mirrorAssetName => fileName;
 
   /// Square input size when the graph has static dimensions.
   final int? fixedInputSize;
@@ -56,6 +66,7 @@ class ModelRegistry {
     outputName: '1959',
     fixedInputSize: 320,
     notes: 'ImageNet normalization, sigmoid output d0, min-max normalized.',
+    mirrorUrl: 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.3/u2netp.onnx',
   );
 
   static const modnet = ModelSpec(
@@ -70,6 +81,7 @@ class ModelRegistry {
     inputNames: ['input'],
     outputName: 'output',
     notes: 'Dynamic H/W (multiples of 32), mean=std=0.5, alpha matte 0..1.',
+    mirrorUrl: 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.3/modnet_q8.onnx',
   );
 
   static const realEsrgan = ModelSpec(
@@ -85,6 +97,7 @@ class ModelRegistry {
     outputName: 'upscaled_image',
     fixedInputSize: 128,
     notes: 'Static 1x3x128x128 float input 0..1 → 1x3x512x512.',
+    mirrorUrl: 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.3/realesrgan_general_x4v3.onnx',
   );
 
   static const migan = ModelSpec(
@@ -99,6 +112,7 @@ class ModelRegistry {
     inputNames: ['image', 'mask'],
     outputName: 'result',
     notes: 'uint8 NCHW image, uint8 mask (255 = keep, 0 = erase), any size.',
+    mirrorUrl: 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.3/migan_pipeline.onnx',
   );
 
   static const lama = ModelSpec(
@@ -114,11 +128,14 @@ class ModelRegistry {
     outputName: 'output',
     fixedInputSize: 512,
     notes: 'Static 512x512, float image 0..1, float mask 1 = erase.',
+    mirrorUrl: 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.3/lama_fp32.onnx',
   );
 
   // Revision-pinned URLs (v1.3): the file at that commit can never change;
   // SHA-256 values are the LFS oids, verified by downloading each file and
-  // running it with ONNX Runtime (see docs/SMART_EDIT.md).
+  // running it with ONNX Runtime (see docs/SMART_EDIT.md). Every file is
+  // mirrored as a GitHub Release asset of this repository with the same name
+  // and the same bytes.
 
   static const mobileSamEncoder = ModelSpec(
     id: 'mobilesam_encoder',
@@ -133,22 +150,32 @@ class ModelRegistry {
     inputNames: ['input_image'],
     outputName: 'image_embeddings',
     notes: 'HWC float 0..255, long side 1024 (the graph normalises and pads) → 1x256x64x64.',
+    mirrorUrl: 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.3/mobilesam_encoder.onnx',
   );
 
-  static const mobileSamDecoder = ModelSpec(
-    id: 'mobilesam_decoder',
+  /// Multi-mask SAM decoder (v1.3.x): the same inputs as the single-mask
+  /// decoder of 1.3, but `masks` has four channels – 0 is the single-mask
+  /// branch, 1..3 are the three candidates with `iou_predictions` per
+  /// channel. Verified by downloading, hashing and running the file with
+  /// ONNX Runtime 1.32: a synthetic circle decoded with a centre point,
+  /// a box prompt (labels 2/3) and a 256 px mask_input all produced sane
+  /// masks in ≈ 100 ms on the 2-core x86 sandbox.
+  static const mobileSamDecoderMulti = ModelSpec(
+    id: 'mobilesam_decoder_multi',
     task: AiTask.interactiveSegmentation,
-    displayName: 'Segment Anything – mask decoder (tap to select)',
+    displayName: 'Segment Anything – multi-mask decoder (tap to select)',
     url:
-        'https://huggingface.co/Acly/MobileSAM/resolve/0d3b403339b4674a82493d5e97964dd78089ddc8/sam_mask_decoder_single.onnx',
-    sha256: '93915fc7c993ab9d59ab8c9ccd3bce37f7509c81ab4150a74abd4d2abbd8570d',
-    sizeBytes: 16501323,
+        'https://huggingface.co/Acly/MobileSAM/resolve/0d3b403339b4674a82493d5e97964dd78089ddc8/sam_mask_decoder_multi.onnx',
+    sha256: '8976b90a87ba50a6a72217a5ff994f7d25ce16f2229fcc1ed259e1294c622ffe',
+    sizeBytes: 16496559,
     license: 'Apache-2.0 (Segment Anything / MobileSAM)',
     source: 'https://github.com/ChaoningZhang/MobileSAM',
     inputNames: ['image_embeddings', 'point_coords', 'point_labels', 'mask_input', 'has_mask_input', 'orig_im_size'],
     outputName: 'masks',
     notes:
-        'Points in the 1024-px encoder frame (label 1 = add, 0 = subtract, -1 = padding) → mask logits at orig_im_size.',
+        'Points/box in the 1024-px encoder frame (label 1 = add, 0 = subtract, 2/3 = box corners, -1 = padding) '
+        '→ masks [1, 4, h, w] logits at orig_im_size (channel 0 single, 1..3 candidates) + iou_predictions [1, 4].',
+    mirrorUrl: 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.3/mobilesam_decoder_multi.onnx',
   );
 
   static const depthAnythingSmall = ModelSpec(
@@ -164,6 +191,7 @@ class ModelRegistry {
     inputNames: ['pixel_values'],
     outputName: 'predicted_depth',
     notes: 'NCHW ImageNet-normalised, sides multiples of 14 → relative inverse depth (larger = nearer).',
+    mirrorUrl: 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.3/depth_anything_v2_small_q8.onnx',
   );
 
   static const List<ModelSpec> all = [
@@ -173,9 +201,12 @@ class ModelRegistry {
     migan,
     lama,
     mobileSamEncoder,
-    mobileSamDecoder,
+    mobileSamDecoderMulti,
     depthAnythingSmall,
   ];
+
+  /// Mirror release that carries every model with the identical SHA-256.
+  static const mirrorReleaseUrl = 'https://github.com/CTO-DRS/lumora-studio/releases/tag/models-1.3';
 
   static ModelSpec byId(String id) => all.firstWhere((m) => m.id == id);
 
@@ -202,7 +233,7 @@ List<ModelSpec> aiToolModels(AiTool tool) => switch (tool) {
   AiTool.cutOutPerson || AiTool.backgroundBlur || AiTool.portraitRetouch => const [ModelRegistry.modnet],
   AiTool.eraser => const [ModelRegistry.migan],
   AiTool.upscale => const [ModelRegistry.realEsrgan],
-  AiTool.selectObject => const [ModelRegistry.mobileSamEncoder, ModelRegistry.mobileSamDecoder],
+  AiTool.selectObject => const [ModelRegistry.mobileSamEncoder, ModelRegistry.mobileSamDecoderMulti],
   AiTool.depthBlur || AiTool.relight => const [ModelRegistry.depthAnythingSmall],
   AiTool.erasePerson => const [ModelRegistry.modnet, ModelRegistry.migan],
 };

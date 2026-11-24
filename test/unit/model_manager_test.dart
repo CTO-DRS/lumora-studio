@@ -8,7 +8,7 @@ import 'package:http/testing.dart';
 import 'package:lumora/features/ai/data/model_manager.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
 
-ModelSpec _spec(List<int> bytes, {String? sha}) => ModelSpec(
+ModelSpec _spec(List<int> bytes, {String? sha, String? mirror}) => ModelSpec(
   id: 'test_model',
   task: AiTask.segmentation,
   displayName: 'test',
@@ -19,6 +19,7 @@ ModelSpec _spec(List<int> bytes, {String? sha}) => ModelSpec(
   source: '',
   inputNames: const ['x'],
   outputName: 'y',
+  mirrorUrl: mirror ?? '',
 );
 
 void main() {
@@ -26,15 +27,23 @@ void main() {
   setUp(() => tmp = Directory.systemTemp.createTempSync('lumora_models'));
   tearDown(() => tmp.deleteSync(recursive: true));
 
-  test('registry entries are well formed', () {
+  test('registry entries are well formed and mirrored', () {
     final ids = <String>{};
     for (final m in ModelRegistry.all) {
       expect(ids.add(m.id), isTrue);
       expect(m.url, startsWith('https://huggingface.co/'));
       expect(RegExp(r'^[0-9a-f]{64}$').hasMatch(m.sha256), isTrue, reason: m.id);
       expect(m.sizeBytes, greaterThan(1000000));
+      // Every model is mirrored on the project host with the same bytes.
+      expect(
+        m.mirrorUrl,
+        'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.3/${m.fileName}',
+        reason: m.id,
+      );
     }
     expect(ModelRegistry.forTask(AiTask.inpainting).length, 2);
+    expect(ModelRegistry.byId('mobilesam_decoder_multi').sizeBytes, 16496559);
+    expect(ModelRegistry.byId('mobilesam_decoder_multi').url, endsWith('sam_mask_decoder_multi.onnx'));
   });
 
   test('downloads, verifies and caches', () async {
@@ -68,9 +77,51 @@ void main() {
     expect(Directory('${tmp.path}/models').listSync(), isEmpty);
   });
 
-  test('HTTP errors surface', () async {
+  test('HTTP errors surface when there is no mirror', () async {
     final client = MockClient.streaming((req, _) async => http.StreamedResponse(const Stream.empty(), 404));
     final m = ModelManager(client: client, baseDir: () async => tmp);
     await expectLater(m.ensure(_spec([1, 2, 3])), throwsA(isA<HttpException>()));
+  });
+
+  test('falls back to the mirror when the primary URL fails', () async {
+    final bytes = utf8.encode('fake-onnx-model' * 1000);
+    final seen = <Uri>[];
+    final client = MockClient.streaming((req, _) async {
+      seen.add(req.url);
+      if (req.url.host == 'example.com') return http.StreamedResponse(const Stream.empty(), 503);
+      return http.StreamedResponse(Stream.value(bytes), 200, contentLength: bytes.length);
+    });
+    final m = ModelManager(client: client, baseDir: () async => tmp);
+    final spec = _spec(bytes, mirror: 'https://mirror.example.org/m.onnx');
+    final f = await m.ensure(spec);
+    expect(f.readAsBytesSync(), bytes);
+    expect(seen.map((u) => u.host), ['example.com', 'mirror.example.org']);
+    expect(await m.verify(spec), isTrue);
+  });
+
+  test('falls back to the mirror after a checksum mismatch on the primary', () async {
+    final good = utf8.encode('fake-onnx-model' * 1000);
+    final tampered = utf8.encode('tampered-bytes!');
+    final client = MockClient.streaming((req, _) async {
+      final body = req.url.host == 'example.com' ? tampered : good;
+      return http.StreamedResponse(Stream.value(body), 200, contentLength: body.length);
+    });
+    final m = ModelManager(client: client, baseDir: () async => tmp);
+    final spec = _spec(good, mirror: 'https://mirror.example.org/m.onnx');
+    final f = await m.ensure(spec);
+    expect(f.readAsBytesSync(), good);
+    expect(await m.isInstalled(spec), isTrue);
+  });
+
+  test('reports the primary error when the mirror fails too', () async {
+    final client = MockClient.streaming(
+      (req, _) async => http.StreamedResponse(const Stream.empty(), req.url.host == 'example.com' ? 404 : 500),
+    );
+    final m = ModelManager(client: client, baseDir: () async => tmp);
+    await expectLater(
+      m.ensure(_spec([1, 2, 3], mirror: 'https://mirror.example.org/m.onnx')),
+      throwsA(isA<HttpException>()),
+    );
+    expect(Directory('${tmp.path}/models').listSync(), isEmpty);
   });
 }
