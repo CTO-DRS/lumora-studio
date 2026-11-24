@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lumora/features/video_editor/domain/audio_analysis.dart';
 import 'package:lumora/features/video_editor/domain/timeline_ops.dart';
 import 'package:lumora/features/video_editor/domain/video_project.dart';
 import 'package:lumora/features/video_editor/presentation/video_editor_controller.dart';
@@ -38,6 +39,7 @@ class _TimelineViewState extends ConsumerState<TimelineView> {
     final ctrl = ref.read(videoEditorControllerProvider.notifier);
     final project = s.project;
     final scheme = Theme.of(context).colorScheme;
+    final musicWave = project.music == null ? null : s.audio[project.music!.path]?.waveform;
 
     // Follow the playhead while playing.
     if (!_userScrolling && _scroll.hasClients) {
@@ -96,6 +98,8 @@ class _TimelineViewState extends ConsumerState<TimelineView> {
                                       clip: project.clips[i],
                                       selected: project.clips[i].id == s.selectedClipId,
                                       thumbs: s.thumbnails[project.clips[i].path] ?? const [],
+                                      waveform: s.audio[project.clips[i].path]?.waveform,
+                                      pxPerSecond: _pxPerSecond,
                                       onTap: () => ctrl.select(project.clips[i].id),
                                     ),
                                   ),
@@ -103,6 +107,31 @@ class _TimelineViewState extends ConsumerState<TimelineView> {
                             ),
                           ),
                           const SizedBox(height: 6),
+                          if (s.snapToBeats && project.clips.isNotEmpty) ...[
+                            SizedBox(
+                              height: 12,
+                              width: totalPx,
+                              child: Stack(
+                                children: [
+                                  for (var i = 0; i < project.clips.length; i++)
+                                    for (final beat in s.audio[project.clips[i].path]?.beats.beatMs ?? const <int>[])
+                                      Positioned(
+                                        left: _msToPx(starts[i] + (beat / project.clips[i].speed).round()) - 2,
+                                        top: 2,
+                                        bottom: 2,
+                                        width: 4,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            color: scheme.primary.withValues(alpha: 0.85),
+                                            borderRadius: BorderRadius.circular(2),
+                                          ),
+                                        ),
+                                      ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                          ],
                           SizedBox(
                             height: 26,
                             child: Stack(
@@ -147,13 +176,23 @@ class _TimelineViewState extends ConsumerState<TimelineView> {
                               ),
                               alignment: AlignmentDirectional.centerStart,
                               padding: const EdgeInsets.symmetric(horizontal: 6),
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.music_note, size: 14),
-                                  SizedBox(width: 4),
-                                  Icon(Icons.graphic_eq, size: 14),
-                                ],
-                              ),
+                              child: musicWave == null
+                                  ? const Row(
+                                      children: [
+                                        Icon(Icons.music_note, size: 14),
+                                        SizedBox(width: 4),
+                                        Icon(Icons.graphic_eq, size: 14),
+                                      ],
+                                    )
+                                  : CustomPaint(
+                                      painter: _WaveformPainter(
+                                        musicWave.peaks,
+                                        musicWave.bucketMs,
+                                        Colors.white70,
+                                        pxPerSecond: _pxPerSecond,
+                                        loop: true,
+                                      ),
+                                    ),
                             ),
                           ],
                         ],
@@ -177,12 +216,24 @@ class _TimelineViewState extends ConsumerState<TimelineView> {
 }
 
 class _ClipTile extends StatelessWidget {
-  const _ClipTile({required this.clip, required this.selected, required this.thumbs, required this.onTap});
+  const _ClipTile({
+    required this.clip,
+    required this.selected,
+    required this.thumbs,
+    required this.onTap,
+    this.waveform,
+    this.pxPerSecond = 60,
+  });
 
   final VideoClip clip;
   final bool selected;
   final List<String> thumbs;
   final VoidCallback onTap;
+
+  /// Level buckets of this clip's source audio (null while analysing or
+  /// when the clip has no audio).
+  final AudioWaveform? waveform;
+  final double pxPerSecond;
 
   @override
   Widget build(BuildContext context) {
@@ -207,9 +258,24 @@ class _ClipTile extends StatelessWidget {
                     Expanded(child: Image.file(File(t), fit: BoxFit.cover, gaplessPlayback: true)),
                 ],
               ),
+            if (waveform != null && clip.hasAudio)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 18,
+                child: CustomPaint(
+                  painter: _WaveformPainter(
+                    waveform!.peaks,
+                    waveform.bucketMs,
+                    Colors.white.withValues(alpha: 0.85),
+                    pxPerSecond: pxPerSecond,
+                  ),
+                ),
+              ),
             PositionedDirectional(
               start: 4,
-              bottom: 2,
+              bottom: waveform != null && clip.hasAudio ? 20 : 2,
               child: Text(
                 [
                   if (clip.speed != 1) '${clip.speed}×',
@@ -224,4 +290,39 @@ class _ClipTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Draws vertical bars from waveform level buckets. [pxPerSecond] is the
+/// timeline zoom; when [loop] is set (music track) buckets wrap around the
+/// waveform duration, because the track repeats to fill the timeline.
+class _WaveformPainter extends CustomPainter {
+  _WaveformPainter(this.peaks, this.bucketMs, this.color, {this.pxPerSecond = 60, this.loop = false});
+
+  final List<double> peaks;
+  final int bucketMs;
+  final Color color;
+  final double pxPerSecond;
+  final bool loop;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (peaks.isEmpty) return;
+    final msPerPx = 1000 / pxPerSecond;
+    final span = peaks.length * bucketMs;
+    final paint = Paint()..color = color;
+    const barWidth = 2.0;
+    const gap = 1.0;
+    for (var x = 0.0; x < size.width; x += barWidth + gap) {
+      var ms = x * msPerPx;
+      if (loop && span > 0) ms %= span;
+      final i = (ms ~/ bucketMs).clamp(0, peaks.length - 1);
+      final level = peaks[i].clamp(0.05, 1.0);
+      final h = level * size.height;
+      canvas.drawRect(Rect.fromLTWH(x, (size.height - h) / 2, barWidth, h), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WaveformPainter old) =>
+      old.peaks != peaks || old.color != color || old.pxPerSecond != pxPerSecond;
 }

@@ -6,11 +6,13 @@ All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepach
 
 ### Added
 - **Auto straighten (v1.4 "Pro foundations" starts)**: a Hough-based horizon detector (pure Dart, no model, ~2 ms on a 256 px proxy) finds the strongest near-horizontal structure and applies the correction angle in one undoable step — new "Auto straighten" button in the crop panel and a new Smart command ("سوي الصوره / سوي الافق", "straighten / level the horizon / align"). Detection runs on the preview proxy; low-confidence or already-level photos are left untouched.
+- **Audio waveform & beat snap (v1.4 video foundations)**: every clip and the music track is analysed on-device with one FFmpeg PCM decode (mono 22.05 kHz) and pure-Dart DSP — no model, no network. The timeline draws level bars under each clip and a live looping waveform on the music track; an energy-flux onset detector plus autocorrelation tempo estimate build a beat grid, and a new "Snap to beats" toggle snaps splits to the nearest beat and shows beat markers on the timeline.
 - **Intent benchmark grows to 1,080 commands** (555 AR / 525 EN) with the new straighten phrases, still **100 % exact-plan accuracy** in both languages.
 
 ### العربية
 - **التسوية التلقائية (بداية الإصدار 1.4 "أسس الاحترافية")**: كاشف أفق بخوارزمية Hough بلغة Dart نقية (بدون أي نموذج) يجد أقوى بنية أفقية شبه مستقيمة ويطبق زاوية التصحيح في خطوة واحدة قابلة للتراجع — زر جديد "تسوية تلقائية" في لوحة القص وأمر ذكي جديد. يعمل الكشف على معاينة مصغرة، والصور المشوشة الثقة أو المستوية أصلًا تُترك كما هي.
 - **معيار النوايا يصل إلى 1080 أمرًا** (555 عربي / 525 إنجليزي) بدقة 100٪ في اللغتين.
+- **شكل الموجة الصوتية والمحاذاة على الإيقاع (أسس فيديو 1.4)**: يُحلَّل صوت كل مقطع ومسار الموسيقى على الجهاز بفك ترميز PCM واحد بمحرك FFmpeg (أحادي 22.05 كيلوهرتز) ومعالجة إشارة نقية بلغة Dart — دون أي نموذج ودون شبكة. تعرض الطريقة الزمنية أعمدة المستوى أسفل كل مقطع وموجة حية متكررة لمسار الموسيقى؛ ويُنتج كاشف البدايات بطاقة التدفق مع تقدير الإيقاع بالتوصيل الذاتي شبكة إيقاع، وزر «محاذاة الإيقاع» الجديد يحاذي التقسيم على أقرب إيقاع ويعرض علامات الإيقاع على الطريقة الزمنية.
 
 ## [1.3.3] - 2026-11-24
 

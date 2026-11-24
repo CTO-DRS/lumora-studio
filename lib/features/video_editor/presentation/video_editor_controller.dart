@@ -5,6 +5,7 @@ import 'package:lumora/core/providers.dart';
 import 'package:lumora/features/photo_editor/data/preset_store.dart';
 import 'package:lumora/features/photo_editor/domain/edit_history.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
+import 'package:lumora/features/video_editor/domain/audio_analysis.dart';
 import 'package:lumora/features/video_editor/domain/look_keyframes.dart';
 import 'package:lumora/features/video_editor/domain/timeline_ops.dart';
 import 'package:lumora/features/video_editor/domain/video_project.dart';
@@ -23,6 +24,8 @@ class VideoEditorState {
     this.selectedTextId,
     this.playheadMs = 0,
     this.thumbnails = const {},
+    this.audio = const {},
+    this.snapToBeats = false,
     this.busy = false,
     this.progress,
     this.error,
@@ -34,6 +37,13 @@ class VideoEditorState {
   final String? selectedTextId;
   final int playheadMs;
   final Map<String, List<String>> thumbnails;
+
+  /// Waveform + beat grid per source path (clips and the music track).
+  final Map<String, ClipAudio> audio;
+
+  /// When on, splitting and the playhead jump to the nearest detected
+  /// beat within a small tolerance.
+  final bool snapToBeats;
   final bool busy;
   final double? progress;
   final String? error;
@@ -49,6 +59,8 @@ class VideoEditorState {
     String? Function()? selectedTextId,
     int? playheadMs,
     Map<String, List<String>>? thumbnails,
+    Map<String, ClipAudio>? audio,
+    bool? snapToBeats,
     bool? busy,
     double? Function()? progress,
     String? Function()? error,
@@ -59,6 +71,8 @@ class VideoEditorState {
     selectedTextId: selectedTextId != null ? selectedTextId() : this.selectedTextId,
     playheadMs: playheadMs ?? this.playheadMs,
     thumbnails: thumbnails ?? this.thumbnails,
+    audio: audio ?? this.audio,
+    snapToBeats: snapToBeats ?? this.snapToBeats,
     busy: busy ?? this.busy,
     progress: progress != null ? progress() : this.progress,
     error: error != null ? error() : this.error,
@@ -93,7 +107,10 @@ class VideoEditorController extends _$VideoEditorController {
     state = VideoEditorState(history: EditHistory(project), projectId: id);
     for (final c in project.clips) {
       unawaited(_loadThumbs(c));
+      if (c.hasAudio) unawaited(_loadAudio(c.path));
     }
+    final music = project.music;
+    if (music != null) unawaited(_loadAudio(music.path));
   }
 
   Future<void> addClips(List<String> paths) async {
@@ -117,6 +134,7 @@ class VideoEditorController extends _$VideoEditorController {
       _set(state.project.appendClips(clips));
       for (final c in clips) {
         unawaited(_loadThumbs(c));
+        if (c.hasAudio) unawaited(_loadAudio(c.path));
       }
       if (state.selectedClipId == null && clips.isNotEmpty) select(clips.first.id);
     } on Object catch (e) {
@@ -135,6 +153,46 @@ class VideoEditorController extends _$VideoEditorController {
     }
   }
 
+  Future<void> _loadAudio(String path) async {
+    if (state.audio.containsKey(path)) return;
+    try {
+      final result = await _engine.analyseAudio(path);
+      if (result != null) state = state.copyWith(audio: {...state.audio, path: result});
+    } on Object catch (e) {
+      debugPrint('audio analysis failed: $e');
+    }
+  }
+
+  /// Toggles beat snapping; analysing missing audio on the way in.
+  Future<void> toggleSnapToBeats() async {
+    final next = !state.snapToBeats;
+    state = state.copyWith(snapToBeats: next);
+    if (next) {
+      for (final c in state.project.clips) {
+        if (c.hasAudio) unawaited(_loadAudio(c.path));
+      }
+      final music = state.project.music;
+      if (music != null) unawaited(_loadAudio(music.path));
+    }
+  }
+
+  /// Timeline position of the beat nearest to the playhead (within
+  /// tolerance), or null when disabled / no analysis available.
+  int? snappedToBeat([int? timelineMs, int toleranceMs = 150]) {
+    if (!state.snapToBeats) return null;
+    final ms = timelineMs ?? state.playheadMs;
+    final hit = state.project.clipAt(ms);
+    if (hit == null) return null;
+    final (index, local) = hit;
+    final c = state.project.clips[index];
+    final clipAudio = state.audio[c.path];
+    if (clipAudio == null) return null;
+    final sourceMs = (local * c.speed).round();
+    final snappedSource = clipAudio.beats.snap(sourceMs, toleranceMs: toleranceMs);
+    if (snappedSource == null) return null;
+    return state.project.clipStarts[index] + (snappedSource / c.speed).round();
+  }
+
   void _set(VideoProject p, {bool live = false}) =>
       state = state.copyWith(history: live ? state.history.replace(p) : state.history.push(p));
 
@@ -149,7 +207,10 @@ class VideoEditorController extends _$VideoEditorController {
 
   void seek(int ms) => state = state.copyWith(playheadMs: ms.clamp(0, state.project.totalDurationMs));
 
-  void splitAtPlayhead() => update((p) => p.splitAt(state.playheadMs, newId: _uuid.v4()));
+  void splitAtPlayhead() {
+    final ms = snappedToBeat() ?? state.playheadMs;
+    update((p) => p.splitAt(ms, newId: _uuid.v4()));
+  }
 
   void applyPreset(String? id) {
     final preset = ref.read(presetLibraryControllerProvider).byId(id);
@@ -265,6 +326,11 @@ class VideoEditorController extends _$VideoEditorController {
 
   void setMusic(String? path) =>
       update((p) => path == null ? p.copyWith(music: null) : p.copyWith(music: AudioTrack(path: path)));
+
+  /// Analyses a newly added music track for the waveform and beat grid.
+  Future<void> analyseMusic(String path) async {
+    await _loadAudio(path);
+  }
 
   Future<String?> export(VideoExportQuality quality) async {
     state = state.copyWith(busy: true, progress: () => 0, error: () => null);

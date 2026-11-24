@@ -261,6 +261,26 @@ class FfmpegCommandBuilder {
     output,
   ];
 
+  /// Decodes the audio of [input] to mono little-endian PCM16 at
+  /// [sampleRate] Hz for waveform and beat analysis (`-f s16le` writes no
+  /// container header, so the output is exactly the raw samples).
+  static List<String> audioPcmArgs(String input, String output, {int sampleRate = 22050}) => [
+    '-y',
+    '-hide_banner',
+    '-i',
+    input,
+    '-vn',
+    '-ac',
+    '1',
+    '-ar',
+    '$sampleRate',
+    '-f',
+    's16le',
+    '-acodec',
+    'pcm_s16le',
+    output,
+  ];
+
   static List<String> _rotation(int turns) => switch (turns % 4) {
     1 => ['transpose=1'],
     2 => ['hflip', 'vflip'],

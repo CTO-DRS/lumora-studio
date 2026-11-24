@@ -270,6 +270,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoStraighten => 'Auto straighten';
 
   @override
+  String get snapToBeats => 'Snap to beats';
+
+  @override
   String get perspectiveV => 'Vertical perspective';
 
   @override

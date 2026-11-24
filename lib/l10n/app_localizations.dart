@@ -614,6 +614,12 @@ abstract class AppLocalizations {
   /// **'Auto straighten'**
   String get autoStraighten;
 
+  /// No description provided for @snapToBeats.
+  ///
+  /// In en, this message translates to:
+  /// **'Snap to beats'**
+  String get snapToBeats;
+
   /// No description provided for @perspectiveV.
   ///
   /// In en, this message translates to:

@@ -9,6 +9,7 @@ import 'package:ffmpeg_kit_flutter_new_min_gpl/return_code.dart';
 import 'package:flutter/services.dart';
 import 'package:lumora/features/photo_editor/domain/edit_state.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
+import 'package:lumora/features/video_editor/domain/audio_analysis.dart';
 import 'package:lumora/features/video_editor/domain/look_keyframes.dart';
 import 'package:lumora/features/video_editor/domain/timeline_ops.dart';
 import 'package:lumora/features/video_editor/domain/video_project.dart';
@@ -116,6 +117,22 @@ class VideoEngine {
       if (File(file).existsSync()) out.add(file);
     }
     return out;
+  }
+
+  /// Decodes the audio of [path] once and builds its waveform + beat grid.
+  /// Returns null when the file has no audio stream. The raw PCM is cached
+  /// in the temp directory, so repeated calls re-use the same decode.
+  Future<ClipAudio?> analyseAudio(String path, {int bucketMs = 100, int sampleRate = 22050}) async {
+    final dir = await _work('audio_${path.hashCode.abs()}');
+    final pcmFile = File(p.join(dir.path, 'audio.pcm'));
+    if (!pcmFile.existsSync()) {
+      await _run(FfmpegCommandBuilder.audioPcmArgs(path, pcmFile.path, sampleRate: sampleRate), 0, null);
+      if (!pcmFile.existsSync()) return null;
+    }
+    final bytes = await pcmFile.readAsBytes();
+    final waveform = AudioAnalysis.buildWaveform(bytes, sampleRate, bucketMs: bucketMs);
+    final beats = AudioAnalysis.detectBeats(bytes, sampleRate);
+    return ClipAudio(waveform: waveform, beats: beats);
   }
 
   /// Exports [project] to an MP4 and returns its path.

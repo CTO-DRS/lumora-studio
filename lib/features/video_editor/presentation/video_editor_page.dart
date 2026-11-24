@@ -131,6 +131,13 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
                     ),
                     Text('${_fmt(s.playheadMs)} / ${_fmt(s.project.totalDurationMs)}'),
                     const Spacer(),
+                    IconButton(
+                      tooltip: l.snapToBeats,
+                      isSelected: s.snapToBeats,
+                      icon: const Icon(Icons.music_note_outlined),
+                      selectedIcon: const Icon(Icons.music_note),
+                      onPressed: ctrl.toggleSnapToBeats,
+                    ),
                     IconButton(tooltip: l.split, icon: const Icon(Icons.content_cut), onPressed: ctrl.splitAtPlayhead),
                     IconButton(
                       tooltip: l.addClip,

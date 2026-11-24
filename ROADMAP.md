@@ -97,6 +97,7 @@ Each phase has themes, features, models (with size/latency targets on a **mid-ra
 | Video | **auto-captions AR/EN** (offline), waveform, **beat detection & snap** | Whisper tiny (~39 M params; ~40 MB int8) / base (~74 M) via whisper.cpp or ONNX; onset/BPM DSP (no model) | captions ≥ 1× real-time on reference phone |
 - **Acceptance:** device-farm integration tests run every model on ≥ 12 devices (3 tiers × 2 OS × 2 vendors); crash-free rate on farm ≥ 99.8 %; no model > 50 MB in this phase.
 - 🚧 **Started 2026-11:** auto-straighten — Hough-based horizon detection (pure Dart, model-free) wired into the crop panel and the Smart engine (AR/EN lexicon, benchmark 1,080 at 100 %). See CHANGELOG "Unreleased".
+- 🚧 **Started 2026-11:** audio waveform + beat detection & snap — one FFmpeg PCM decode (mono 22.05 kHz) per clip and the music track, then pure-Dart energy-flux onset detection and autocorrelation tempo estimate (no model, no network). Waveform strips on the timeline, looping waveform on the music track, beat markers and a "Snap to beats" toggle for splitting. Synthetic click tracks 75–140 BPM are detected within ±3 BPM with zero stray onsets in the unit benchmark. See CHANGELOG "Unreleased".
 
 ### v1.5 — "Semantic" (2027 Q2)
 - 🔜 **Smart search & auto-tags** across projects (on-device CLIP-class embeddings with open weights; ~90–150 MB fp16 → int8 target ≤ 60 MB); search in Arabic & English ("صور البحر عند الغروب").

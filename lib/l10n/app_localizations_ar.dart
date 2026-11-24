@@ -270,6 +270,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get autoStraighten => 'تسوية تلقائية';
 
   @override
+  String get snapToBeats => 'محاذاة الإيقاع';
+
+  @override
   String get perspectiveV => 'المنظور العمودي';
 
   @override
