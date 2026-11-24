@@ -2,6 +2,33 @@
 
 All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
+## [1.3.3] - 2026-11-24
+
+### Added
+- **Smart command history & favourites**: the Smart bar remembers the last 12 commands and shows them (and your starred commands) as chips — tap to run again, long-press to star, one button clears the history while favourites survive. Stored in SharedPreferences on the device.
+- **Next-command suggestions**: after every applied edit the Smart bar offers follow-up chips mapped to real command phrases (remove a look, reverse a temperature change, sharpen after AI work, upscale…).
+- **Dialect lexicon pass**: the intent engine now understands Gulf (وايد، حيل، كلش، زين), Egyptian (اوي، خالص، حلو), Levantine (مره، منيح، بشويش) and Maghrebi (بزاف، برشا، مليح، باهي، دير) intensifiers and "make it nice" words, plus phrases like شوي شوي and على السريع.
+- **1,070-command intent benchmark** (`test/benchmark/` + `tool/gen_intent_benchmark.py`): 550 Arabic / 520 English commands covering slider templates, numbers, looks, actions, compounds, chains, dialects and code-switching, each with its exact expected plan — currently **100 % exact-plan accuracy in both languages** (acceptance bar ≥ 95 %).
+- **Tap-to-select upgrades**: the multi-mask decoder returns up to 4 candidate masks ranked by predicted IoU — switch with one tap from the selection panel; **box prompt** (drag a rectangle), **brush refine** (paint to pull the selection towards your strokes), and **feathered edges** (2 px ramp on selection masks).
+- **Model mirrors**: every model is mirrored as a release asset of this repository (tag `models-v1.3`) with the identical SHA-256; `ModelManager` falls back to the mirror automatically when the primary host fails (`tool/sync_model_mirrors.py` syncs and verifies them).
+- **New quick actions**: depth blur, relight, remove person and tap-to-select join the Home "AI tools" sheet and run on a freshly picked photo.
+- `InferenceEngine.runAll` for multi-output graphs (used by the multi-mask decoder).
+
+### Changed
+- Tap-to-select uses the multi-candidate decoder (`mobilesam_decoder_multi`, 16.5 MB, revision-pinned, SHA-256 `8976b90a…` — downloaded, verified and executed with ONNX Runtime before being registered).
+- 397 tests green (was 355), `flutter analyze` clean.
+- Version 1.3.3 (build 8).
+
+### العربية
+- **سجل الأوامر والمفضلة**: الشريط الذكي يتذكّر آخر 12 أمرًا ويعرضها (ومعها أوامرك المميّزة بنجمة) كأزرار — اضغط للتشغيل مجددًا، واضغط مطولًا للتمييز، وزر واحد يمسح السجل مع بقاء المفضلة.
+- **اقتراح الأمر التالي**: بعد كل تعديل يقترح الشريط الذكي الخطوة التالية كأوامر حقيقية (أزل الفلتر، اعكس درجة الدفء، شدّد بعد الذكاء الاصطناعي…).
+- **معجم اللهجات**: يفهم المحرك الآن شدة الكلام الخليجي (وايد، حيل، كلش) والمصري (اوي، خالص، حلو) والشامي (مره، منيح) والمغاربي (بزاف، برشا، مليح، باهي، دير).
+- **معيار نية من 1070 أمرًا** بدقة 100٪ في اللغتين (العتبة المطلوبة 95٪).
+- **تحديثات التحديد بلمسة**: مرشحو أقنعة متعددون مرتّبون بالجودة (بدّل بنقرة)، وتحديد بالمربع، وتنقيح بالفرشاة، وحواف ناعمة.
+- **مرايا النماذج**: كل نموذج له نسخة على إصدارات هذا المستودع بالبصمة نفسها، مع تحول تلقائي إليها عند تعطل المضيف الأساسي.
+- **إجراءات سريعة جديدة**: تمويه بالعمق، إعادة الإضاءة، إزالة شخص، وتحديد بلمسة في ورقة أدوات الذكاء بالرئيسية.
+- الإصدار 1.3.3 (البناء 8).
+
 ## [1.3.2] - 2026-11-23
 
 ### Fixed
