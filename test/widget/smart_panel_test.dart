@@ -104,10 +104,7 @@ void main() {
     // The same command from history applies again.
     await tester.tap(find.text('more contrast').last);
     await tester.pumpAndSettle();
-    expect(
-      _container(tester).read(photoEditorControllerProvider).edit.adjustments.contrast,
-      closeTo(0.4, 1e-9),
-    );
+    expect(_container(tester).read(photoEditorControllerProvider).edit.adjustments.contrast, closeTo(0.4, 1e-9));
 
     // Long-press stars the command; favourites survive clearing the history.
     expect(find.text('Favourites'), findsNothing);
@@ -131,10 +128,7 @@ void main() {
     // The follow-up cools the photo back down: +0.1 then −0.1.
     await tester.tap(find.text('a bit cooler'));
     await tester.pumpAndSettle();
-    expect(
-      _container(tester).read(photoEditorControllerProvider).edit.adjustments.temperature,
-      closeTo(0, 1e-9),
-    );
+    expect(_container(tester).read(photoEditorControllerProvider).edit.adjustments.temperature, closeTo(0, 1e-9));
   });
 
   test('plan summaries are readable', () {

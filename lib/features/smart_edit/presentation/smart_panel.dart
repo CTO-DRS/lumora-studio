@@ -301,9 +301,21 @@ class SelectionPanel extends ConsumerWidget {
         SegmentedButton<SelectPromptMode>(
           key: const ValueKey('select-modes'),
           segments: [
-            ButtonSegment(value: SelectPromptMode.tap, icon: const Icon(Icons.touch_app_outlined, size: 18), label: Text(l.selectModeTap)),
-            ButtonSegment(value: SelectPromptMode.box, icon: const Icon(Icons.crop_free_outlined, size: 18), label: Text(l.selectModeBox)),
-            ButtonSegment(value: SelectPromptMode.brush, icon: const Icon(Icons.brush_outlined, size: 18), label: Text(l.selectModeBrush)),
+            ButtonSegment(
+              value: SelectPromptMode.tap,
+              icon: const Icon(Icons.touch_app_outlined, size: 18),
+              label: Text(l.selectModeTap),
+            ),
+            ButtonSegment(
+              value: SelectPromptMode.box,
+              icon: const Icon(Icons.crop_free_outlined, size: 18),
+              label: Text(l.selectModeBox),
+            ),
+            ButtonSegment(
+              value: SelectPromptMode.brush,
+              icon: const Icon(Icons.brush_outlined, size: 18),
+              label: Text(l.selectModeBrush),
+            ),
           ],
           selected: {s.selectMode},
           onSelectionChanged: s.busy ? null : (v) => ctrl.setSelectMode(v.first),
@@ -491,8 +503,7 @@ class _CommandHistorySection extends ConsumerWidget {
     );
 
     final columns = <Widget>[
-      if (book.favourites.isNotEmpty)
-        section(l.smartFavourites, book.favourites, starred: true),
+      if (book.favourites.isNotEmpty) section(l.smartFavourites, book.favourites, starred: true),
       if (book.recents.isNotEmpty)
         section(
           l.smartRecent,
@@ -508,12 +519,20 @@ class _CommandHistorySection extends ConsumerWidget {
           ),
         ),
     ];
-    return Column(children: [...columns, Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 2, 16, 0),
-      child: Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: Text(l.smartHistoryHint, style: theme.textTheme.bodySmall?.copyWith(color: t.textMuted, fontSize: 11)),
-      ),
-    )]);
+    return Column(
+      children: [
+        ...columns,
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 2, 16, 0),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              l.smartHistoryHint,
+              style: theme.textTheme.bodySmall?.copyWith(color: t.textMuted, fontSize: 11),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
