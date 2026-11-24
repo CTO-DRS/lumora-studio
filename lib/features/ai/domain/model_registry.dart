@@ -246,7 +246,7 @@ List<ModelSpec> aiToolModels(AiTool tool) => switch (tool) {
   AiTool.cutOutPerson || AiTool.backgroundBlur || AiTool.portraitRetouch => const [ModelRegistry.modnet],
   AiTool.eraser => const [ModelRegistry.migan],
   AiTool.upscale => const [ModelRegistry.realEsrgan],
-  AiTool.selectObject => const [ModelRegistry.mobileSamEncoder, ModelRegistry.mobileSamDecoder],
+  AiTool.selectObject => const [ModelRegistry.mobileSamEncoder, ModelRegistry.mobileSamDecoderMulti],
   AiTool.depthBlur || AiTool.relight => const [ModelRegistry.depthAnythingSmall],
   AiTool.erasePerson => const [ModelRegistry.modnet, ModelRegistry.migan],
 };
