@@ -245,6 +245,8 @@ ACTIONS_AR = [
     ("دقه اعلي", "upscale"), ("جوده اعلي", "upscale"),
     ("اعاده ضبط", "reset"), ("تراجع", "undo"), ("دوّر", "rotateRight"),
     ("دور الصوره لليسار", "rotateLeft"), ("دور الصوره لليمين", "rotateRight"),
+    ("سوي الصوره", "autoStraighten"), ("سوي الافق", "autoStraighten"),
+    ("تسويه الصوره", "autoStraighten"), ("سويها", "autoStraighten"),
     ("اعكس الصوره", "flipHorizontal"), ("اقلب الصوره عموديا", "flipVertical"),
     ("الغ الفلتر", "clearLook"), ("حدد العنصر", "selectObject"),
 ]
@@ -263,6 +265,8 @@ ACTIONS_EN = [
     ("auto fix", "autoEnhance"), ("upscale", "upscale"),
     ("enhance resolution", "upscale"), ("rotate", "rotateRight"),
     ("rotate left", "rotateLeft"), ("flip", "flipHorizontal"),
+    ("straighten", "autoStraighten"), ("straighten the photo", "autoStraighten"),
+    ("level the horizon", "autoStraighten"), ("align the image", "autoStraighten"),
     ("flip vertically", "flipVertical"), ("undo", "undo"),
     ("start over", "reset"), ("remove the filter", "clearLook"),
     ("select the cup", "selectObject"),
@@ -283,6 +287,7 @@ COMPOUNDS_AR = [
     ("ازل الحبوب وحسن الوجه", [act("heal"), act("retouch")]),
     ("دافي وازل الخلفيه", [adj("temperature", 0.2), act("removeBackground")]),
     ("دور الصوره لليمين واعكسها", [act("rotateRight"), act("flipHorizontal")]),
+    ("سوي الافق وامسح الناس", [act("autoStraighten"), act("erasePerson")]),
     ("ازل الضباب وارفع الظلال", [adj("dehaze", 0.4), adj("shadows", 0.25)]),
 ]
 for text, ops in COMPOUNDS_AR:
@@ -300,6 +305,7 @@ COMPOUNDS_EN = [
     ("cinematic and vignette 30", [look("blockbuster"), adj("vignette", -0.3, True)]),
     ("remove the filter and add film grain", [act("clearLook"), adj("grain", 0.25)]),
     ("rotate 180 and flip", [act("rotateRight"), act("rotateRight"), act("flipHorizontal")]),
+    ("straighten and rotate right", [act("autoStraighten"), act("rotateRight")]),
     ("warmer and cut out the person", [adj("temperature", 0.2), act("cutOutPerson")]),
     ("boost contrast and reduce haze", [adj("contrast", 0.2), adj("dehaze", 0.25)]),
     ("set contrast to 30 and black and white", [adj("contrast", 0.3, True), look("mono")]),

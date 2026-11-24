@@ -21,6 +21,7 @@ import 'package:lumora/features/photo_editor/domain/edit_history.dart';
 import 'package:lumora/features/photo_editor/domain/edit_state.dart';
 import 'package:lumora/features/photo_editor/domain/geometry.dart';
 import 'package:lumora/features/photo_editor/domain/histogram.dart';
+import 'package:lumora/features/photo_editor/domain/horizon.dart' as horizon;
 import 'package:lumora/features/photo_editor/domain/layers.dart';
 import 'package:lumora/features/photo_editor/domain/presets.dart';
 import 'package:lumora/features/photo_editor/engine/finishing_renderer.dart';
@@ -657,6 +658,36 @@ class PhotoEditorController extends _$PhotoEditorController {
     }
   }
 
+  /// Detects the horizon on the preview proxy and applies the
+  /// corresponding straighten angle as one undoable step. No-op when the
+  /// detection is not confident enough or the photo is already level.
+  Future<void> autoStraighten() async {
+    final preview = state.preview;
+    if (preview == null) return;
+    CrashLog.instance.breadcrumb('Editor: auto straighten ${preview.width}x${preview.height}');
+    try {
+      final result = await _detectHorizon();
+      if (result == null || !result.isUsable || result.angleDegrees.abs() < 0.1) return;
+      update(
+        (s) => s.copyWith(geometry: s.geometry.copyWith(straightenDegrees: result.correctionDegrees).withoutCrop()),
+      );
+    } on Object catch (e, st) {
+      CrashLog.instance.record('autoStraighten', '$e', st);
+      state = state.copyWith(error: () => '$e', failure: () => e);
+    }
+  }
+
+  Future<horizon.HorizonResult?> _detectHorizon() async {
+    final preview = state.preview;
+    if (preview == null) return null;
+    final small = downscaleImage(preview, 256);
+    final data = await small.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+    final (w, h) = (small.width, small.height);
+    small.dispose();
+    if (data == null) return null;
+    return horizon.detectHorizon(data.buffer.asUint8List(), w, h);
+  }
+
   Future<void> removeBackground({bool portrait = false}) => _busy(() async {
     final r = await ref.read(segmentationPipelineProvider).run(_currentRaster, portrait: portrait);
     update((s) => s.copyWith(rasterPath: r.cutoutPath));
@@ -788,6 +819,8 @@ class PhotoEditorController extends _$PhotoEditorController {
     if (actions.contains(SmartAction.undo)) undo();
     enhance.ImageStats? stats;
     if (actions.contains(SmartAction.autoEnhance)) stats = await _previewStats();
+    horizon.HorizonResult? horizonResult;
+    if (actions.contains(SmartAction.autoStraighten)) horizonResult = await _detectHorizon();
     final instant = plan.ops.where((o) => o is! ActionOp || (o.action.instant && o.action != SmartAction.undo));
     if (instant.isNotEmpty) {
       update((s0) {
@@ -804,6 +837,9 @@ class PhotoEditorController extends _$PhotoEditorController {
                 SmartAction.clearLook => _withPreset(s, null, 1),
                 SmartAction.autoEnhance when stats != null => s.copyWith(
                   adjustments: enhance.autoEnhance(stats, base: s.adjustments),
+                ),
+                SmartAction.autoStraighten when horizonResult != null => s.copyWith(
+                  geometry: s.geometry.copyWith(straightenDegrees: horizonResult.correctionDegrees).withoutCrop(),
                 ),
                 _ => s.copyWith(geometry: applyGeometryAction(s.geometry, action)),
               };

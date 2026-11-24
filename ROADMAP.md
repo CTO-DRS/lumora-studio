@@ -96,6 +96,7 @@ Each phase has themes, features, models (with size/latency targets on a **mid-ra
 | Pro | RAW/DNG 16-bit pipeline, true full-res loupe, auto-straighten (horizon), perspective auto | Dart/Rust DNG decode 🧪, Hough-based horizon | open 24 MP DNG ≤ 2 s |
 | Video | **auto-captions AR/EN** (offline), waveform, **beat detection & snap** | Whisper tiny (~39 M params; ~40 MB int8) / base (~74 M) via whisper.cpp or ONNX; onset/BPM DSP (no model) | captions ≥ 1× real-time on reference phone |
 - **Acceptance:** device-farm integration tests run every model on ≥ 12 devices (3 tiers × 2 OS × 2 vendors); crash-free rate on farm ≥ 99.8 %; no model > 50 MB in this phase.
+- 🚧 **Started 2026-11:** auto-straighten — Hough-based horizon detection (pure Dart, model-free) wired into the crop panel and the Smart engine (AR/EN lexicon, benchmark 1,080 at 100 %). See CHANGELOG "Unreleased".
 
 ### v1.5 — "Semantic" (2027 Q2)
 - 🔜 **Smart search & auto-tags** across projects (on-device CLIP-class embeddings with open weights; ~90–150 MB fp16 → int8 target ≤ 60 MB); search in Arabic & English ("صور البحر عند الغروب").
