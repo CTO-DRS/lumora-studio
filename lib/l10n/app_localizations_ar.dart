@@ -1246,6 +1246,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get selectHint => 'المس العنصر الذي تريده. المس مرة أخرى لإضافة المزيد، واختر «طرح» لاستبعاد أجزاء.';
 
   @override
+  String get selectModeTap => 'لمسة';
+
+  @override
+  String get selectModeBox => 'مربع';
+
+  @override
+  String get selectModeBrush => 'فرشاة';
+
+  @override
+  String get selectBoxHint => 'اسحب مستطيلًا حول العنصر.';
+
+  @override
+  String get selectBrushHint => 'لوّن فوق التحديد لتحسينه.';
+
+  @override
   String get selectAdd => 'إضافة';
 
   @override
