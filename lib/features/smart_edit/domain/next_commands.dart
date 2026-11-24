@@ -26,11 +26,7 @@ enum NextCommand {
 
 /// The starter set for "nothing applied yet" (and the tail after short
 /// plans): cheap, broadly useful commands.
-const List<NextCommand> kDefaultNextCommands = [
-  NextCommand.contrast,
-  NextCommand.mono,
-  NextCommand.portrait,
-];
+const List<NextCommand> kDefaultNextCommands = [NextCommand.contrast, NextCommand.mono, NextCommand.portrait];
 
 /// Ranks follow-ups for [last] (best first, at most [max]).
 ///

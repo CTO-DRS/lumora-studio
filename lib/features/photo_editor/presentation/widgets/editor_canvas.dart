@@ -260,26 +260,24 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
       onPanStart: s.busy
           ? null
           : (d) => setState(() {
-                _boxDragStart = norm(d.localPosition);
-                _boxDragEnd = _boxDragStart;
-              }),
-      onPanUpdate: s.busy || _boxDragStart == null
-          ? null
-          : (d) => setState(() => _boxDragEnd = norm(d.localPosition)),
+              _boxDragStart = norm(d.localPosition);
+              _boxDragEnd = _boxDragStart;
+            }),
+      onPanUpdate: s.busy || _boxDragStart == null ? null : (d) => setState(() => _boxDragEnd = norm(d.localPosition)),
       onPanEnd: s.busy
           ? null
           : (_) {
-            final a = _boxDragStart;
-            final b = _boxDragEnd;
-            setState(() {
-              _boxDragStart = null;
-              _boxDragEnd = null;
-            });
-            if (a != null && b != null && (a.dx - b.dx).abs() > 0.02 && (a.dy - b.dy).abs() > 0.02) {
-              Haptics.selection();
-              _ctrl.setSelectionBox(SelectBox(a.dx, a.dy, b.dx, b.dy));
-            }
-          },
+              final a = _boxDragStart;
+              final b = _boxDragEnd;
+              setState(() {
+                _boxDragStart = null;
+                _boxDragEnd = null;
+              });
+              if (a != null && b != null && (a.dx - b.dx).abs() > 0.02 && (a.dy - b.dy).abs() > 0.02) {
+                Haptics.selection();
+                _ctrl.setSelectionBox(SelectBox(a.dx, a.dy, b.dx, b.dy));
+              }
+            },
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -306,36 +304,32 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
   /// Brush mode: painting refines the current selection (SAM mask_input).
   Widget _brushSelector(PhotoEditorState s, Size size, ui.Image? overlay) {
     Offset norm(Offset p) => Offset((p.dx / size.width).clamp(0, 1), (p.dy / size.height).clamp(0, 1));
-    Stroke current() => Stroke(
-      points: List.of(_livePoints),
-      width: 0.045,
-      color: context.lumora.violet.toARGB32(),
-    );
+    Stroke current() => Stroke(points: List.of(_livePoints), width: 0.045, color: context.lumora.violet.toARGB32());
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onPanStart: s.busy
           ? null
           : (d) => setState(() {
-                _livePoints
-                  ..clear()
-                  ..addAll([norm(d.localPosition).dx, norm(d.localPosition).dy]);
-              }),
+              _livePoints
+                ..clear()
+                ..addAll([norm(d.localPosition).dx, norm(d.localPosition).dy]);
+            }),
       onPanUpdate: s.busy
           ? null
           : (d) => setState(() {
-                final n = norm(d.localPosition);
-                _livePoints.addAll([n.dx, n.dy]);
-              }),
+              final n = norm(d.localPosition);
+              _livePoints.addAll([n.dx, n.dy]);
+            }),
       onPanEnd: s.busy
           ? null
           : (_) {
-            final stroke = current();
-            setState(_livePoints.clear);
-            if (stroke.points.length >= 2) {
-              Haptics.light();
-              _ctrl.refineSelection([stroke]);
-            }
-          },
+              final stroke = current();
+              setState(_livePoints.clear);
+              if (stroke.points.length >= 2) {
+                Haptics.light();
+                _ctrl.refineSelection([stroke]);
+              }
+            },
       child: Stack(
         fit: StackFit.expand,
         children: [

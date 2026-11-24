@@ -246,7 +246,6 @@ final Map<String, _E> _lexiconRaw = {
   'بزاف': const _E(_K.strong), // Maghrebi
   'برشا': const _E(_K.strong, exact: true), // Tunisian
   'شويه': const _E(_K.slight), // Egyptian/Levantine/Maghrebi
-
   // ---- removal verbs
   'ازل': const _E(_K.remove),
   'ازاله': const _E(_K.remove),
