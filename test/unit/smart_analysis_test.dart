@@ -134,6 +134,47 @@ void main() {
       expect(labels, [1, 0, -1]);
     });
 
+    test('samPrompt encodes a box as corner points with labels 2 and 3', () {
+      final (coords, labels, n) = samPrompt(
+        const [],
+        1024,
+        768,
+        box: const SelectBox(0.9, 0.1, 0.25, 0.5), // corners given swapped
+      );
+      expect(n, 2);
+      // Normalised to the min/max corner order, in encoder-frame pixels
+      // (float32 storage → closeTo).
+      expect(labels, [2, 3]);
+      expect(coords[0], closeTo(256, 1e-3));
+      expect(coords[1], closeTo(76.8, 1e-2));
+      expect(coords[2], closeTo(921.6, 1e-2));
+      expect(coords[3], closeTo(384, 1e-3));
+    });
+
+    test('strokeMaskInput maps painted pixels to +/-8 logits at 256²', () {
+      final strokes = RgbaImage(512, 256);
+      for (var x = 0; x < 256; x++) {
+        for (var y = 0; y < 128; y++) {
+          final o = (y * 512 + x) * 4;
+          strokes.pixels[o] = 255; // white = painted
+          strokes.pixels[o + 3] = 255;
+        }
+      }
+      final input = strokeMaskInput(strokes);
+      expect(input.length, 256 * 256);
+      expect(input[0], 8); // painted region (top-left quarter)
+      expect(input[128 * 256 + 128], -8); // outside
+    });
+
+    test('featherSelection softens the boundary of a binary mask', () {
+      final mask = logitsToMask([for (var y = 0; y < 6; y++) for (var x = 0; x < 6; x++) x < 3 ? 1.0 : -1.0], 6, 6);
+      final soft = featherSelection(mask, 1);
+      int at(int x, int y) => soft.pixels[(y * 6 + x) * 4];
+      expect(at(0, 0), 255); // interior stays solid
+      expect(at(2, 0), inInclusiveRange(1, 254)); // white side of the edge ramps down
+      expect(at(3, 0), inInclusiveRange(1, 254)); // black side gets a ramp up
+    });
+
     test('logitsToMask thresholds at zero and coverage counts it', () {
       final m = logitsToMask([-1, 0.5, 2, -3], 2, 2);
       expect([for (var i = 0; i < 4; i++) m.pixels[i * 4]], [0, 255, 255, 0]);
@@ -145,23 +186,44 @@ void main() {
       expect(rgbaToHwcFloat(img), [1, 2, 3, 4, 5, 6]);
     });
 
-    test('pipeline: encoder once, decoder per tap, with the right tensors', () async {
+    test('pipeline: encoder once, multi-mask decoder per tap', () async {
       final engine = _SamFakeEngine();
       final p = ObjectSelectPipeline(engine);
       expect(() => p.maskFor(const [SelectPoint(0.5, 0.5)]), throwsStateError);
       await p.prepareRgba('img', RgbaImage(64, 48));
       expect(p.isPreparedFor('img'), isTrue);
       expect(engine.encoderShapes.single, [768, 1024, 3]);
-      final mask = await p.maskFor(const [SelectPoint(0.5, 0.5)]);
-      expect(mask.width, 1024);
-      expect(mask.height, 768);
+      final candidates = await p.candidatesFor(const [SelectPoint(0.5, 0.5)]);
+      expect(candidates, hasLength(4));
+      // Ranked by predicted IoU, best first.
+      expect(candidates.first.iou, 0.9);
+      expect(candidates[1].iou, 0.5);
       final call = engine.calls.single;
-      expect(call.$1, ModelRegistry.mobileSamDecoder.id);
+      expect(call.$1, ModelRegistry.mobileSamDecoderMulti.id);
       expect(call.$2['point_coords'], [1, 2, 2]);
       expect(call.$2['point_labels'], [1, 2]);
       expect(call.$2['orig_im_size'], [2]);
       expect(call.$2['image_embeddings'], [1, 256, 64, 64]);
+      final mask = await p.maskFor(const [SelectPoint(0.5, 0.5)]);
+      expect(mask.width, 1024);
+      expect(mask.height, 768);
       expect(maskCoverage(mask), closeTo(0.5, 0.01));
+    });
+
+    test('brush refine: painted mask input raises has_mask_input', () async {
+      final engine = _SamFakeEngine();
+      final p = ObjectSelectPipeline(engine);
+      await p.prepareRgba('img', RgbaImage(64, 48));
+      final strokes = RgbaImage(256, 256, Uint8List.fromList(List.filled(256 * 256 * 4, 255)));
+      final input = strokeMaskInput(strokes);
+      await p.candidatesFor(const [SelectPoint(0.5, 0.5)], maskInput: input);
+      final call = engine.calls.last;
+      expect(call.$1, ModelRegistry.mobileSamDecoderMulti.id);
+      expect(call.$2['mask_input'], [1, 1, 256, 256]);
+      expect(engine.hasMaskInputs.last, 1);
+      // Without a mask input the decoder must not trust the (empty) mask.
+      await p.candidatesFor(const [SelectPoint(0.5, 0.5)]);
+      expect(engine.hasMaskInputs.last, 0);
     });
   });
 
@@ -220,25 +282,40 @@ void main() {
   });
 }
 
-/// Returns a left-half-selected mask for the decoder.
+/// Returns a left-half-selected mask for the decoder, with 4 candidates of
+/// decreasing predicted quality (the multi-mask decoder contract).
 class _SamFakeEngine implements InferenceEngine {
   final calls = <(String, Map<String, List<int>>)>[];
   final encoderShapes = <List<int>>[];
+  final hasMaskInputs = <double>[];
 
   @override
   Future<List<num>> run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
+    final outputs = await runAll(model, inputs);
+    return outputs[model.outputName] ?? outputs.values.first;
+  }
+
+  @override
+  Future<Map<String, List<num>>> runAll(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
     if (model.id == ModelRegistry.mobileSamEncoder.id) {
       encoderShapes.add(inputs.values.single.$2);
-      return Float32List(256 * 64 * 64);
+      return {model.outputName: Float32List(256 * 64 * 64)};
     }
     calls.add((model.id, {for (final e in inputs.entries) e.key: e.value.$2}));
+    hasMaskInputs.add((inputs['has_mask_input']!.$1 as Float32List)[0]);
     final size = inputs['orig_im_size']!.$1 as Float32List;
     final h = size[0].toInt();
     final w = size[1].toInt();
-    return [
+    final mask = <num>[
       for (var y = 0; y < h; y++)
         for (var x = 0; x < w; x++) x < w / 2 ? 1.0 : -1.0,
     ];
+    return {
+      'masks': [
+        for (var k = 0; k < 4; k++) ...mask,
+      ],
+      'iou_predictions': const [0.9, 0.5, 0.3, 0.1],
+    };
   }
 
   @override

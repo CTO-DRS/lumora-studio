@@ -14,8 +14,16 @@ import 'package:lumora/features/ai/domain/model_registry.dart';
 /// with a fake and the runtime can be swapped (e.g. LiteRT) later.
 abstract class InferenceEngine {
   /// Runs [model] with named inputs. Each input is a typed list
-  /// ([Float32List] or [Uint8List]) and its shape.
+  /// ([Float32List] or [Uint8List]) and its shape. Returns the flattened
+  /// [ModelSpec.outputName] tensor.
   Future<List<num>> run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs);
+
+  /// Runs [model] and returns **every** named output flattened, for graphs
+  /// with several outputs (e.g. the multi-mask SAM decoder that also emits
+  /// its IoU scores and low-res masks). Engines that do not support it
+  /// throw.
+  Future<Map<String, List<num>>> runAll(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) =>
+      throw UnimplementedError('runAll');
 
   Future<void> release();
 }
@@ -182,10 +190,17 @@ class OnnxInferenceEngine implements InferenceEngine {
   }
 
   @override
-  Future<List<num>> run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) =>
-      _serialized(() => _run(model, inputs));
+  Future<List<num>> run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
+    final outputs = await runAll(model, inputs);
+    final out = outputs[model.outputName] ?? outputs.values.first;
+    return out;
+  }
 
-  Future<List<num>> _run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
+  @override
+  Future<Map<String, List<num>>> runAll(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) =>
+      _serialized(() => _runAll(model, inputs));
+
+  Future<Map<String, List<num>>> _runAll(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
     final session = await _sessionFor(model);
     final shapes = {for (final e in inputs.entries) e.key: e.value.$2};
     CrashLog.instance.breadcrumb('AI: run ${model.id} inputs $shapes');
@@ -196,10 +211,13 @@ class OnnxInferenceEngine implements InferenceEngine {
         values[e.key] = await OrtValue.fromList(e.value.$1, e.value.$2);
       }
       outputs = await session.run(values);
-      final out = outputs[model.outputName] ?? outputs.values.first;
-      final flat = await out.asFlattenedList();
-      CrashLog.instance.breadcrumb('AI: run ${model.id} done (${flat.length} values)');
-      return flat.cast<num>();
+      final flat = <String, List<num>>{};
+      for (final e in outputs.entries) {
+        flat[e.key] = (await e.value.asFlattenedList()).cast<num>();
+      }
+      final main = flat[model.outputName] ?? flat.values.first;
+      CrashLog.instance.breadcrumb('AI: run ${model.id} done (${main.length} values, ${flat.length} outputs)');
+      return flat;
     } on AiException {
       rethrow;
     } on Object catch (e) {
