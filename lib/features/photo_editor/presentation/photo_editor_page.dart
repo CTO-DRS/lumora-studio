@@ -91,6 +91,22 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
         ctrl.setTool(EditorTool.ai);
         if (!await models(AiTool.portraitRetouch)) return;
         await ctrl.subjectAdjustment(retouch: true);
+      case QuickAction.depthBlur:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.depthBlur)) return;
+        await ctrl.depthEffect();
+      case QuickAction.relight:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.relight)) return;
+        await ctrl.depthEffect(relight: true);
+      case QuickAction.erasePerson:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.erasePerson)) return;
+        await ctrl.erasePerson();
+      case QuickAction.selectObject:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.selectObject)) return;
+        await ctrl.startSelection();
     }
   }
 

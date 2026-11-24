@@ -133,6 +133,9 @@ class PhotoEditorState {
     this.hasSelection = false,
     this.suggestions = const [],
     this.lastSmartPlan,
+    this.selectMode = SelectPromptMode.tap,
+    this.selectCandidates = const [],
+    this.selectCandidateIndex = 0,
   });
 
   final EditHistory<EditState> history;
@@ -197,6 +200,16 @@ class PhotoEditorState {
   /// commands based on it (see next_commands.dart).
   final SmartEditPlan? lastSmartPlan;
 
+  /// How the next selection prompt is given (tap / box / brush).
+  final SelectPromptMode selectMode;
+
+  /// Predicted IoU of each mask candidate of the last decode, best first.
+  /// Empty when the (single) decoder has not run yet.
+  final List<double> selectCandidates;
+
+  /// Which candidate is currently shown (index into [selectCandidates]).
+  final int selectCandidateIndex;
+
   EditState get edit => history.present;
 
   /// Whether the canvas currently shows the un-framed image (so on-canvas
@@ -235,6 +248,9 @@ class PhotoEditorState {
     bool? hasSelection,
     List<Suggestion>? suggestions,
     SmartEditPlan? Function()? lastSmartPlan,
+    SelectPromptMode? selectMode,
+    List<double>? selectCandidates,
+    int? selectCandidateIndex,
   }) => PhotoEditorState(
     history: history ?? this.history,
     projectId: projectId ?? this.projectId,
@@ -267,6 +283,9 @@ class PhotoEditorState {
     hasSelection: hasSelection ?? this.hasSelection,
     suggestions: suggestions ?? this.suggestions,
     lastSmartPlan: lastSmartPlan != null ? lastSmartPlan() : this.lastSmartPlan,
+    selectMode: selectMode ?? this.selectMode,
+    selectCandidates: selectCandidates ?? this.selectCandidates,
+    selectCandidateIndex: selectCandidateIndex ?? this.selectCandidateIndex,
   );
 }
 
@@ -853,6 +872,9 @@ class PhotoEditorController extends _$PhotoEditorController {
 
   void setSelectAdd({required bool value}) => state = state.copyWith(selectAdd: value);
 
+  /// Switches how the next selection prompt is given (tap / box / brush).
+  void setSelectMode(SelectPromptMode mode) => state = state.copyWith(selectMode: mode);
+
   /// Adds a prompt point at [normalized] (0..1 on the displayed, un-framed
   /// output image) and refreshes the selection.
   Future<void> selectAt(Offset normalized) async {
@@ -872,8 +894,9 @@ class PhotoEditorController extends _$PhotoEditorController {
 
   void clearSelection() {
     _selectionMask = null;
+    _candidateMasks = const [];
     _setOverlay(null);
-    state = state.copyWith(selectPoints: const [], hasSelection: false);
+    state = state.copyWith(selectPoints: const [], hasSelection: false, selectCandidates: const [], selectCandidateIndex: 0);
   }
 
   /// Leaves tap-to-select without applying anything.
@@ -885,8 +908,16 @@ class PhotoEditorController extends _$PhotoEditorController {
   void _dropSelection() {
     if (!state.selecting && _selectionMask == null) return;
     _selectionMask = null;
+    _candidateMasks = const [];
     _setOverlay(null);
-    state = state.copyWith(selecting: false, selectPoints: const [], hasSelection: false);
+    state = state.copyWith(
+      selecting: false,
+      selectPoints: const [],
+      hasSelection: false,
+      selectCandidates: const [],
+      selectCandidateIndex: 0,
+      selectMode: SelectPromptMode.tap,
+    );
   }
 
   void _setOverlay(ui.Image? img) {
@@ -896,22 +927,66 @@ class PhotoEditorController extends _$PhotoEditorController {
     if (old != null) WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
   }
 
-  Future<void> _updateSelection(List<SelectPoint> points) async {
+  Future<void> _updateSelection(List<SelectPoint> points, {SelectBox? box, Float32List? maskInput}) async {
     state = state.copyWith(selectPoints: points);
-    if (points.isEmpty) {
+    if (points.isEmpty && box == null) {
       clearSelection();
       return;
     }
     await _busy(() async {
       final pipeline = ref.read(objectSelectPipelineProvider);
       await pipeline.prepare(_currentRaster);
-      final mask = await pipeline.maskFor(points);
-      _selectionMask = mask;
-      final overlay = await _selectionOverlay(mask);
-      _setOverlay(overlay);
-      state = state.copyWith(hasSelection: maskCoverage(mask) > 0);
+      final candidates = await pipeline.candidatesFor(points, box: box, maskInput: maskInput);
+      _candidateMasks = [for (final c in candidates) c.mask];
+      await _applyCandidate(0, [for (final c in candidates) c.iou]);
     }, label: 'select: decode');
   }
+
+  List<RgbaImage> _candidateMasks = const [];
+
+  /// Shows candidate [index] of the last decode (the multi-mask decoder
+  /// returns part/whole-object guesses ranked by IoU).
+  Future<void> selectCandidate(int index) async {
+    if (_candidateMasks.isEmpty || state.busy) return;
+    await _applyCandidate(index, state.selectCandidates);
+  }
+
+  Future<void> _applyCandidate(int index, List<double> ious) async {
+    if (_candidateMasks.isEmpty) return;
+    final i = index.clamp(0, _candidateMasks.length - 1);
+    final mask = _candidateMasks[i];
+    _selectionMask = featherSelection(mask);
+    final overlay = await _selectionOverlay(_selectionMask!);
+    _setOverlay(overlay);
+    state = state.copyWith(
+      hasSelection: maskCoverage(mask) > 0,
+      selectCandidates: ious,
+      selectCandidateIndex: i,
+    );
+  }
+
+  /// Box prompt: the drag rectangle selects the object it encloses (and
+  /// replaces the accumulated tap points).
+  Future<void> setSelectionBox(SelectBox box) async {
+    if (!state.selecting) return;
+    await _updateSelection(const [], box: box);
+  }
+
+  /// Brush refinement: the painted strokes become SAM's `mask_input` and
+  /// the decoder re-runs with `has_mask_input = 1`, pulling the selection
+  /// towards (or away from, for eraser strokes) the painted area.
+  Future<void> refineSelection(List<Stroke> strokes) => _busy(() async {
+    if (!state.selecting) return;
+    final pipeline = ref.read(objectSelectPipelineProvider);
+    await pipeline.prepare(_currentRaster);
+    final raster = _currentRaster;
+    final (sw, sh) = await _rasterSize(raster);
+    final painted = await _strokesToSourceMask(strokes, sw, sh, maxSide: 256);
+    final input = strokeMaskInput(painted);
+    final candidates = await pipeline.candidatesFor(state.selectPoints, maskInput: input);
+    _candidateMasks = [for (final c in candidates) c.mask];
+    await _applyCandidate(0, [for (final c in candidates) c.iou]);
+  }, label: 'select: refine');
 
   /// Tinted overlay of a source-space [mask] warped into the output frame
   /// (crop/rotation applied) so it lines up with the canvas.

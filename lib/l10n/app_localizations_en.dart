@@ -1245,6 +1245,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectHint => 'Tap the object you want. Tap again to add more; switch to Subtract to remove parts.';
 
   @override
+  String get selectModeTap => 'Tap';
+
+  @override
+  String get selectModeBox => 'Box';
+
+  @override
+  String get selectModeBrush => 'Brush';
+
+  @override
+  String get selectBoxHint => 'Drag a rectangle around the object.';
+
+  @override
+  String get selectBrushHint => 'Paint over the selection to refine it.';
+
+  @override
   String get selectAdd => 'Add';
 
   @override

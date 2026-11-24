@@ -10,10 +10,16 @@ class FakeEngine implements InferenceEngine {
 
   @override
   Future<List<num>> run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
+    final outputs = await runAll(model, inputs);
+    return outputs[model.outputName] ?? outputs.values.first;
+  }
+
+  @override
+  Future<Map<String, List<num>>> runAll(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
     calls.add((model.id, {for (final e in inputs.entries) e.key: e.value.$2}));
     final shape = inputs.values.first.$2;
     final n = shape.reduce((a, b) => a * b);
-    return Float32List(n);
+    return {model.outputName: Float32List(n)};
   }
 
   @override

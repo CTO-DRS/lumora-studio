@@ -5,6 +5,7 @@ import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
+import 'package:lumora/features/ai/pipelines/smart_pipelines.dart' show SelectPromptMode;
 import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/engine/preset_thumbnails.dart';
 import 'package:lumora/features/photo_editor/presentation/photo_editor_controller.dart';
@@ -247,6 +248,7 @@ class SelectionPanel extends ConsumerWidget {
     final ctrl = ref.read(photoEditorControllerProvider.notifier);
     final l = context.l10n;
     final t = context.lumora;
+    final theme = Theme.of(context);
     final ready = s.hasSelection && !s.busy;
 
     Future<void> erase() async {
@@ -296,22 +298,41 @@ class SelectionPanel extends ConsumerWidget {
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 8),
+        SegmentedButton<SelectPromptMode>(
+          key: const ValueKey('select-modes'),
+          segments: [
+            ButtonSegment(value: SelectPromptMode.tap, icon: const Icon(Icons.touch_app_outlined, size: 18), label: Text(l.selectModeTap)),
+            ButtonSegment(value: SelectPromptMode.box, icon: const Icon(Icons.crop_free_outlined, size: 18), label: Text(l.selectModeBox)),
+            ButtonSegment(value: SelectPromptMode.brush, icon: const Icon(Icons.brush_outlined, size: 18), label: Text(l.selectModeBrush)),
+          ],
+          selected: {s.selectMode},
+          onSelectionChanged: s.busy ? null : (v) => ctrl.setSelectMode(v.first),
+        ),
+        const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(
-              child: SegmentedButton<bool>(
-                segments: [
-                  ButtonSegment(value: true, label: Text(l.selectAdd), icon: const Icon(Icons.add_circle_outline)),
-                  ButtonSegment(
-                    value: false,
-                    label: Text(l.selectSubtract),
-                    icon: const Icon(Icons.remove_circle_outline),
-                  ),
-                ],
-                selected: {s.selectAdd},
-                onSelectionChanged: (v) => ctrl.setSelectAdd(value: v.first),
+            if (s.selectMode == SelectPromptMode.tap)
+              Expanded(
+                child: SegmentedButton<bool>(
+                  segments: [
+                    ButtonSegment(value: true, label: Text(l.selectAdd), icon: const Icon(Icons.add_circle_outline)),
+                    ButtonSegment(
+                      value: false,
+                      label: Text(l.selectSubtract),
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                  ],
+                  selected: {s.selectAdd},
+                  onSelectionChanged: (v) => ctrl.setSelectAdd(value: v.first),
+                ),
+              )
+            else
+              Expanded(
+                child: Text(
+                  s.selectMode == SelectPromptMode.box ? l.selectBoxHint : l.selectBrushHint,
+                  style: theme.textTheme.bodySmall,
+                ),
               ),
-            ),
             IconButton(
               tooltip: l.selectUndoPoint,
               onPressed: s.selectPoints.isEmpty || s.busy ? null : ctrl.undoSelectPoint,
@@ -324,7 +345,29 @@ class SelectionPanel extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        if (s.selectCandidates.length > 1) ...[
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 36,
+            child: ListView(
+              key: const ValueKey('select-candidates'),
+              scrollDirection: Axis.horizontal,
+              children: [
+                for (var i = 0; i < s.selectCandidates.length; i++)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 6),
+                    child: ChoiceChip(
+                      visualDensity: VisualDensity.compact,
+                      label: Text('${(s.selectCandidates[i] * 100).round()}%'),
+                      selected: i == s.selectCandidateIndex,
+                      onSelected: s.busy ? null : (_) => ctrl.selectCandidate(i),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
         Row(
           children: [
             action(

@@ -2474,6 +2474,36 @@ abstract class AppLocalizations {
   /// **'Tap the object you want. Tap again to add more; switch to Subtract to remove parts.'**
   String get selectHint;
 
+  /// No description provided for @selectModeTap.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap'**
+  String get selectModeTap;
+
+  /// No description provided for @selectModeBox.
+  ///
+  /// In en, this message translates to:
+  /// **'Box'**
+  String get selectModeBox;
+
+  /// No description provided for @selectModeBrush.
+  ///
+  /// In en, this message translates to:
+  /// **'Brush'**
+  String get selectModeBrush;
+
+  /// No description provided for @selectBoxHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag a rectangle around the object.'**
+  String get selectBoxHint;
+
+  /// No description provided for @selectBrushHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint over the selection to refine it.'**
+  String get selectBrushHint;
+
   /// No description provided for @selectAdd.
   ///
   /// In en, this message translates to:
