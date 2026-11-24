@@ -3,7 +3,10 @@ enum AiTask { segmentation, portraitMatting, upscale, inpainting, interactiveSeg
 
 /// Describes a downloadable on-device model. Every model is fetched from a
 /// public URL on demand, verified with SHA-256 and cached locally – nothing
-/// is bundled in the app and no image ever leaves the device.
+/// is bundled in the app and no image ever leaves the device. When [url]
+/// fails (HTTP error, TLS problem, corrupted bytes), the same file is
+/// fetched from [mirrorUrl], a project-controlled GitHub Releases asset
+/// with the **identical SHA-256**, before the download is reported failed.
 class ModelSpec {
   const ModelSpec({
     required this.id,
@@ -16,6 +19,7 @@ class ModelSpec {
     required this.source,
     required this.inputNames,
     required this.outputName,
+    this.mirrorUrl,
     this.fixedInputSize,
     this.notes = '',
   });
@@ -30,6 +34,11 @@ class ModelSpec {
   final String source;
   final List<String> inputNames;
   final String outputName;
+
+  /// Project-hosted copy of the exact same file (same SHA-256), used as an
+  /// automatic fallback when [url] fails. Hosted as release assets of this
+  /// repository (tag `models-v1.3`, see `tool/sync_model_mirrors.py`).
+  final String? mirrorUrl;
 
   /// Square input size when the graph has static dimensions.
   final int? fixedInputSize;
@@ -54,6 +63,7 @@ class ModelRegistry {
     source: 'https://github.com/xuebinqin/U-2-Net',
     inputNames: ['input.1'],
     outputName: '1959',
+    mirrorUrl: '$_kMirrorBase/u2netp.onnx',
     fixedInputSize: 320,
     notes: 'ImageNet normalization, sigmoid output d0, min-max normalized.',
   );
@@ -69,6 +79,7 @@ class ModelRegistry {
     source: 'https://github.com/ZHKKKe/MODNet',
     inputNames: ['input'],
     outputName: 'output',
+    mirrorUrl: '$_kMirrorBase/modnet_q8.onnx',
     notes: 'Dynamic H/W (multiples of 32), mean=std=0.5, alpha matte 0..1.',
   );
 
@@ -83,6 +94,7 @@ class ModelRegistry {
     source: 'https://github.com/xinntao/Real-ESRGAN',
     inputNames: ['image'],
     outputName: 'upscaled_image',
+    mirrorUrl: '$_kMirrorBase/realesrgan_general_x4v3.onnx',
     fixedInputSize: 128,
     notes: 'Static 1x3x128x128 float input 0..1 → 1x3x512x512.',
   );
@@ -98,6 +110,7 @@ class ModelRegistry {
     source: 'https://github.com/Picsart-AI-Research/MI-GAN',
     inputNames: ['image', 'mask'],
     outputName: 'result',
+    mirrorUrl: '$_kMirrorBase/migan_pipeline.onnx',
     notes: 'uint8 NCHW image, uint8 mask (255 = keep, 0 = erase), any size.',
   );
 
@@ -112,6 +125,7 @@ class ModelRegistry {
     source: 'https://github.com/advimman/lama',
     inputNames: ['image', 'mask'],
     outputName: 'output',
+    mirrorUrl: '$_kMirrorBase/lama_fp32.onnx',
     fixedInputSize: 512,
     notes: 'Static 512x512, float image 0..1, float mask 1 = erase.',
   );
@@ -119,6 +133,10 @@ class ModelRegistry {
   // Revision-pinned URLs (v1.3): the file at that commit can never change;
   // SHA-256 values are the LFS oids, verified by downloading each file and
   // running it with ONNX Runtime (see docs/SMART_EDIT.md).
+
+  /// Base URL of the project-hosted model mirrors (release assets of this
+  /// repository, tag `models-v1.3`; see `tool/sync_model_mirrors.py`).
+  static const _kMirrorBase = 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-v1.3';
 
   static const mobileSamEncoder = ModelSpec(
     id: 'mobilesam_encoder',
@@ -132,6 +150,7 @@ class ModelRegistry {
     source: 'https://github.com/ChaoningZhang/MobileSAM',
     inputNames: ['input_image'],
     outputName: 'image_embeddings',
+    mirrorUrl: '$_kMirrorBase/mobilesam_encoder.onnx',
     notes: 'HWC float 0..255, long side 1024 (the graph normalises and pads) → 1x256x64x64.',
   );
 
@@ -147,8 +166,31 @@ class ModelRegistry {
     source: 'https://github.com/ChaoningZhang/MobileSAM',
     inputNames: ['image_embeddings', 'point_coords', 'point_labels', 'mask_input', 'has_mask_input', 'orig_im_size'],
     outputName: 'masks',
+    mirrorUrl: '$_kMirrorBase/mobilesam_decoder.onnx',
     notes:
         'Points in the 1024-px encoder frame (label 1 = add, 0 = subtract, -1 = padding) → mask logits at orig_im_size.',
+  );
+
+  /// Multi-candidate mask decoder: same inputs as [mobileSamDecoder] but
+  /// returns 4 candidate masks (dim 1) with an `iou_predictions` [1, 4]
+  /// score each; `low_res_masks` [1, 4, 256, 256] can be fed back as
+  /// `mask_input` for refinement. Verified by running it with ONNX Runtime
+  /// (see docs/SMART_EDIT.md). Powers the candidate picker of tap to select.
+  static const mobileSamDecoderMulti = ModelSpec(
+    id: 'mobilesam_decoder_multi',
+    task: AiTask.interactiveSegmentation,
+    displayName: 'Segment Anything – multi-mask decoder (tap to select)',
+    url:
+        'https://huggingface.co/Acly/MobileSAM/resolve/0d3b403339b4674a82493d5e97964dd78089ddc8/sam_mask_decoder_multi.onnx',
+    sha256: '8976b90a87ba50a6a72217a5ff994f7d25ce16f2229fcc1ed259e1294c622ffe',
+    sizeBytes: 16496559,
+    license: 'Apache-2.0 (Segment Anything / MobileSAM)',
+    source: 'https://github.com/ChaoningZhang/MobileSAM',
+    inputNames: ['image_embeddings', 'point_coords', 'point_labels', 'mask_input', 'has_mask_input', 'orig_im_size'],
+    outputName: 'masks',
+    mirrorUrl: '$_kMirrorBase/mobilesam_decoder_multi.onnx',
+    notes:
+        'Same prompts as the single decoder (box corners = labels 2, 3) → masks [1, 4, H, W] + iou_predictions [1, 4] + low_res_masks [1, 4, 256, 256].',
   );
 
   static const depthAnythingSmall = ModelSpec(
@@ -163,6 +205,7 @@ class ModelRegistry {
     source: 'https://github.com/DepthAnything/Depth-Anything-V2',
     inputNames: ['pixel_values'],
     outputName: 'predicted_depth',
+    mirrorUrl: '$_kMirrorBase/depth_anything_v2_small_q8.onnx',
     notes: 'NCHW ImageNet-normalised, sides multiples of 14 → relative inverse depth (larger = nearer).',
   );
 
@@ -174,6 +217,7 @@ class ModelRegistry {
     lama,
     mobileSamEncoder,
     mobileSamDecoder,
+    mobileSamDecoderMulti,
     depthAnythingSmall,
   ];
 
