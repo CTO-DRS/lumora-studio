@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
@@ -7,7 +9,10 @@ import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/engine/preset_thumbnails.dart';
 import 'package:lumora/features/photo_editor/presentation/photo_editor_controller.dart';
 import 'package:lumora/features/photo_editor/presentation/widgets/presets_panel.dart';
+import 'package:lumora/features/smart_edit/data/command_store.dart';
+import 'package:lumora/features/smart_edit/domain/next_commands.dart';
 import 'package:lumora/features/smart_edit/presentation/smart_actions.dart';
+import 'package:lumora/l10n/app_localizations.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// "Smart" tab of the photo editor: a command bar that understands Arabic
@@ -53,7 +58,11 @@ class _SmartPanelState extends ConsumerState<SmartPanel> {
     setState(() => _running = true);
     try {
       final plan = await runSmartCommand(context, ref, text);
-      if (mounted && !plan.isEmpty && plan.unrecognized.isEmpty) _text.clear();
+      if (mounted && !plan.isEmpty) {
+        // History survives the editor; favourites are managed from the chips.
+        unawaited(ref.read(smartCommandBookProvider.notifier).record(text));
+        if (plan.unrecognized.isEmpty) _text.clear();
+      }
     } finally {
       if (mounted) setState(() => _running = false);
     }
@@ -143,6 +152,39 @@ class _SmartPanelState extends ConsumerState<SmartPanel> {
             ],
           ),
         ),
+        const _CommandHistorySection(),
+        if (s.lastSmartPlan != null && !s.lastSmartPlan!.isEmpty) ...[
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 4),
+            child: Row(
+              children: [
+                Icon(Icons.redo_outlined, size: 15, color: t.violet),
+                const SizedBox(width: 6),
+                Text(l.smartNextTitle, style: theme.textTheme.labelLarge),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 42,
+            child: ListView(
+              key: const ValueKey('smart-next-commands'),
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: [
+                for (final c in nextCommands(s.lastSmartPlan))
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 6),
+                    child: ActionChip(
+                      visualDensity: VisualDensity.compact,
+                      avatar: const Icon(Icons.arrow_forward_rounded, size: 13),
+                      label: Text(smartNextLabel(l, c)),
+                      onPressed: s.busy ? null : () => _submit(smartNextLabel(l, c)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
         if (s.suggestions.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 4),
@@ -314,5 +356,121 @@ class SelectionPanel extends ConsumerWidget {
         ),
       ],
     );
+  }
+}
+
+/// Localised command phrase of a follow-up suggestion (the same text the
+/// engine parses when the chip is tapped).
+String smartNextLabel(AppLocalizations l, NextCommand c) => switch (c) {
+  NextCommand.warmer => l.smartNextWarmer,
+  NextCommand.cooler => l.smartNextCooler,
+  NextCommand.removeLook => l.smartNextRemoveLook,
+  NextCommand.contrast => l.smartNextContrast,
+  NextCommand.sharpen => l.smartNextSharpen,
+  NextCommand.portrait => l.smartNextPortrait,
+  NextCommand.mono => l.smartNextMono,
+  NextCommand.vignette => l.smartNextVignette,
+  NextCommand.upscale => l.smartNextUpscale,
+};
+
+/// Favourites + recent commands under the example chips. Tap a chip to run
+/// the command again; long-press to star (or unstar) it. Everything stays
+/// in SharedPreferences on the device.
+class _CommandHistorySection extends ConsumerWidget {
+  const _CommandHistorySection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final book = ref.watch(smartCommandBookProvider);
+    final busy = ref.watch(photoEditorControllerProvider.select((s) => s.busy));
+    final l = context.l10n;
+    final t = context.lumora;
+    final theme = Theme.of(context);
+    if (!book.loaded || (book.recents.isEmpty && book.favourites.isEmpty)) return const SizedBox.shrink();
+
+    void submit(String command) {
+      if (busy) return;
+      ref.read(smartCommandBookProvider.notifier).record(command);
+      unawaited(runSmartCommand(context, ref, command));
+    }
+
+    Widget chip(String command, {required bool starred}) {
+      final label = starred ? '$kSmartFavouriteMark $command' : command;
+      // Flutter 3.50 chips dropped onLongPress, so the star gesture is an
+      // outer detector: a long-press wins the arena, a quick tap still
+      // reaches the chip's own InkWell.
+      return GestureDetector(
+        onLongPress: () {
+          Haptics.light();
+          ref.read(smartCommandBookProvider.notifier).toggleFavourite(command);
+        },
+        child: Padding(
+          padding: const EdgeInsetsDirectional.only(end: 6),
+          child: RawChip(
+            visualDensity: VisualDensity.compact,
+            avatar: Icon(
+              starred ? Icons.star_rounded : Icons.history_rounded,
+              size: 14,
+              color: starred ? t.apricot : t.textMuted,
+            ),
+            label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+            tooltip: starred ? l.smartHistoryHint : null,
+            onPressed: () {
+              Haptics.selection();
+              submit(command);
+            },
+          ),
+        ),
+      );
+    }
+
+    Widget section(String title, List<String> commands, {bool starred = false, Widget? trailing}) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 6, 16, 0),
+          child: Row(
+            children: [
+              Expanded(child: Text(title, style: theme.textTheme.labelLarge)),
+              ?trailing,
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 42,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            children: [for (final c in commands) chip(c, starred: starred)],
+          ),
+        ),
+      ],
+    );
+
+    final columns = <Widget>[
+      if (book.favourites.isNotEmpty)
+        section(l.smartFavourites, book.favourites, starred: true),
+      if (book.recents.isNotEmpty)
+        section(
+          l.smartRecent,
+          book.recents,
+          trailing: GlassIconButton(
+            icon: Icons.delete_sweep_outlined,
+            size: 18,
+            tooltip: l.smartClearHistory,
+            onPressed: () {
+              Haptics.selection();
+              ref.read(smartCommandBookProvider.notifier).clearHistory();
+            },
+          ),
+        ),
+    ];
+    return Column(children: [...columns, Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 2, 16, 0),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: Text(l.smartHistoryHint, style: theme.textTheme.bodySmall?.copyWith(color: t.textMuted, fontSize: 11)),
+      ),
+    )]);
   }
 }
