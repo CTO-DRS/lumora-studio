@@ -1153,6 +1153,48 @@ class AppLocalizationsAr extends AppLocalizations {
   String get smartOnDevice => 'يُفهم الأمر على جهازك، ولا يُرسل أي شيء.';
 
   @override
+  String get smartFavourites => 'المفضلة';
+
+  @override
+  String get smartRecent => 'الأوامر الأخيرة';
+
+  @override
+  String get smartHistoryHint => 'اضغط للتشغيل مجددًا · اضغط مطولًا لتمييزه بنجمة أو إزالة النجمة.';
+
+  @override
+  String get smartClearHistory => 'مسح سجل الأوامر';
+
+  @override
+  String get smartNextTitle => 'جرّب بعدها';
+
+  @override
+  String get smartNextWarmer => 'أدفأ قليلًا';
+
+  @override
+  String get smartNextCooler => 'أبرد قليلًا';
+
+  @override
+  String get smartNextRemoveLook => 'أزل الفلتر';
+
+  @override
+  String get smartNextContrast => 'زد التباين';
+
+  @override
+  String get smartNextSharpen => 'زد الحدة كثيرًا';
+
+  @override
+  String get smartNextPortrait => 'نعّم البشرة';
+
+  @override
+  String get smartNextMono => 'أبيض وأسود';
+
+  @override
+  String get smartNextVignette => 'أضف تظليل الحواف';
+
+  @override
+  String get smartNextUpscale => 'كبّر الدقة';
+
+  @override
   String get sugAutoFix => 'إصلاح تلقائي';
 
   @override
