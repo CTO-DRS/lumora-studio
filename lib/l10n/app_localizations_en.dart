@@ -1152,6 +1152,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get smartOnDevice => 'Understood on your device — nothing is sent anywhere.';
 
   @override
+  String get smartFavourites => 'Favourites';
+
+  @override
+  String get smartRecent => 'Recent';
+
+  @override
+  String get smartHistoryHint => 'Tap to run again · long-press to star or unstar.';
+
+  @override
+  String get smartClearHistory => 'Clear command history';
+
+  @override
+  String get smartNextTitle => 'Next, try';
+
+  @override
+  String get smartNextWarmer => 'a bit warmer';
+
+  @override
+  String get smartNextCooler => 'a bit cooler';
+
+  @override
+  String get smartNextRemoveLook => 'remove the filter';
+
+  @override
+  String get smartNextContrast => 'more contrast';
+
+  @override
+  String get smartNextSharpen => 'sharpen a lot';
+
+  @override
+  String get smartNextPortrait => 'smooth skin';
+
+  @override
+  String get smartNextMono => 'black and white';
+
+  @override
+  String get smartNextVignette => 'add vignette';
+
+  @override
+  String get smartNextUpscale => 'upscale';
+
+  @override
   String get sugAutoFix => 'Auto fix';
 
   @override

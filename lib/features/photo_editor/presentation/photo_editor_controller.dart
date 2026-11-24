@@ -132,6 +132,7 @@ class PhotoEditorState {
     this.selectOverlay,
     this.hasSelection = false,
     this.suggestions = const [],
+    this.lastSmartPlan,
   });
 
   final EditHistory<EditState> history;
@@ -192,6 +193,10 @@ class PhotoEditorState {
   /// One-tap fixes for the current photo (best first).
   final List<Suggestion> suggestions;
 
+  /// The smart plan applied most recently — the Smart bar offers follow-up
+  /// commands based on it (see next_commands.dart).
+  final SmartEditPlan? lastSmartPlan;
+
   EditState get edit => history.present;
 
   /// Whether the canvas currently shows the un-framed image (so on-canvas
@@ -229,6 +234,7 @@ class PhotoEditorState {
     ui.Image? Function()? selectOverlay,
     bool? hasSelection,
     List<Suggestion>? suggestions,
+    SmartEditPlan? Function()? lastSmartPlan,
   }) => PhotoEditorState(
     history: history ?? this.history,
     projectId: projectId ?? this.projectId,
@@ -260,6 +266,7 @@ class PhotoEditorState {
     selectOverlay: selectOverlay != null ? selectOverlay() : this.selectOverlay,
     hasSelection: hasSelection ?? this.hasSelection,
     suggestions: suggestions ?? this.suggestions,
+    lastSmartPlan: lastSmartPlan != null ? lastSmartPlan() : this.lastSmartPlan,
   );
 }
 
@@ -787,6 +794,7 @@ class PhotoEditorController extends _$PhotoEditorController {
       });
     }
     CrashLog.instance.breadcrumb('Editor: smart edit ${plan.toJson()}');
+    state = state.copyWith(lastSmartPlan: () => plan);
     return [
       for (final a in actions)
         if (!a.instant) a,

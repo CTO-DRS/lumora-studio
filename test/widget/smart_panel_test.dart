@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
 import 'package:lumora/features/photo_editor/presentation/photo_editor_controller.dart';
+import 'package:lumora/features/smart_edit/data/command_store.dart';
 import 'package:lumora/features/smart_edit/domain/edit_ops.dart';
 import 'package:lumora/features/smart_edit/presentation/smart_actions.dart';
 import 'package:lumora/features/smart_edit/presentation/smart_panel.dart';
@@ -88,6 +89,53 @@ void main() {
     expect(pending, [SmartAction.removeBackground]);
     await ctrl.applySmartPlan(const SmartEditPlan(ops: [ActionOp(SmartAction.reset)]));
     expect(_container(tester).read(photoEditorControllerProvider).edit.geometry.quarterTurns, 0);
+  });
+
+  testWidgets('commands run again from history and star into favourites', (tester) async {
+    await tester.pumpWidget(_wrap(const SmartPanel()));
+    await tester.pump();
+    // History is empty before the first command.
+    expect(find.text('Recent'), findsNothing);
+
+    await tester.tap(find.text('more contrast'));
+    await tester.pumpAndSettle();
+    expect(find.text('Recent'), findsOneWidget);
+
+    // The same command from history applies again.
+    await tester.tap(find.text('more contrast').last);
+    await tester.pumpAndSettle();
+    expect(
+      _container(tester).read(photoEditorControllerProvider).edit.adjustments.contrast,
+      closeTo(0.4, 1e-9),
+    );
+
+    // Long-press stars the command; favourites survive clearing the history.
+    expect(find.text('Favourites'), findsNothing);
+    await tester.longPress(find.byIcon(Icons.history_rounded));
+    await tester.pump();
+    expect(find.text('Favourites'), findsOneWidget);
+    _container(tester).read(smartCommandBookProvider.notifier).clearHistory();
+    await tester.pump();
+    expect(find.text('Recent'), findsNothing);
+    expect(find.text('Favourites'), findsOneWidget);
+  });
+
+  testWidgets('next-command suggestions appear after an edit and run', (tester) async {
+    await tester.pumpWidget(_wrap(const SmartPanel()));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('smart-next-commands')), findsNothing);
+
+    await tester.tap(find.text('a bit warmer'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('smart-next-commands')), findsOneWidget);
+
+    // The follow-up cools the photo back down: +0.1 then −0.1.
+    await tester.tap(find.text('a bit cooler'));
+    await tester.pumpAndSettle();
+    expect(
+      _container(tester).read(photoEditorControllerProvider).edit.adjustments.temperature,
+      closeTo(0, 1e-9),
+    );
   });
 
   test('plan summaries are readable', () {
