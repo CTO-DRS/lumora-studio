@@ -5,7 +5,7 @@
 > Arabic version: [docs/ROADMAP.ar.md](docs/ROADMAP.ar.md) · One-page vision: [docs/VISION.md](docs/VISION.md)
 
 Status legend: ✅ shipped · 🚧 partial / in progress · 🔜 planned · 🧪 research spike (may change)
-Last updated: 2026-11-21 (v1.3.0). Dates are targets, not promises; quality gates decide releases.
+Last updated: 2026-11-24 (v1.3.3). Dates are targets, not promises; quality gates decide releases.
 
 ---
 
@@ -34,6 +34,7 @@ Lumora's bet is the opposite: **the best intelligence is the one that runs where
 | Local & retouch | ✅ brush/linear/radial/subject masks, healing & clone (model-free), selective colour |
 | AI (ONNX Runtime) | ✅ background removal (U²-Net-p), portrait matting (MODNet), eraser (MI-GAN / LaMa), 4× upscale (Real-ESRGAN), safe CPU defaults, verified downloads |
 | **Smart (v1.3)** | ✅ **typed commands in Arabic & English** → one-step edit plan · ✅ **suggestions for this photo** · ✅ **tap to select** (MobileSAM) → erase / cut out / adjust / blur rest · ✅ **depth blur & relight** (Depth Anything V2) · ✅ **remove person** |
+| **Smart polish (v1.3.3)** | ✅ **command history & favourites** + next-command suggestions after each edit · ✅ **dialect lexicon** (Gulf/Egyptian/Levantine/Maghrebi) · ✅ **1,070-command AR/EN intent benchmark** at 100 % exact plans · ✅ tap-to-select **multi-mask candidates** (IoU-ranked), **box prompt**, **brush refine**, **feathered edges** · ✅ **project-hosted model mirrors** with automatic fallback |
 | Documents, batch, collage | ✅ scanner with PDF, batch edit, collage maker |
 | Video | ✅ timeline, transitions, speed/reverse, crop, stabilisation, filter keyframes, music, text (Arabic shaping), GIF, fast & studio export |
 | Platform | ✅ Android APKs per ABI, unsigned iOS build, glass design system, AR/EN + RTL, tablets layouts, CI + release workflows |
@@ -77,12 +78,13 @@ Each phase has themes, features, models (with size/latency targets on a **mid-ra
 - ✅ Remove person (MODNet + MI-GAN); iOS build no longer depends on `download.onnxruntime.ai`.
 - Acceptance met: `flutter analyze` clean; 350+ tests green incl. 140+ AR/EN command phrases; models SHA-256 verified and executed before shipping.
 
-### v1.3.x — polish (2026-12)
-- 🔜 Home "AI tools" sheet & quick actions for the new tools; Smart bar suggestions of *next* commands after each edit.
-- 🔜 Command history & favourites; dialect lexicon pass (Gulf, Egyptian, Levantine, Maghrebi) with a 1,000-phrase benchmark.
-- 🔜 Tap-to-select: multi-mask decoder (choose among 3 candidates), box prompt, brush refine, feathered edges.
-- 🔜 Mirror every model on a project-controlled host (GitHub Releases) with identical SHA-256 as an automatic fallback.
-- **Acceptance:** intent benchmark ≥ 95 % exact plans (AR & EN separately); select-tap p95 ≤ 150 ms on the reference phone.
+### v1.3.x — polish ✅ (features shipped 2026-11, v1.3.3)
+- ✅ Home "AI tools" sheet & quick actions for the new tools; Smart bar suggestions of *next* commands after each edit.
+- ✅ Command history & favourites; dialect lexicon pass (Gulf, Egyptian, Levantine, Maghrebi).
+- ✅ 1,070-phrase intent benchmark (550 AR / 520 EN): slider templates × directions × intensities, looks, actions, compounds, chains, dialects, code-switching — measured in CI.
+- ✅ Tap-to-select: multi-mask decoder (up to 4 IoU-ranked candidates, chips to switch), box prompt, brush refine (SAM `mask_input`), feathered edges (2 px ramp).
+- ✅ Mirror of every model on a project-controlled host (GitHub Releases of this repo, tag `models-v1.3`) with identical SHA-256 as an automatic fallback (`tool/sync_model_mirrors.py`).
+- **Acceptance:** intent benchmark **100 %** exact plans (AR & EN separately; bar ≥ 95 %) ✅ · select-tap p95 ≤ 150 ms on the reference phone 🚧 (needs the device farm; sandbox-verified 0.07–0.12 s per decode).
 
 ### v1.4 — "Pro foundations" (2027 Q1)
 | Theme | Features | Models / tech | Targets |
@@ -193,7 +195,7 @@ Each phase has themes, features, models (with size/latency targets on a **mid-ra
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Third-party hosts break (e.g. `download.onnxruntime.ai` TLS failure in Nov 2026) | builds or model downloads fail | pinned revisions, SHA-256, project mirror, scripted fallbacks (`tool/ios_fix_onnxruntime_spm.sh`) |
+| Third-party hosts break (e.g. `download.onnxruntime.ai` TLS failure in Nov 2026) | builds or model downloads fail | pinned revisions, SHA-256, project mirror (live since v1.3.3 — every model also served from this repo's releases), scripted fallbacks (`tool/ios_fix_onnxruntime_spm.sh`) |
 | Model licences (non-commercial weights) | legal | licence check in the registry review; reject NC weights (e.g. RMBG-2.0, CodeFormer-class) |
 | GPL x264 in `min_gpl` vs App Store terms | iOS distribution | ship iOS with `ffmpeg_kit_flutter_new_min` + VideoToolbox (LGPL) |
 | NPU/driver crashes on some SoCs | app killed natively | CPU default (done), per-SoC allow-list, farm testing, auto-fallback |
