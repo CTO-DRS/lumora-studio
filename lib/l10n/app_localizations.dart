@@ -2288,6 +2288,90 @@ abstract class AppLocalizations {
   /// **'Understood on your device — nothing is sent anywhere.'**
   String get smartOnDevice;
 
+  /// No description provided for @smartFavourites.
+  ///
+  /// In en, this message translates to:
+  /// **'Favourites'**
+  String get smartFavourites;
+
+  /// No description provided for @smartRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent'**
+  String get smartRecent;
+
+  /// No description provided for @smartHistoryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to run again · long-press to star or unstar.'**
+  String get smartHistoryHint;
+
+  /// No description provided for @smartClearHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear command history'**
+  String get smartClearHistory;
+
+  /// No description provided for @smartNextTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Next, try'**
+  String get smartNextTitle;
+
+  /// No description provided for @smartNextWarmer.
+  ///
+  /// In en, this message translates to:
+  /// **'a bit warmer'**
+  String get smartNextWarmer;
+
+  /// No description provided for @smartNextCooler.
+  ///
+  /// In en, this message translates to:
+  /// **'a bit cooler'**
+  String get smartNextCooler;
+
+  /// No description provided for @smartNextRemoveLook.
+  ///
+  /// In en, this message translates to:
+  /// **'remove the filter'**
+  String get smartNextRemoveLook;
+
+  /// No description provided for @smartNextContrast.
+  ///
+  /// In en, this message translates to:
+  /// **'more contrast'**
+  String get smartNextContrast;
+
+  /// No description provided for @smartNextSharpen.
+  ///
+  /// In en, this message translates to:
+  /// **'sharpen a lot'**
+  String get smartNextSharpen;
+
+  /// No description provided for @smartNextPortrait.
+  ///
+  /// In en, this message translates to:
+  /// **'smooth skin'**
+  String get smartNextPortrait;
+
+  /// No description provided for @smartNextMono.
+  ///
+  /// In en, this message translates to:
+  /// **'black and white'**
+  String get smartNextMono;
+
+  /// No description provided for @smartNextVignette.
+  ///
+  /// In en, this message translates to:
+  /// **'add vignette'**
+  String get smartNextVignette;
+
+  /// No description provided for @smartNextUpscale.
+  ///
+  /// In en, this message translates to:
+  /// **'upscale'**
+  String get smartNextUpscale;
+
   /// No description provided for @sugAutoFix.
   ///
   /// In en, this message translates to:
