@@ -6,6 +6,7 @@ import 'package:lumora/features/photo_editor/domain/geometry.dart';
 enum SmartAction {
   // Instant, model-free.
   autoEnhance,
+  autoStraighten,
   clearLook,
   reset,
   undo,
