@@ -15,7 +15,21 @@ import 'package:lumora/features/video_editor/presentation/video_editor_page.dart
 import 'package:material_ui/material_ui.dart';
 
 /// One-tap actions started from the home screen.
-enum QuickAction { removeBackground, autoEnhance, upscale, eraser, heal, cutOutPerson, blurBackground, retouch }
+enum QuickAction {
+  removeBackground,
+  autoEnhance,
+  upscale,
+  eraser,
+  heal,
+  cutOutPerson,
+  blurBackground,
+  retouch,
+  // v1.3.x: the new smart tools join the home AI tools sheet.
+  depthBlur,
+  relight,
+  erasePerson,
+  selectObject,
+}
 
 /// Arguments for opening the photo editor.
 class PhotoEditorArgs {

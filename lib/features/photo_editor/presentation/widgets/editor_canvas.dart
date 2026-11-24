@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
+import 'package:lumora/features/ai/pipelines/smart_pipelines.dart';
 import 'package:lumora/features/photo_editor/domain/layers.dart';
 import 'package:lumora/features/photo_editor/engine/overlay_painter.dart';
 import 'package:lumora/features/photo_editor/presentation/photo_editor_controller.dart';
@@ -224,26 +225,129 @@ class _EditorCanvasState extends ConsumerState<EditorCanvas> {
 
   Widget _selector(PhotoEditorState s, Size size) {
     final overlay = s.selectOverlay;
+    return switch (s.selectMode) {
+      SelectPromptMode.box => _boxSelector(s, size, overlay),
+      SelectPromptMode.brush => _brushSelector(s, size, overlay),
+      SelectPromptMode.tap => _tapSelector(s, size, overlay),
+    };
+  }
+
+  Widget _tapSelector(PhotoEditorState s, Size size, ui.Image? overlay) => GestureDetector(
+    key: const ValueKey('select-canvas'),
+    behavior: HitTestBehavior.opaque,
+    onTapUp: s.busy
+        ? null
+        : (d) {
+            Haptics.selection();
+            _ctrl.selectAt(
+              Offset((d.localPosition.dx / size.width).clamp(0, 1), (d.localPosition.dy / size.height).clamp(0, 1)),
+            );
+          },
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        if (overlay != null) RawImage(image: overlay, fit: BoxFit.fill),
+        CustomPaint(painter: _SelectPointsPainter(s, context.lumora.violet)),
+      ],
+    ),
+  );
+
+  /// Box mode: drag a rectangle, release selects what it encloses.
+  Widget _boxSelector(PhotoEditorState s, Size size, ui.Image? overlay) {
+    Offset norm(Offset p) => Offset((p.dx / size.width).clamp(0, 1), (p.dy / size.height).clamp(0, 1));
     return GestureDetector(
-      key: const ValueKey('select-canvas'),
       behavior: HitTestBehavior.opaque,
-      onTapUp: s.busy
+      onPanStart: s.busy
           ? null
-          : (d) {
+          : (d) => setState(() {
+                _boxDragStart = norm(d.localPosition);
+                _boxDragEnd = _boxDragStart;
+              }),
+      onPanUpdate: s.busy || _boxDragStart == null
+          ? null
+          : (d) => setState(() => _boxDragEnd = norm(d.localPosition)),
+      onPanEnd: s.busy
+          ? null
+          : (_) {
+            final a = _boxDragStart;
+            final b = _boxDragEnd;
+            setState(() {
+              _boxDragStart = null;
+              _boxDragEnd = null;
+            });
+            if (a != null && b != null && (a.dx - b.dx).abs() > 0.02 && (a.dy - b.dy).abs() > 0.02) {
               Haptics.selection();
-              _ctrl.selectAt(
-                Offset((d.localPosition.dx / size.width).clamp(0, 1), (d.localPosition.dy / size.height).clamp(0, 1)),
-              );
-            },
+              _ctrl.setSelectionBox(SelectBox(a.dx, a.dy, b.dx, b.dy));
+            }
+          },
       child: Stack(
         fit: StackFit.expand,
         children: [
           if (overlay != null) RawImage(image: overlay, fit: BoxFit.fill),
           CustomPaint(painter: _SelectPointsPainter(s, context.lumora.violet)),
+          if (_boxDragStart != null && _boxDragEnd != null)
+            Positioned.fromRect(
+              rect: Rect.fromPoints(
+                Offset(_boxDragStart!.dx * size.width, _boxDragStart!.dy * size.height),
+                Offset(_boxDragEnd!.dx * size.width, _boxDragEnd!.dy * size.height),
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: context.lumora.violet, width: 2),
+                  color: context.lumora.violet.withValues(alpha: 0.15),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
+
+  /// Brush mode: painting refines the current selection (SAM mask_input).
+  Widget _brushSelector(PhotoEditorState s, Size size, ui.Image? overlay) {
+    Offset norm(Offset p) => Offset((p.dx / size.width).clamp(0, 1), (p.dy / size.height).clamp(0, 1));
+    Stroke current() => Stroke(
+      points: List.of(_livePoints),
+      width: 0.045,
+      color: context.lumora.violet.toARGB32(),
+    );
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanStart: s.busy
+          ? null
+          : (d) => setState(() {
+                _livePoints
+                  ..clear()
+                  ..addAll([norm(d.localPosition).dx, norm(d.localPosition).dy]);
+              }),
+      onPanUpdate: s.busy
+          ? null
+          : (d) => setState(() {
+                final n = norm(d.localPosition);
+                _livePoints.addAll([n.dx, n.dy]);
+              }),
+      onPanEnd: s.busy
+          ? null
+          : (_) {
+            final stroke = current();
+            setState(_livePoints.clear);
+            if (stroke.points.length >= 2) {
+              Haptics.light();
+              _ctrl.refineSelection([stroke]);
+            }
+          },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (overlay != null) RawImage(image: overlay, fit: BoxFit.fill),
+          CustomPaint(painter: _StrokesPainter([if (_livePoints.isNotEmpty) current()])),
+        ],
+      ),
+    );
+  }
+
+  Offset? _boxDragStart;
+  Offset? _boxDragEnd;
 
   // ------------------------------------------------------ colour picker
 

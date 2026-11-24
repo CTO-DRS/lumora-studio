@@ -11,6 +11,10 @@ import 'package:lumora/features/ai/pipelines/tensor_utils.dart';
 // ---------------------------------------------------------------------------
 // Tap to select (MobileSAM)
 
+/// How the user prompts tap-to-select: taps (add/subtract points), a drag
+/// box, or brush strokes that refine the current selection.
+enum SelectPromptMode { tap, box, brush }
+
 /// A prompt point, normalised (0..1) to the *source* raster.
 @immutable
 class SelectPoint {
@@ -27,6 +31,25 @@ class SelectPoint {
 
   @override
   int get hashCode => Object.hash(x, y, positive);
+}
+
+/// A drag-box prompt, normalised (0..1) to the source raster. SAM treats
+/// the corners as two extra points (labels 2 = top-left, 3 = bottom-right).
+@immutable
+class SelectBox {
+  const SelectBox(this.x1, this.y1, this.x2, this.y2);
+
+  final double x1;
+  final double y1;
+  final double x2;
+  final double y2;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SelectBox && other.x1 == x1 && other.y1 == y1 && other.x2 == x2 && other.y2 == y2;
+
+  @override
+  int get hashCode => Object.hash(x1, y1, x2, y2);
 }
 
 /// Size the MobileSAM encoder expects: long side exactly 1024 px.
@@ -50,11 +73,16 @@ Float32List rgbaToHwcFloat(RgbaImage img) {
   return out;
 }
 
-/// Decoder prompt tensors for [points] in an encoder frame of [rw]x[rh]:
-/// coordinates `[1, n+1, 2]`, labels `[1, n+1]` (1 add, 0 subtract) plus
-/// the padding point SAM expects when no box is given (label -1).
-(Float32List, Float32List, int) samPrompt(List<SelectPoint> points, int rw, int rh) {
-  final n = points.length + 1;
+/// Decoder prompt tensors for [points] in an encoder frame of [rw]x[rh].
+/// Without a [box]: coordinates `[1, n+1, 2]`, labels `[1, n+1]` (1 add,
+/// 0 subtract) plus the padding point SAM expects (label -1). With a box,
+/// the two corners are appended with labels 2 (top-left) and 3
+/// (bottom-right) and no padding point.
+(Float32List, Float32List, int) samPrompt(List<SelectPoint> points, int rw, int rh, {SelectBox? box}) {
+  final corners = box == null
+      ? 0
+      : 2;
+  final n = points.length + (box == null ? 1 : corners);
   final coords = Float32List(n * 2);
   final labels = Float32List(n);
   for (var i = 0; i < points.length; i++) {
@@ -62,8 +90,57 @@ Float32List rgbaToHwcFloat(RgbaImage img) {
     coords[i * 2 + 1] = points[i].y.clamp(0.0, 1.0) * rh;
     labels[i] = points[i].positive ? 1 : 0;
   }
-  labels[n - 1] = -1;
+  if (box != null) {
+    final x1 = math.min(box.x1, box.x2).clamp(0.0, 1.0) * rw;
+    final y1 = math.min(box.y1, box.y2).clamp(0.0, 1.0) * rh;
+    final x2 = math.max(box.x1, box.x2).clamp(0.0, 1.0) * rw;
+    final y2 = math.max(box.y1, box.y2).clamp(0.0, 1.0) * rh;
+    coords[points.length * 2] = x1;
+    coords[points.length * 2 + 1] = y1;
+    labels[points.length] = 2;
+    coords[points.length * 2 + 2] = x2;
+    coords[points.length * 2 + 3] = y2;
+    labels[points.length + 1] = 3;
+  } else {
+    labels[n - 1] = -1;
+  }
   return (coords, labels, n);
+}
+
+/// Painted strokes (white = paint, as rendered by `paintStrokes(asMask)`) →
+/// the 256×256 low-res mask logits SAM's decoder accepts as `mask_input`
+/// (inside = +8, outside = −8) for brush refinement of a selection.
+Float32List strokeMaskInput(RgbaImage strokes) {
+  const side = 256;
+  final out = Float32List(side * side);
+  final sx = strokes.width / side;
+  final sy = strokes.height / side;
+  for (var y = 0; y < side; y++) {
+    final srcY = math.min(strokes.height - 1, (y * sy).floor());
+    for (var x = 0; x < side; x++) {
+      final srcX = math.min(strokes.width - 1, (x * sx).floor());
+      final o = (srcY * strokes.width + srcX) * 4;
+      final painted = strokes.pixels[o] > 127 && strokes.pixels[o + 3] > 40;
+      out[y * side + x] = painted ? 8 : -8;
+    }
+  }
+  return out;
+}
+
+/// Feather radius applied to selection masks so erase / cut / adjust do
+/// not leave a hard 1-px seam at the mask boundary (v1.3.x).
+const kSelectionFeather = 2;
+
+/// Softens a binary mask's edges into a smooth ramp (alpha 0 → 255).
+RgbaImage featherSelection(RgbaImage mask, [int radius = kSelectionFeather]) => boxBlurMask(mask, radius);
+
+/// One candidate of the multi-mask decoder: a mask plus its predicted
+/// quality (IoU with the ground truth, 0..1 — higher is better).
+class SelectionCandidate {
+  const SelectionCandidate(this.mask, this.iou);
+
+  final RgbaImage mask;
+  final double iou;
 }
 
 /// Mask logits (`> 0` = selected) → white-on-black RGBA mask.
@@ -136,26 +213,62 @@ class ObjectSelectPipeline {
     _rh = rh;
   }
 
-  /// Mask (encoder-frame resolution, white = selected) for [points].
-  Future<RgbaImage> maskFor(List<SelectPoint> points) async {
+  /// Mask (encoder-frame resolution, white = selected) for [points],
+  /// optionally refined with a [box] prompt, brush [maskInput] logits, and
+  /// [feather]-ed edges. The best-IoU candidate of the multi-mask decoder
+  /// is returned; see [candidatesFor].
+  Future<RgbaImage> maskFor(
+    List<SelectPoint> points, {
+    SelectBox? box,
+    Float32List? maskInput,
+    int feather = kSelectionFeather,
+  }) async {
+    final candidates = await candidatesFor(points, box: box, maskInput: maskInput);
+    return featherSelection(candidates.first.mask, feather);
+  }
+
+  /// Runs the **multi-mask decoder**: up to 4 candidate masks for the same
+  /// prompt (part / whole object…), ranked by predicted IoU (best first).
+  /// The UI lets the user switch candidates when the first guess is wrong.
+  Future<List<SelectionCandidate>> candidatesFor(
+    List<SelectPoint> points, {
+    SelectBox? box,
+    Float32List? maskInput,
+  }) async {
     final emb = _embedding;
-    if (emb == null || points.isEmpty) throw StateError('prepare() an image and add a point first');
-    final (coords, labels, n) = samPrompt(points, _rw, _rh);
-    const spec = ModelRegistry.mobileSamDecoder;
-    final out = await engine.run(spec, {
+    if (emb == null || (points.isEmpty && box == null && maskInput == null)) {
+      throw StateError('prepare() an image and add a point, box or mask first');
+    }
+    final (coords, labels, n) = samPrompt(points, _rw, _rh, box: box);
+    const spec = ModelRegistry.mobileSamDecoderMulti;
+    final out = await engine.runAll(spec, {
       'image_embeddings': (emb, const [1, 256, 64, 64]),
       'point_coords': (coords, [1, n, 2]),
       'point_labels': (labels, [1, n]),
-      'mask_input': (Float32List(256 * 256), const [1, 1, 256, 256]),
-      'has_mask_input': (Float32List(1), const [1]),
+      'mask_input': (maskInput ?? Float32List(256 * 256), const [1, 1, 256, 256]),
+      'has_mask_input': (Float32List.fromList([maskInput != null ? 1 : 0]), const [1]),
       'orig_im_size': (Float32List.fromList([_rh.toDouble(), _rw.toDouble()]), const [2]),
     });
-    if (out.length < _rw * _rh) {
-      throw AiException(AiErrorKind.inference, model: spec, detail: 'unexpected mask size ${out.length}');
+    final masks = out['masks'];
+    final ious = out['iou_predictions'];
+    if (masks == null || ious == null || masks.length < _rw * _rh) {
+      throw const AiException(AiErrorKind.inference, model: spec, detail: 'unexpected decoder outputs');
     }
+    final count = masks.length ~/ (_rw * _rh);
     final w = _rw;
     final h = _rh;
-    return Isolate.run(() => logitsToMask(out, w, h));
+    return Isolate.run(() {
+      final candidates = <SelectionCandidate>[];
+      for (var k = 0; k < count; k++) {
+        final logits = masks.sublist(k * w * h, (k + 1) * w * h);
+        final iou = k < ious.length ? ious[k].toDouble() : 0.0;
+        candidates.add(SelectionCandidate(logitsToMask(logits, w, h), iou));
+      }
+      // Highest predicted quality first; equal scores keep mask order.
+      final ranked = [for (var i = 0; i < candidates.length; i++) i]
+        ..sort((a, b) => candidates[b].iou.compareTo(candidates[a].iou));
+      return [for (final i in ranked) candidates[i]];
+    });
   }
 
   void clear() {
