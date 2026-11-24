@@ -193,6 +193,34 @@ void main() {
     }
   });
 
+  group('dialect commands (v1.3.x lexicon pass)', () {
+    final cases = <String, List<EditOp>>{
+      // Gulf
+      'خليها دافيه وايد': [up(AdjustmentParam.temperature, 0.36)],
+      'دافي حيل': [up(AdjustmentParam.temperature, 0.36)],
+      'خليها زين': [act(SmartAction.autoEnhance)],
+      // Egyptian
+      'خليها دافيه اوي': [up(AdjustmentParam.temperature, 0.36)],
+      'حلو شويه': [act(SmartAction.autoEnhance)],
+      'غامق خالص': [up(AdjustmentParam.exposure, -0.63)],
+      // Levantine
+      'مره حلو': [act(SmartAction.autoEnhance)],
+      'خليها برد شوي': [up(AdjustmentParam.temperature, -0.1)],
+      // Maghrebi
+      'دافيه بزاف': [up(AdjustmentParam.temperature, 0.36)],
+      'خليها بارد برشا': [up(AdjustmentParam.temperature, -0.36)],
+      'خليها حلوة': [act(SmartAction.autoEnhance)],
+      'ديرها زوينه': [act(SmartAction.autoEnhance)],
+      // shared
+      'زد السطوع شويه': [up(AdjustmentParam.exposure, 0.175)],
+      'ع السريع': [act(SmartAction.autoEnhance)],
+      'على السريع': [act(SmartAction.autoEnhance)],
+    };
+    for (final c in cases.entries) {
+      test(c.key, () => expectPlan(c.key, c.value));
+    }
+  });
+
   group('plan semantics', () {
     test('unknown text is reported, not guessed', () {
       final plan = _e.parse('blah blah');
