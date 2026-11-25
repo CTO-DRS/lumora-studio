@@ -31,19 +31,35 @@ void main() {
     final ids = <String>{};
     for (final m in ModelRegistry.all) {
       expect(ids.add(m.id), isTrue);
-      expect(m.url, startsWith('https://huggingface.co/'));
+      // Primary source: an upstream host (Hugging Face / GitHub) or, for
+      // project-built artefacts (e.g. the int8 sky quantisation), the
+      // project's own release directly.
+      expect(
+        m.url,
+        anyOf(startsWith('https://huggingface.co/'), startsWith('https://github.com/')),
+        reason: m.id,
+      );
       expect(RegExp(r'^[0-9a-f]{64}$').hasMatch(m.sha256), isTrue, reason: m.id);
-      expect(m.sizeBytes, greaterThan(1000000));
-      // Every model is mirrored on the project host with the same bytes.
+      expect(m.sizeBytes, greaterThan(100000), reason: m.id);
+      // Every model is mirrored on the project host with the same bytes:
+      // models-1.3 for the v1.3 pack, models-1.4 for the v1.4 pack (and
+      // project-built int8 files whose primary *is* the release).
       expect(
         m.mirrorUrl,
-        'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.3/${m.fileName}',
+        anyOf('', 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.3/${m.fileName}',
+            'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.4/${m.fileName}'),
         reason: m.id,
       );
     }
     expect(ModelRegistry.forTask(AiTask.inpainting).length, 2);
     expect(ModelRegistry.byId('mobilesam_decoder_multi').sizeBytes, 16496559);
     expect(ModelRegistry.byId('mobilesam_decoder_multi').url, endsWith('sam_mask_decoder_multi.onnx'));
+    // v1.4 models are registered with their verified contracts.
+    expect(ModelRegistry.byId('yunet').sizeBytes, 232589);
+    expect(ModelRegistry.byId('facemesh').sizeBytes, 4920995);
+    expect(ModelRegistry.byId('skyseg_int8').sizeBytes, 44247982);
+    expect(ModelRegistry.forTask(AiTask.faceDetection).length, 1);
+    expect(ModelRegistry.forTask(AiTask.skySegmentation).length, 1);
   });
 
   test('downloads, verifies and caches', () async {

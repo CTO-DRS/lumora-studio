@@ -1209,6 +1209,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiErasePerson => 'Remove person';
 
   @override
+  String get aiFaceSkin => 'Skin retouch (face)';
+
+  @override
+  String get aiEyeBrighten => 'Brighten eyes';
+
+  @override
+  String get aiTeethWhiten => 'Whiten teeth';
+
+  @override
+  String get aiSkyEnhance => 'Enhance sky';
+
+  @override
+  String get aiSkyReplace => 'Replace sky';
+
+  @override
   String get selectHint => 'Tap the object you want. Tap again to add more; switch to Subtract to remove parts.';
 
   @override

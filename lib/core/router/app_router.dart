@@ -30,6 +30,12 @@ enum QuickAction {
   relight,
   selectObject,
   erasePerson,
+
+  // v1.4: face & sky quick actions.
+  faceSkin,
+  eyeBrighten,
+  teethWhiten,
+  skyEnhance,
 }
 
 /// Arguments for opening the photo editor.

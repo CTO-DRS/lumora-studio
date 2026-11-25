@@ -25,7 +25,12 @@ enum SmartAction {
   relight,
   retouch,
   upscale,
-  erasePerson;
+  erasePerson,
+  // v1.4: face & sky (models on demand).
+  faceSkin,
+  eyeBrighten,
+  teethWhiten,
+  skyEnhance;
 
   /// Whether the action changes the edit without any further input or
   /// model (applied immediately and atomically with slider changes).

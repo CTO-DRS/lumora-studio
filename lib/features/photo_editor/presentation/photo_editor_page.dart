@@ -107,6 +107,22 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
         ctrl.setTool(EditorTool.ai);
         if (!await models(AiTool.erasePerson)) return;
         await ctrl.erasePerson();
+      case QuickAction.faceSkin:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.faceSkin)) return;
+        await ctrl.faceRetouch();
+      case QuickAction.eyeBrighten:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.eyeBrighten)) return;
+        await ctrl.eyeBrighten();
+      case QuickAction.teethWhiten:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.teethWhiten)) return;
+        await ctrl.teethWhiten();
+      case QuickAction.skyEnhance:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.skyEdit)) return;
+        await ctrl.enhanceSky();
     }
   }
 

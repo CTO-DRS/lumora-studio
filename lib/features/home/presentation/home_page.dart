@@ -77,6 +77,11 @@ class _HomePageState extends ConsumerState<HomePage> {
       card(Icons.layers_clear_outlined, t.blue, l.aiDepthBlur, QuickAction.depthBlur, AiTool.depthBlur),
       card(Icons.wb_incandescent_outlined, t.apricot, l.aiRelight, QuickAction.relight, AiTool.relight),
       card(Icons.person_remove_outlined, t.rose, l.aiErasePerson, QuickAction.erasePerson, AiTool.erasePerson),
+      // v1.4: face & sky, reachable from Home too.
+      card(Icons.face_retouching_off, t.rose, l.aiFaceSkin, QuickAction.faceSkin, AiTool.faceSkin),
+      card(Icons.visibility_outlined, t.violet, l.aiEyeBrighten, QuickAction.eyeBrighten, AiTool.eyeBrighten),
+      card(Icons.sentiment_satisfied_alt_outlined, t.mint, l.aiTeethWhiten, QuickAction.teethWhiten, AiTool.teethWhiten),
+      card(Icons.wb_sunny_outlined, t.blue, l.aiSkyEnhance, QuickAction.skyEnhance, AiTool.skyEdit),
       AiToolCard(
         icon: Icons.document_scanner_outlined,
         color: t.teal,

@@ -2402,6 +2402,36 @@ abstract class AppLocalizations {
   /// **'Remove person'**
   String get aiErasePerson;
 
+  /// No description provided for @aiFaceSkin.
+  ///
+  /// In en, this message translates to:
+  /// **'Skin retouch (face)'**
+  String get aiFaceSkin;
+
+  /// No description provided for @aiEyeBrighten.
+  ///
+  /// In en, this message translates to:
+  /// **'Brighten eyes'**
+  String get aiEyeBrighten;
+
+  /// No description provided for @aiTeethWhiten.
+  ///
+  /// In en, this message translates to:
+  /// **'Whiten teeth'**
+  String get aiTeethWhiten;
+
+  /// No description provided for @aiSkyEnhance.
+  ///
+  /// In en, this message translates to:
+  /// **'Enhance sky'**
+  String get aiSkyEnhance;
+
+  /// No description provided for @aiSkyReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace sky'**
+  String get aiSkyReplace;
+
   /// No description provided for @selectHint.
   ///
   /// In en, this message translates to:

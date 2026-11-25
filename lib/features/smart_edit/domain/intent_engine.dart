@@ -40,6 +40,9 @@ enum _K {
   right,
   vertical,
   relight,
+  eyes,
+  teeth,
+  sky,
   filler,
 }
 
@@ -545,12 +548,33 @@ final Map<String, _E> _lexiconRaw = {
   'retouch': const _E(_K.skin),
   'smooth': const _E(_K.skin),
   'beaut': const _E(_K.skin),
+  'eye': const _E(_K.eyes),
+  'eyes': const _E(_K.eyes),
+  'teeth': const _E(_K.teeth),
+  'tooth': const _E(_K.teeth),
+  'whiten': const _E(_K.teeth),
+  'sky': const _E(_K.sky),
+  'skies': const _E(_K.sky),
+  'horizon': const _E(_K.sky),
   'بشره': const _E(_K.skin),
   'وجه': const _E(_K.skin),
   'رتوش': const _E(_K.skin),
   'تنعيم': const _E(_K.skin),
   'جمل': const _E(_K.skin, exact: true),
   'تجميل': const _E(_K.skin),
+  'عيون': const _E(_K.eyes),
+  'عين': const _E(_K.eyes),
+  'اسنان': const _E(_K.teeth),
+  'أسنان': const _E(_K.teeth),
+  'سنون': const _E(_K.teeth),
+  'ضرس': const _E(_K.teeth),
+  'ثنايا': const _E(_K.teeth),
+  'تبييض': const _E(_K.teeth),
+  'بيض': const _E(_K.teeth, exact: true),
+  'سماء': const _E(_K.sky),
+  'سما': const _E(_K.sky, exact: true),
+  'افق': const _E(_K.sky),
+  'أفق': const _E(_K.sky),
   'filter': const _E(_K.filter),
   'preset': const _E(_K.filter),
   'look': const _E(_K.filter, exact: true),
@@ -919,6 +943,15 @@ class RuleIntentEngine implements EditIntentEngine {
       ops.add(const ActionOp(SmartAction.removeBackground));
     } else if (skin) {
       ops.add(const ActionOp(SmartAction.retouch));
+      consumedParams = true;
+    } else if (has(_K.eyes) && !remove) {
+      ops.add(const ActionOp(SmartAction.eyeBrighten));
+      consumedParams = true;
+    } else if (has(_K.teeth)) {
+      ops.add(const ActionOp(SmartAction.teethWhiten));
+      consumedParams = true;
+    } else if (has(_K.sky) && !remove && !blur) {
+      ops.add(const ActionOp(SmartAction.skyEnhance));
       consumedParams = true;
     } else if (has(_K.blemish)) {
       ops.add(const ActionOp(SmartAction.heal));

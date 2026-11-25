@@ -11,6 +11,7 @@ import 'package:lumora/core/diagnostics/crash_log.dart';
 import 'package:lumora/core/providers.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
+import 'package:lumora/features/ai/pipelines/sky_pipeline.dart';
 import 'package:lumora/features/ai/pipelines/smart_pipelines.dart';
 import 'package:lumora/features/ai/pipelines/tensor_utils.dart';
 import 'package:lumora/features/photo_editor/data/preset_store.dart';
@@ -695,6 +696,86 @@ class PhotoEditorController extends _$PhotoEditorController {
         : const Adjustments(exposure: 0.3);
     addMask(MaskKind.subject, maskPath: r.maskPath, adjustments: adjustments, invert: blurBackground);
   }, label: retouch ? 'portrait retouch' : (blurBackground ? 'background blur' : 'subject mask'));
+
+  // ---------------------------------------------------------------- v1.4: faces & sky
+
+  /// Face-aware retouch: the landmarks' skin mask gets a gentle smoothing
+  /// recipe (negative clarity/structure on skin only – eyes, brows and lips
+  /// stay untouched). Adds the eyes/teeth masks too, disabled, so the user
+  /// can enable eye brighten / teeth whiten from the layers panel.
+  Future<void> faceRetouch() => _busy(() async {
+    final r = await ref.read(faceAnalysisPipelineProvider).run(_currentRaster);
+    if (r == null) {
+      state = state.copyWith(error: () => 'no face detected');
+      return;
+    }
+    addMask(
+      MaskKind.subject,
+      maskPath: r.skinMaskPath,
+      adjustments: const Adjustments(clarity: -0.3, structure: -0.25, exposure: 0.05, temperature: 0.03),
+    );
+  }, label: 'face retouch');
+
+  /// Eye brighten as its own one-tap tool.
+  Future<void> eyeBrighten() => _busy(() async {
+    final r = await ref.read(faceAnalysisPipelineProvider).run(_currentRaster);
+    if (r == null) {
+      state = state.copyWith(error: () => 'no face detected');
+      return;
+    }
+    addMask(
+      MaskKind.subject,
+      maskPath: r.eyesMaskPath,
+      adjustments: const Adjustments(exposure: 0.2, highlights: 0.12, clarity: 0.08),
+    );
+  }, label: 'eye brighten');
+
+  /// Teeth whiten (brighten + desaturate inside the mouth polygon).
+  Future<void> teethWhiten() => _busy(() async {
+    final r = await ref.read(faceAnalysisPipelineProvider).run(_currentRaster);
+    if (r == null) {
+      state = state.copyWith(error: () => 'no face detected');
+      return;
+    }
+    addMask(
+      MaskKind.subject,
+      maskPath: r.teethMaskPath,
+      adjustments: const Adjustments(exposure: 0.15, saturation: -0.25, temperature: -0.05),
+    );
+  }, label: 'teeth whiten');
+
+  /// Segments the sky only (no raster change) and applies the "bluer,
+  /// punchier sky" recipe through the mask.
+  Future<void> enhanceSky() => _busy(() async {
+    final r = await ref.read(skyPipelineProvider).run(_currentRaster);
+    if (r.skyFraction < SkyPipeline.minSkyFraction) {
+      state = state.copyWith(error: () => 'no sky detected');
+      return;
+    }
+    _lastSkyMask = r.skyMaskPath;
+    addMask(
+      MaskKind.subject,
+      maskPath: r.skyMaskPath,
+      adjustments: const Adjustments(
+        temperature: -0.12,
+        saturation: 0.18,
+        vibrance: 0.1,
+        exposure: -0.05,
+        contrast: 0.08,
+      ),
+    );
+  }, label: 'sky enhance');
+
+  /// Runs the sky model once and swaps the raster to the replaced image.
+  Future<void> replaceSky(String replacementPath) => _busy(() async {
+    final r = await ref.read(skyPipelineProvider).replace(_currentRaster, replacementPath);
+    _lastSkyMask = r.skyMaskPath;
+    update((s) => s.copyWith(rasterPath: r.imagePath));
+  }, label: 'sky replace');
+
+  /// Mask of the most recent sky segmentation (used by follow-up commands).
+  String? _lastSkyMask;
+  String? get lastSkyMask => _lastSkyMask;
 
   /// Maps a point normalised to the output (cropped/rotated) image back to
   /// source pixels of the current raster (`buildInverseWarp` yields

@@ -609,3 +609,92 @@ final class DepthPipelineProvider
 }
 
 String _$depthPipelineHash() => r'24c3c97446f0b93db16ddfff1ace71c32f68df6e';
+
+@ProviderFor(faceAnalysisPipeline)
+final faceAnalysisPipelineProvider = FaceAnalysisPipelineProvider._();
+
+final class FaceAnalysisPipelineProvider
+    extends
+        $FunctionalProvider<
+          FaceAnalysisPipeline,
+          FaceAnalysisPipeline,
+          FaceAnalysisPipeline
+        >
+    with $Provider<FaceAnalysisPipeline> {
+  FaceAnalysisPipelineProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'faceAnalysisPipelineProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$faceAnalysisPipelineHash();
+
+  @$internal
+  @override
+  $ProviderElement<FaceAnalysisPipeline> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  FaceAnalysisPipeline create(Ref ref) {
+    return faceAnalysisPipeline(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(FaceAnalysisPipeline value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<FaceAnalysisPipeline>(value),
+    );
+  }
+}
+
+String _$faceAnalysisPipelineHash() =>
+    r'97f8a02c7dd6dd77b46d381737f4a64f0a23acff';
+
+@ProviderFor(skyPipeline)
+final skyPipelineProvider = SkyPipelineProvider._();
+
+final class SkyPipelineProvider
+    extends $FunctionalProvider<SkyPipeline, SkyPipeline, SkyPipeline>
+    with $Provider<SkyPipeline> {
+  SkyPipelineProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'skyPipelineProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$skyPipelineHash();
+
+  @$internal
+  @override
+  $ProviderElement<SkyPipeline> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  SkyPipeline create(Ref ref) {
+    return skyPipeline(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SkyPipeline value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SkyPipeline>(value),
+    );
+  }
+}
+
+String _$skyPipelineHash() => r'b4110713f583bfc864cdef6d9a703c1cd6320bc0';

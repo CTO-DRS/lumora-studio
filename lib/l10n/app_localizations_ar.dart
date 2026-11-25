@@ -1210,6 +1210,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get aiErasePerson => 'إزالة شخص';
 
   @override
+  String get aiFaceSkin => 'تنعيم البشرة (الوجه)';
+
+  @override
+  String get aiEyeBrighten => 'تفتيح العيون';
+
+  @override
+  String get aiTeethWhiten => 'تبييض الأسنان';
+
+  @override
+  String get aiSkyEnhance => 'تجميل السماء';
+
+  @override
+  String get aiSkyReplace => 'استبدال السماء';
+
+  @override
   String get selectHint => 'المس العنصر الذي تريده. المس مرة أخرى لإضافة المزيد، واختر «طرح» لاستبعاد أجزاء.';
 
   @override

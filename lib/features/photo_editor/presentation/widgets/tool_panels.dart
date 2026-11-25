@@ -1179,6 +1179,46 @@ class AiPanel extends ConsumerWidget {
         tool: AiTool.erasePerson,
         onTap: withModels(AiTool.erasePerson, ctrl.erasePerson),
       ),
+      // v1.4 – faces & sky.
+      AiToolCard(
+        icon: Icons.face_retouching_off,
+        color: t.rose,
+        label: l.aiFaceSkin,
+        tool: AiTool.faceSkin,
+        onTap: withModels(AiTool.faceSkin, ctrl.faceRetouch),
+      ),
+      AiToolCard(
+        icon: Icons.visibility_outlined,
+        color: t.violet,
+        label: l.aiEyeBrighten,
+        tool: AiTool.eyeBrighten,
+        onTap: withModels(AiTool.eyeBrighten, ctrl.eyeBrighten),
+      ),
+      AiToolCard(
+        icon: Icons.sentiment_satisfied_alt_outlined,
+        color: t.mint,
+        label: l.aiTeethWhiten,
+        tool: AiTool.teethWhiten,
+        onTap: withModels(AiTool.teethWhiten, ctrl.teethWhiten),
+      ),
+      AiToolCard(
+        icon: Icons.wb_sunny_outlined,
+        color: t.blue,
+        label: l.aiSkyEnhance,
+        tool: AiTool.skyEdit,
+        onTap: withModels(AiTool.skyEdit, ctrl.enhanceSky),
+      ),
+      AiToolCard(
+        icon: Icons.swap_horiz,
+        color: t.apricot,
+        label: l.aiSkyReplace,
+        tool: AiTool.skyReplace,
+        onTap: withModels(AiTool.skyReplace, () async {
+          final path = (await FilePicker.pickFile(type: FileType.image))?.path;
+          if (path == null) return;
+          await ctrl.replaceSky(path);
+        }),
+      ),
     ];
     return Column(
       children: [

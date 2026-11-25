@@ -90,6 +90,18 @@ Future<bool> runSmartAction(BuildContext context, WidgetRef ref, SmartAction act
     case SmartAction.erasePerson:
       if (!await models(AiTool.erasePerson)) return false;
       await ctrl.erasePerson();
+    case SmartAction.faceSkin:
+      if (!await models(AiTool.faceSkin)) return false;
+      await ctrl.faceRetouch();
+    case SmartAction.eyeBrighten:
+      if (!await models(AiTool.eyeBrighten)) return false;
+      await ctrl.eyeBrighten();
+    case SmartAction.teethWhiten:
+      if (!await models(AiTool.teethWhiten)) return false;
+      await ctrl.teethWhiten();
+    case SmartAction.skyEnhance:
+      if (!await models(AiTool.skyEdit)) return false;
+      await ctrl.enhanceSky();
     case SmartAction.eraseObject:
       if (!await models(AiTool.eraser)) return false;
       ctrl
@@ -159,6 +171,10 @@ String smartActionLabel(AppLocalizations l, SmartAction a) => switch (a) {
   SmartAction.retouch => l.aiRetouch,
   SmartAction.upscale => l.aiUpscale,
   SmartAction.erasePerson => l.aiErasePerson,
+  SmartAction.faceSkin => l.aiFaceSkin,
+  SmartAction.eyeBrighten => l.aiEyeBrighten,
+  SmartAction.teethWhiten => l.aiTeethWhiten,
+  SmartAction.skyEnhance => l.aiSkyEnhance,
 };
 
 String suggestionLabel(AppLocalizations l, SuggestionKind k) => switch (k) {
