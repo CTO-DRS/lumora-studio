@@ -40,7 +40,11 @@ enum SmartAction {
   skyReplaceGolden,
 
   // Low-light rescue (v1.5 W5): model-free denoise + exposure lift.
-  lowLightRescue;
+  lowLightRescue,
+
+  // Face retouch from the 478-point landmark masks (v1.5 W4).
+  lipColour,
+  browEnhance;
 
   /// Whether the action changes the edit without any further input or
   /// model (applied immediately and atomically with slider changes).

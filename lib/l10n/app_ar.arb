@@ -442,5 +442,7 @@
   "captionsNeedClip": "أضف مقطعًا أولًا.",
   "captionsSaved": "تم حفظ ملفات الترجمة",
   "aiLowLight": "إنقاذ الإضاءة المنخفضة",
-  "aiLowLightDone": "تم رفع الإضاءة وتقليل الضجيج"
+  "aiLowLightDone": "تم رفع الإضاءة وتقليل الضجيج",
+  "aiLipColour": "لون الشفاه",
+  "aiBrowEnhance": "تحسين الحواجب"
 }

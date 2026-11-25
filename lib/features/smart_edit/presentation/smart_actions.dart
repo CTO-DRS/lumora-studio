@@ -101,6 +101,12 @@ Future<bool> runSmartAction(BuildContext context, WidgetRef ref, SmartAction act
     case SmartAction.teethWhiten:
       if (!await models(AiTool.teethWhiten)) return false;
       await ctrl.faceAdjustment(FaceRegion.teeth);
+    case SmartAction.lipColour:
+      if (!await models(AiTool.faceRetouch)) return false;
+      await ctrl.faceAdjustment(FaceRegion.lips);
+    case SmartAction.browEnhance:
+      if (!await models(AiTool.faceRetouch)) return false;
+      await ctrl.faceAdjustment(FaceRegion.brows);
     case SmartAction.skyDeepen:
       if (!await models(AiTool.skyDeepen)) return false;
       await ctrl.skyDeepen();
@@ -199,6 +205,8 @@ String smartActionLabel(AppLocalizations l, SmartAction a) => switch (a) {
   SmartAction.skyReplaceStorm => l.aiSkyReplaceStorm,
   SmartAction.skyReplaceGolden => l.aiSkyReplaceGolden,
   SmartAction.lowLightRescue => l.aiLowLight,
+  SmartAction.lipColour => l.aiLipColour,
+  SmartAction.browEnhance => l.aiBrowEnhance,
 };
 
 String suggestionLabel(AppLocalizations l, SuggestionKind k) => switch (k) {

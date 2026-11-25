@@ -2743,6 +2743,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dark photo lifted and denoised'**
   String get aiLowLightDone;
+
+  /// No description provided for @aiLipColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Lip colour'**
+  String get aiLipColour;
+
+  /// No description provided for @aiBrowEnhance.
+  ///
+  /// In en, this message translates to:
+  /// **'Enhance brows'**
+  String get aiBrowEnhance;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

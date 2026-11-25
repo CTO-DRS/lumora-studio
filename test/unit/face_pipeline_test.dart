@@ -250,6 +250,21 @@ void main() {
       expect(at(30, 70), closeTo(0, 0.05)); // not lips
     });
 
+    test('lip mask is the lip ring minus the mouth opening', () {
+      final mask = buildFaceMask(analysis, FaceRegion.lips, 100, 100);
+      double at(int x, int y) => mask.pixels[(y * 100 + x) * 4] / 255;
+      expect(at(21, 61), closeTo(1, 0.05)); // between inner and outer lips
+      expect(at(27, 67), closeTo(0, 0.05)); // mouth opening (teeth) excluded
+      expect(at(50, 12), closeTo(0, 0.05)); // not skin
+      expect(at(25, 25), closeTo(0, 0.05)); // not eyes
+    });
+
+    test('brow mask builds for every face without touching lips', () {
+      final mask = buildFaceMask(analysis, FaceRegion.brows, 100, 100);
+      expect(mask.pixels.length, 100 * 100 * 4);
+      expect(mask.pixels[(70 * 100 + 30) * 4], 0);
+    });
+
     test('teeth mask is the eroded inner lip ring', () {
       final mask = buildFaceMask(analysis, FaceRegion.teeth, 100, 100);
       double at(int x, int y) => mask.pixels[(y * 100 + x) * 4] / 255;

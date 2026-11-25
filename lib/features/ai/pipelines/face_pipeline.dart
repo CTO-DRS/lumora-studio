@@ -110,7 +110,7 @@ const List<int> kLipsInner = [
 ];
 
 /// What a face mask covers.
-enum FaceRegion { skin, eyes, teeth }
+enum FaceRegion { skin, eyes, teeth, lips, brows }
 
 // ---------------------------------------------------------------------------
 // Results
@@ -388,7 +388,8 @@ List<(double, double)> _pointsOf(Float32List all, List<int> indices) => [
 /// Builds a soft grayscale face mask for [region] across every analysed
 /// face, rasterised at ≤ [rasterSide] and bilinearly stretched to
 /// [width]×[height]. Skin = the face oval minus eyes, brows and lips;
-/// eyes = the eye rings dilated; teeth = the inner lip ring eroded.
+/// eyes = the eye rings dilated; teeth = the inner lip ring eroded;
+/// lips = the lip ring minus the mouth opening; brows = the brow rings.
 RgbaImage buildFaceMask(FaceAnalysis analysis, FaceRegion region, int width, int height, {int rasterSide = 256}) {
   final k = math.min(1, rasterSide / math.max(analysis.width, analysis.height));
   final mw = math.max(2, (analysis.width * k).round());
@@ -408,6 +409,14 @@ RgbaImage buildFaceMask(FaceAnalysis analysis, FaceRegion region, int width, int
         }
       case FaceRegion.teeth:
         fillPolygon(mask, mw, mh, scalePolygon(_pointsOf(pts, kLipsInner), 0.8), 1);
+      case FaceRegion.lips:
+        // The lip ring minus the mouth opening, so teeth stay untouched.
+        fillPolygon(mask, mw, mh, _pointsOf(pts, kLipsOuter), 1);
+        fillPolygon(mask, mw, mh, scalePolygon(_pointsOf(pts, kLipsInner), 0.9), 0);
+      case FaceRegion.brows:
+        for (final ring in [kBrowA, kBrowB]) {
+          fillPolygon(mask, mw, mh, scalePolygon(_pointsOf(pts, ring), 1.15), 1);
+        }
     }
   }
   final small = RgbaImage(mw, mh);

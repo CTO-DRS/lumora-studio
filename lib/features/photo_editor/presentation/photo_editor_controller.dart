@@ -739,6 +739,8 @@ class PhotoEditorController extends _$PhotoEditorController {
         FaceRegion.skin => const Adjustments(clarity: -0.4, structure: -0.25, exposure: 0.06),
         FaceRegion.eyes => const Adjustments(exposure: 0.22, vibrance: 0.1),
         FaceRegion.teeth => const Adjustments(saturation: -0.45, exposure: 0.12),
+        FaceRegion.lips => const Adjustments(saturation: 0.45, vibrance: 0.2, contrast: 0.1, exposure: -0.05),
+        FaceRegion.brows => const Adjustments(exposure: -0.3, contrast: 0.25, structure: 0.3),
       };
       addMask(MaskKind.subject, maskPath: maskPath, adjustments: adjustments);
     },
@@ -746,6 +748,8 @@ class PhotoEditorController extends _$PhotoEditorController {
       FaceRegion.skin => 'face skin retouch',
       FaceRegion.eyes => 'eye brighten',
       FaceRegion.teeth => 'teeth whiten',
+      FaceRegion.lips => 'lip colour',
+      FaceRegion.brows => 'brows enhance',
     },
   );
 

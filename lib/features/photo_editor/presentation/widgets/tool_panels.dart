@@ -1208,6 +1208,20 @@ class AiPanel extends ConsumerWidget {
         tool: AiTool.teethWhiten,
         onTap: withModels(AiTool.teethWhiten, () => ctrl.faceAdjustment(FaceRegion.teeth)),
       ),
+      AiToolCard(
+        icon: Icons.favorite_outline,
+        color: t.apricot,
+        label: l.aiLipColour,
+        tool: AiTool.faceRetouch,
+        onTap: withModels(AiTool.faceRetouch, () => ctrl.faceAdjustment(FaceRegion.lips)),
+      ),
+      AiToolCard(
+        icon: Icons.remove_red_eye_outlined,
+        color: t.mint,
+        label: l.aiBrowEnhance,
+        tool: AiTool.faceRetouch,
+        onTap: withModels(AiTool.faceRetouch, () => ctrl.faceAdjustment(FaceRegion.brows)),
+      ),
       // v1.4 "Sky & scene": sky segmentation tools.
       AiToolCard(
         icon: Icons.filter_drama_outlined,

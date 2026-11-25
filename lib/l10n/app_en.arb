@@ -598,5 +598,7 @@
   "captionsNeedClip": "Add a clip first.",
   "captionsSaved": "Caption files saved",
   "aiLowLight": "Low-light rescue",
-  "aiLowLightDone": "Dark photo lifted and denoised"
+  "aiLowLightDone": "Dark photo lifted and denoised",
+  "aiLipColour": "Lip colour",
+  "aiBrowEnhance": "Enhance brows"
 }

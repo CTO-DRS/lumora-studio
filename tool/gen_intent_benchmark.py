@@ -274,6 +274,17 @@ ACTIONS_AR = [
     ("تقليل التشويش", "lowLightRescue"),
     ("ازل التشويش", "lowLightRescue"),
     ("قلل التشويش", "lowLightRescue"),
+    ("احمر الشفاه", "lipColour"),
+    ("لون الشفاه", "lipColour"),
+    ("لون شفاهي", "lipColour"),
+    ("لون الشفايف", "lipColour"),
+    ("شفاه حمراء", "lipColour"),
+    ("حسن الحواجب", "browEnhance"),
+    ("تحسين الحواجب", "browEnhance"),
+    ("قوي الحواجب", "browEnhance"),
+    ("ظلل الحواجب", "browEnhance"),
+    ("غمق الحواجب", "browEnhance"),
+    ("اغمق الحواجب", "browEnhance"),
 ]
 for phrase, action in ACTIONS_AR:
     entries.append((phrase, "ar", [act(action)]))
@@ -323,6 +334,20 @@ ACTIONS_EN = [
     ("remove the noise", "lowLightRescue"),
     ("noise reduction", "lowLightRescue"),
     ("less noise", "lowLightRescue"),
+    ("lip colour", "lipColour"),
+    ("lip color", "lipColour"),
+    ("lipstick", "lipColour"),
+    ("tint my lips", "lipColour"),
+    ("color my lips", "lipColour"),
+    ("colour my lips", "lipColour"),
+    ("red lips", "lipColour"),
+    ("enhance brows", "browEnhance"),
+    ("enhance eyebrows", "browEnhance"),
+    ("define brows", "browEnhance"),
+    ("define my eyebrows", "browEnhance"),
+    ("darken brows", "browEnhance"),
+    ("darken eyebrows", "browEnhance"),
+    ("thicken brows", "browEnhance"),
 ]
 for phrase, action in ACTIONS_EN:
     entries.append((phrase, "en", [act(action)]))

@@ -1382,4 +1382,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiLowLightDone => 'Dark photo lifted and denoised';
+
+  @override
+  String get aiLipColour => 'Lip colour';
+
+  @override
+  String get aiBrowEnhance => 'Enhance brows';
 }
