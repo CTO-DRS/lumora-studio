@@ -30,6 +30,9 @@ class _SkyFake implements InferenceEngine {
       throw UnimplementedError();
 
   @override
+  Future<ModelSpec> specFor(ModelSpec model) async => model;
+
+  @override
   Future<void> release() async {}
 }
 

@@ -21,13 +21,29 @@ enum TensorDtype {
       TensorDtype.values.firstWhere((d) => d.name == name, orElse: () => TensorDtype.unknown);
 }
 
-/// A raw tensor travelling between isolates: bytes + shape + dtype.
+/// A raw tensor travelling between isolates: bytes + shape + dtype, plus
+/// the quantisation parameters the graph declares for it (1/0 for float
+/// tensors — the identity dequantisation).
 class TensorWire {
-  const TensorWire({required this.bytes, required this.shape, required this.dtype});
+  const TensorWire({
+    required this.bytes,
+    required this.shape,
+    required this.dtype,
+    this.scale = 1.0,
+    this.zeroPoint = 0,
+  });
 
   final Uint8List bytes;
   final List<int> shape;
   final TensorDtype dtype;
+
+  /// Quantisation scale (quantised graphs only; float tensors ship 1.0).
+  final double scale;
+
+  /// Quantisation zero point (quantised graphs only; float tensors ship 0).
+  final int zeroPoint;
+
+  bool get quantised => scale > 0 && (scale != 1.0 || zeroPoint != 0);
 
   int get numElements => shape.fold(1, (a, b) => a * b);
 
@@ -58,6 +74,10 @@ class TensorWire {
     }
   }
 
+  /// Dequantised view: `value * scale + zeroPoint`. Identity for float
+  /// tensors (scale 1, zero point 0).
+  List<double> dequantized() => [for (final v in decode()) v * scale + zeroPoint];
+
   /// Encodes a flat list of numbers as float32 bytes (the common input case
   /// for our graphs; int/uint inputs are passed as typed lists by the
   /// pipelines and never need re-encoding).
@@ -69,8 +89,13 @@ class TensorWire {
     return TensorWire(bytes: _bytesOf(f), shape: shape, dtype: TensorDtype.float32);
   }
 
-  static TensorWire fromBytes(Uint8List bytes, List<int> shape, TensorDtype dtype) =>
-      TensorWire(bytes: bytes, shape: shape, dtype: dtype);
+  static TensorWire fromBytes(
+    Uint8List bytes,
+    List<int> shape,
+    TensorDtype dtype, {
+    double scale = 1.0,
+    int zeroPoint = 0,
+  }) => TensorWire(bytes: bytes, shape: shape, dtype: dtype, scale: scale, zeroPoint: zeroPoint);
 
   /// Verifies the raw bytes hold at least [n] elements of [elementSize] bytes.
   void _checkSize(int n, int elementSize) {
@@ -157,7 +182,13 @@ Map<String, Object?> encodeRunRequest(WorkerRunRequest r) => <String, Object?>{
   'type': 'run',
   'inputs': <String, Map<String, Object?>>{
     for (final e in r.inputs.entries)
-      e.key: <String, Object?>{'bytes': e.value.bytes, 'shape': e.value.shape, 'dtype': e.value.dtype.name},
+      e.key: <String, Object?>{
+        'bytes': e.value.bytes,
+        'shape': e.value.shape,
+        'dtype': e.value.dtype.name,
+        'scale': e.value.scale,
+        'zeroPoint': e.value.zeroPoint,
+      },
   },
 };
 
@@ -173,7 +204,13 @@ Map<String, Object?> encodeRunResult(WorkerRunResult r) => <String, Object?>{
   'error': r.error,
   'outputs': <String, Map<String, Object?>>{
     for (final e in r.outputs.entries)
-      e.key: <String, Object?>{'bytes': e.value.bytes, 'shape': e.value.shape, 'dtype': e.value.dtype.name},
+      e.key: <String, Object?>{
+        'bytes': e.value.bytes,
+        'shape': e.value.shape,
+        'dtype': e.value.dtype.name,
+        'scale': e.value.scale,
+        'zeroPoint': e.value.zeroPoint,
+      },
   },
 };
 
@@ -215,4 +252,6 @@ TensorWire _decodeTensor(Map<Object?, Object?> m) => TensorWire(
   bytes: m['bytes']! as Uint8List,
   shape: List<int>.from(m['shape']! as List<Object?>),
   dtype: TensorDtype.fromName(m['dtype']! as String),
+  scale: (m['scale'] as num?)?.toDouble() ?? 1.0,
+  zeroPoint: (m['zeroPoint'] as num?)?.toInt() ?? 0,
 );

@@ -102,4 +102,26 @@ void main() {
       expect(TensorDtype.fromName('float32'), TensorDtype.float32);
     });
   });
+
+  group('quantisation parameters on the wire', () {
+    test('uint8 probs round-trip with scale and zero point', () {
+      final raw = Uint8List.fromList(List.generate(8, (i) => i * 31));
+      final wire = TensorWire.fromBytes(raw, [1, 8], TensorDtype.uint8, scale: 1 / 256);
+      final encoded = encodeRunResult(WorkerRunResult(outputs: {'out': wire}));
+      final decoded = decodeRunResult(encoded);
+      final out = decoded.outputs['out']!;
+      expect(out.scale, closeTo(1 / 256, 1e-9));
+      expect(out.zeroPoint, 0);
+      expect(out.quantised, isTrue);
+      final probs = out.dequantized();
+      expect(probs.length, 8);
+      expect(probs[4], closeTo((4 * 31) / 256, 1e-9));
+    });
+
+    test('float tensors are not quantised and dequantize identically', () {
+      final wire = TensorWire.fromFloats([1.5, -0.5], [2]);
+      expect(wire.quantised, isFalse);
+      expect(wire.dequantized(), [1.5, -0.5]);
+    });
+  });
 }

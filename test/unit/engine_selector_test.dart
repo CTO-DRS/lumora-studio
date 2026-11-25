@@ -29,6 +29,9 @@ class FakeEngine implements InferenceEngine {
   }
 
   @override
+  Future<ModelSpec> specFor(ModelSpec model) async => model;
+
+  @override
   Future<void> release() async {}
 }
 
@@ -65,25 +68,40 @@ void main() {
     'input': (Float32List.fromList([1]), [1]),
   };
 
+  EngineSelector selector(
+    FakeEngine onnx,
+    FakeEngine lite, {
+    bool accelerated = true,
+    bool accelerators = true,
+    bool liteInstalled = true,
+  }) => EngineSelector(
+    onnx: onnx,
+    liteRt: lite,
+    accelerated: () => accelerated,
+    hasAccelerators: () => accelerators,
+    liteInstalled: (_) async => liteInstalled,
+  );
+
   test('acceleration off → ONNX directly', () async {
     final onnx = FakeEngine('onnx');
     final lite = FakeEngine('lite');
-    final selector = EngineSelector(onnx: onnx, liteRt: lite, accelerated: () => false, hasAccelerators: () => true);
+    final s = selector(onnx, lite, accelerated: false);
     final spec = _onnxSpec(lite: _liteSpec());
 
-    final out = await selector.run(spec, inputs);
+    final out = await s.run(spec, inputs);
     expect(out, [1]);
     expect(onnx.calls, ['m']);
     expect(lite.calls, isEmpty);
+    expect(await s.specFor(spec), same(spec));
   });
 
   test('no lite variant → ONNX even when accelerated', () async {
     final onnx = FakeEngine('onnx');
     final lite = FakeEngine('lite');
-    final selector = EngineSelector(onnx: onnx, liteRt: lite, accelerated: () => true, hasAccelerators: () => true);
+    final s = selector(onnx, lite);
     final spec = _onnxSpec();
 
-    await selector.run(spec, inputs);
+    await s.run(spec, inputs);
     expect(onnx.calls, ['m']);
     expect(lite.calls, isEmpty);
   });
@@ -91,23 +109,38 @@ void main() {
   test('no accelerators on device → ONNX', () async {
     final onnx = FakeEngine('onnx');
     final lite = FakeEngine('lite');
-    final selector = EngineSelector(onnx: onnx, liteRt: lite, accelerated: () => true, hasAccelerators: () => false);
+    final s = selector(onnx, lite, accelerators: false);
     final spec = _onnxSpec(lite: _liteSpec());
 
-    await selector.run(spec, inputs);
+    await s.run(spec, inputs);
     expect(onnx.calls, ['m']);
     expect(lite.calls, isEmpty);
   });
 
-  test('accelerated + lite variant → LiteRT runs the tflite spec', () async {
+  test('lite variant not installed → ONNX, and it never counts as a failure', () async {
+    final onnx = FakeEngine('onnx');
+    final lite = FakeEngine('lite');
+    final s = selector(onnx, lite, liteInstalled: false);
+    final spec = _onnxSpec(lite: _liteSpec());
+
+    expect(await s.specFor(spec), same(spec), reason: 'installed gate keeps the ONNX spec');
+    await s.run(spec, inputs);
+    await s.run(spec, inputs);
+    expect(onnx.calls, ['m', 'm']);
+    expect(lite.calls, isEmpty);
+    expect(s.pinnedToOnnx, isEmpty, reason: 'missing file is not a LiteRT failure');
+  });
+
+  test('accelerated + installed lite variant → LiteRT runs the tflite spec', () async {
     final onnx = FakeEngine('onnx');
     final lite = FakeEngine('lite', result: [42]);
-    final selector = EngineSelector(onnx: onnx, liteRt: lite, accelerated: () => true, hasAccelerators: () => true);
+    final s = selector(onnx, lite);
     final liteSpec = _liteSpec();
     final spec = _onnxSpec(lite: liteSpec);
 
-    expect(selector.prefersLiteRt(spec), isTrue);
-    final out = await selector.run(spec, inputs);
+    expect(s.prefersLiteRt(spec), isTrue);
+    expect(await s.specFor(spec), same(liteSpec));
+    final out = await s.run(spec, inputs);
     expect(out, [42]);
     expect(lite.calls, ['m']);
     expect(onnx.calls, isEmpty);
@@ -116,30 +149,31 @@ void main() {
   test('LiteRT failure transparently falls back to ONNX', () async {
     final onnx = FakeEngine('onnx', result: [3]);
     final lite = FakeEngine('lite', throwOnCall: true);
-    final selector = EngineSelector(onnx: onnx, liteRt: lite, accelerated: () => true, hasAccelerators: () => true);
+    final s = selector(onnx, lite);
     final spec = _onnxSpec(lite: _liteSpec());
 
-    final out = await selector.run(spec, inputs);
+    final out = await s.run(spec, inputs);
     expect(out, [3]);
     expect(lite.calls, ['m']);
     expect(onnx.calls, ['m']);
-    expect(selector.prefersLiteRt(spec), isTrue, reason: 'one failure is not a pin yet');
+    expect(s.prefersLiteRt(spec), isTrue, reason: 'one failure is not a pin yet');
   });
 
   test('two consecutive LiteRT failures pin ONNX for the session', () async {
     final onnx = FakeEngine('onnx', result: [5]);
     final lite = FakeEngine('lite', throwOnCall: true);
-    final selector = EngineSelector(onnx: onnx, liteRt: lite, accelerated: () => true, hasAccelerators: () => true);
+    final s = selector(onnx, lite);
     final spec = _onnxSpec(lite: _liteSpec());
 
-    await selector.run(spec, inputs);
-    await selector.run(spec, inputs);
+    await s.run(spec, inputs);
+    await s.run(spec, inputs);
     expect(lite.calls, ['m', 'm'], reason: 'exactly two LiteRT attempts');
     expect(onnx.calls, ['m', 'm']);
-    expect(selector.pinnedToOnnx, {'m'});
-    expect(selector.prefersLiteRt(spec), isFalse);
+    expect(s.pinnedToOnnx, {'m'});
+    expect(s.prefersLiteRt(spec), isFalse);
+    expect(await s.specFor(spec), same(spec), reason: 'pinned — specFor returns the ONNX spec');
 
-    await selector.run(spec, inputs);
+    await s.run(spec, inputs);
     expect(lite.calls, ['m', 'm'], reason: 'pinned — no more LiteRT attempts');
     expect(onnx.calls, ['m', 'm', 'm']);
   });
@@ -147,11 +181,11 @@ void main() {
   test('a LiteRT success resets the failure counter', () async {
     final onnx = FakeEngine('onnx', result: [1]);
     final lite = FakeEngine('lite', result: [2]);
-    final selector = EngineSelector(onnx: onnx, liteRt: lite, accelerated: () => true, hasAccelerators: () => true);
+    final s = selector(onnx, lite);
     final spec = _onnxSpec(lite: _liteSpec());
 
-    await selector.run(spec, inputs); // success
-    expect(selector.pinnedToOnnx, isEmpty);
-    expect(selector.prefersLiteRt(spec), isTrue);
+    await s.run(spec, inputs); // success
+    expect(s.pinnedToOnnx, isEmpty);
+    expect(s.prefersLiteRt(spec), isTrue);
   });
 }

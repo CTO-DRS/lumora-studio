@@ -241,3 +241,17 @@ List<SrTile> planSrTiles(int w, int h, {int tile = 128, int overlap = 16}) {
       for (final x in starts(w)) SrTile(x, y, tile),
   ];
 }
+
+/// Converts RGBA to an interleaved uint8 NHWC tensor (`[1, H, W, 3]`) — the
+/// LiteRT quantised graph contract (uint8 0..255 RGB, channel-last).
+Uint8List rgbaToNhwcUint8(RgbaImage img) {
+  final plane = img.width * img.height;
+  final out = Uint8List(plane * 3);
+  final px = img.pixels;
+  for (var i = 0; i < plane; i++) {
+    out[i * 3] = px[i * 4];
+    out[i * 3 + 1] = px[i * 4 + 1];
+    out[i * 3 + 2] = px[i * 4 + 2];
+  }
+  return out;
+}

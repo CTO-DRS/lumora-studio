@@ -258,7 +258,7 @@ class ModelRegistry {
     source: 'https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet',
     inputNames: ['input'],
     outputName: 'cls_8',
-    mirrorUrl: '$_kMirrorBase14/yunet_face_detect.onnx',
+    mirrorUrl: '$_kMirrorBase14/yunet.onnx',
     notes:
         'Static 1x3x640x640 float BGR 0..255 (resize any photo to 640x640 and scale boxes back). 12 outputs: cls_8/16/32 [1,N,1], obj_8/16/32 [1,N,1], bbox_8/16/32 [1,N,4], kps_8/16/32 [1,N,10] with N = 6400/1600/400 (row-major grids).',
   );
@@ -281,15 +281,20 @@ class ModelRegistry {
     source: 'https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker',
     inputNames: ['input_12'],
     outputName: 'Identity',
-    mirrorUrl: '$_kMirrorBase14/face_landmarks_478.onnx',
+    mirrorUrl: '$_kMirrorBase14/facemesh.onnx',
     fixedInputSize: 256,
     notes:
         'NHWC float RGB 0..1 [1,256,256,3] aligned square crop → Identity [1,1,1,1434] = 478×(x,y,z) in crop pixels (0..256); Identity_1 = face presence logit (sigmoid, keep > 0.5); Identity_2 auxiliary (ignored).',
   );
 
   /// Base URL of the v1.4 project-hosted model mirrors (release assets of
-  /// this repository, tag `models-v1.4`; see `tool/sync_model_mirrors.py`).
-  static const _kMirrorBase14 = 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-v1.4';
+  /// this repository, tag `models-1.4`; see `tool/sync_model_mirrors.py`).
+  /// Fixed 2026-11-25: the release actually publishes as `models-1.4` and
+  /// under short asset names (yunet.onnx / facemesh.onnx / skyseg_int8.onnx
+  /// / mobilenet_v2_1.0_224_quant.tflite) — the previous registry pointed
+  /// at a non-existent `models-v1.4` tag with different names, so the
+  /// v1.4 mirrors 404'd.
+  static const _kMirrorBase14 = 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.4';
 
   /// U²-Net sky segmentation, quantised int8 (44.2 MB). The fp32 original
   /// (176 MB) exceeds the v1.4 ≤ 50 MB budget, so the shipped asset is the
@@ -303,14 +308,14 @@ class ModelRegistry {
     id: 'skyseg_q8',
     task: AiTask.skySegmentation,
     displayName: 'U²-Net – sky segmentation (int8)',
-    url: '$_kMirrorBase14/skyseg_q8.onnx',
+    url: '$_kMirrorBase14/skyseg_int8.onnx',
     sha256: '01c60b73595450b6ceac707055b8315dacbd5019344f1ecbb1b8becaebef2076',
     sizeBytes: 44247982,
     license: 'MIT (U²-Net sky segmentation — xiongzhu666/Sky-Segmentation-and-Post-processing; base U²-Net Apache-2.0)',
     source: 'https://github.com/xiongzhu666/Sky-Segmentation-and-Post-processing',
     inputNames: ['input.1'],
     outputName: '1959',
-    mirrorUrl: '$_kMirrorBase14/skyseg_q8.onnx',
+    mirrorUrl: '$_kMirrorBase14/skyseg_int8.onnx',
     fixedInputSize: 320,
     notes:
         'Static [1, 3, 320, 320] float, RGB 0..1 with ImageNet mean/std normalisation → 7 maps [1, 1, 320, 320]; output 0 is the final sky map, min-max normalised per image and thresholded at 0.5 (reference contract). int8 quantisation: 2.4× smaller, ~2× faster, IoU vs fp32 ≈ 0.93 (see docs/SMART_EDIT.md).',
@@ -339,8 +344,33 @@ class ModelRegistry {
     outputName: 'output',
     mirrorUrl: '$_kMirrorBase/mobilenetv2_224_q8.onnx',
     fixedInputSize: 224,
+    lite: mobilenetSceneLite,
     notes:
         'Static [batch, 3, 224, 224] float, RGB 0..1 with ImageNet mean/std normalisation → 1000 ImageNet logits (measurements on a 2-core x86 sandbox: 2.4 ms per frame).',
+  );
+
+  /// LiteRT sibling of [mobilenetScene] (Wave 2 W1): the official uint8
+  /// quantised MobileNetV2 (1.0, 224) from google-coral/test_data — a
+  /// Google-owned repository whose master file is immutable per commit
+  /// tag; downloaded, parsed and SHA-256-verified in the sandbox before
+  /// registration. uint8 NHWC contract → 1001 classes (0 = background).
+  /// Served identically from the project mirror (tag `models-1.4`).
+  static const mobilenetSceneLite = ModelSpec(
+    id: 'mobilenetv2_224_q8',
+    task: AiTask.sceneClassification,
+    displayName: 'MobileNetV2 – scene classifier (uint8, LiteRT)',
+    url: 'https://github.com/google-coral/test_data/raw/master/mobilenet_v2_1.0_224_quant.tflite',
+    sha256: '7aad0c74c5e3c06e5eb3c827e13304fdd68a83da6087d92ee169c24ff9fd4776',
+    sizeBytes: 3610798,
+    license: 'Apache-2.0 (TensorFlow MobileNetV2, google-coral test_data)',
+    source: 'https://github.com/google-coral/test_data',
+    inputNames: ['input'],
+    outputName: 'MobilenetV2/Predictions/Softmax',
+    mirrorUrl: '$_kMirrorBase14/mobilenet_v2_1.0_224_quant.tflite',
+    fixedInputSize: 224,
+    format: 'tflite',
+    notes:
+        'uint8 NHWC [1, 224, 224, 3] RGB 0..255 → uint8 [1, 1001] probabilities (scale 1/256, zero point 0); class 0 is background and is dropped before tag aggregation. Same weights as the ONNX sibling.',
   );
 
   static const List<ModelSpec> all = [

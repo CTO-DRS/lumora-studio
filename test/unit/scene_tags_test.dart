@@ -32,13 +32,24 @@ Uint8List paint(int w, int h, (int, int, int) Function(int x, int y) f) {
 class RecordingEngine implements InferenceEngine {
   RecordingEngine(this.logits);
 
-  final List<double> logits;
+  List<num> logits;
+
+  /// When set, [specFor] resolves to this LiteRT variant (the selector's
+  /// installed-gated behaviour) — the pipeline must switch contracts.
+  ModelSpec? liteOverride;
+
   final shapes = <List<int>>[];
+  final inputsAreUint8 = <bool>[];
+
+  @override
+  Future<ModelSpec> specFor(ModelSpec model) async => liteOverride ?? model;
 
   @override
   Future<List<num>> run(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) async {
-    shapes.add(inputs.values.first.$2);
-    return Float32List.fromList(logits);
+    final (data, shape) = inputs.values.first;
+    shapes.add(shape);
+    inputsAreUint8.add(data is Uint8List);
+    return logits;
   }
 
   @override
@@ -47,6 +58,14 @@ class RecordingEngine implements InferenceEngine {
 
   @override
   Future<void> release() async {}
+}
+
+/// 1001 uint8 probabilities (LiteRT MobileNetV2 contract): class 0 is
+/// background; [classIndex] (0-based ImageNet) is boosted.
+List<int> uint8Spike(int classIndex, {int boosted = 244}) {
+  final out = List<int>.filled(1001, 0);
+  out[classIndex + 1] = boosted; // 244/256 ≈ 0.95 — the rest is background noise
+  return out;
 }
 
 /// Logits with one class boosted above the rest.
@@ -165,6 +184,32 @@ void main() {
 
     test('wrong output length is an inference error', () async {
       final engine = RecordingEngine(List<double>.filled(100, 0));
+      final proxy = RgbaImage(2, 2, paint(2, 2, (x, y) => (10, 10, 10)));
+      expect(() => SceneClassifierPipeline(engine).run(proxy), throwsA(isA<AiException>()));
+    });
+
+    test('LiteRT variant: uint8 NHWC input, background class dropped', () async {
+      final engine = RecordingEngine(uint8Spike(285))..liteOverride = ModelRegistry.mobilenetSceneLite;
+      final proxy = RgbaImage(2, 2, paint(2, 2, (x, y) => (255, 0, 0)));
+      final result = await SceneClassifierPipeline(engine).run(proxy);
+
+      expect(engine.shapes.single, [1, 224, 224, 3], reason: 'quantised graph is NHWC');
+      expect(engine.inputsAreUint8.single, isTrue, reason: 'uint8 0..255 contract, no normalisation');
+
+      // The raw uint8 buffer is channel-last RGB.
+      final t = rgbaToNhwcUint8(proxy.resize(224, 224));
+      expect(t[0], 255, reason: 'red channel first (NHWC)');
+      expect(t[1], 0);
+      expect(t[2], 0);
+
+      // Background dropped: pets (class 285) still wins through the
+      // ln(p) → softmax recovery, and its probability is sane.
+      expect(result.activeTags.first, SceneTag.pets);
+      expect(result.topClassIndex, 285);
+    });
+
+    test('LiteRT variant with wrong class count is an inference error', () async {
+      final engine = RecordingEngine(List<int>.filled(1000, 3))..liteOverride = ModelRegistry.mobilenetSceneLite;
       final proxy = RgbaImage(2, 2, paint(2, 2, (x, y) => (10, 10, 10)));
       expect(() => SceneClassifierPipeline(engine).run(proxy), throwsA(isA<AiException>()));
     });

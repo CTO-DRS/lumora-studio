@@ -25,6 +25,12 @@ abstract class InferenceEngine {
   Future<Map<String, List<num>>> runAll(ModelSpec model, Map<String, (TypedData, List<int>)> inputs) =>
       throw UnimplementedError('runAll');
 
+  /// The spec the engine will actually execute for [model] — the LiteRT
+  /// variant (`model.lite`) when one is selected and installed, otherwise
+  /// [model] itself. Contract-aware pipelines (different preprocessing per
+  /// format) call this before building their inputs.
+  Future<ModelSpec> specFor(ModelSpec model) async => model;
+
   Future<void> release();
 }
 
@@ -118,6 +124,9 @@ OrtSessionOptions sessionOptionsFor({
 ///   attributed on-device.
 class OnnxInferenceEngine implements InferenceEngine {
   OnnxInferenceEngine(this._models, {bool Function()? accelerated}) : _accelerated = accelerated ?? (() => false);
+
+  @override
+  Future<ModelSpec> specFor(ModelSpec model) async => model;
 
   final ModelManager _models;
   final bool Function() _accelerated;

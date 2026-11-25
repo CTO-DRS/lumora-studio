@@ -72,9 +72,11 @@ I/O contracts:
 
 Verified like every model: downloaded from the pinned zoo commit (immutable), hashed, and executed with ONNX Runtime. Semantic check: an ImageNet-normalised photo of a white fluffy cat returned white-fluffy-animal classes (Angora rabbit, West Highland terrier) in the top-5 while the same pixels without normalisation returned unrelated objects (wall clock, spotlight) — the preprocessing contract is the zoo's `[0..1] → ImageNet mean/std`. I/O contract: `input` float `[batch,3,224,224]` (RGB, ImageNet-normalised via `rgbaToNchw`), `output` float `[batch,1000]` ImageNet-1k logits; `SceneResult.fromLogits` softmaxes them and sums the mass of hand-curated class subsets into the pets/food/nature/city/vehicle/plant tags (`scene_tags.dart`).
 
-## 4. Model mirrors (v1.3.x)
+## 4. Model mirrors (v1.3.x — restored 2026-11-25)
 
 Every model carries a `mirrorUrl` pointing at release assets of this repository (tag `models-v1.3`). `ModelManager` downloads from the primary URL first and falls back to the mirror on any HTTP/network error or checksum mismatch — a broken third-party host only costs one extra request. `tool/sync_model_mirrors.py` downloads, SHA-256-verifies and publishes the mirrors (idempotent, `--check` mode verifies only).
+
+**Restoration note (2026-11-25):** the `models-v1.3` tag existed but had **no release** — every v1.3 mirror URL 404'd. The release was recreated with all ten assets (u2netp, modnet_q8, realesrgan, migan, LaMa fp32, MobileSAM encoder + both decoders, Depth Anything V2 Small q8, MobileNetV2 q8), each downloaded from its pinned primary URL, SHA-256-verified against the registry, and uploaded byte-identical. The v1.4 mirrors were likewise repaired: the release publishes as tag **`models-1.4`** under short asset names (yunet.onnx, facemesh.onnx, skyseg_int8.onnx, mobilenet_v2_1.0_224_quant.tflite); the registry's `_kMirrorBase14` and per-model `mirrorUrl`s were corrected, and yunet/facemesh were re-downloaded and verified byte-identical (8f2383e4… / 7d6e82de…).
 
 ## 5. Smart bar helpers (v1.3.x)
 

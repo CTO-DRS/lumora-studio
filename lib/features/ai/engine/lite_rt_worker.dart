@@ -200,7 +200,14 @@ WorkerRunResult _readOutputs(Interpreter interpreter) {
   final outputs = <String, TensorWire>{};
   final tensors = interpreter.getOutputTensors();
   for (final t in tensors) {
-    outputs[t.name] = TensorWire(bytes: Uint8List.fromList(t.data), shape: t.shape, dtype: _dtypeOf(t));
+    final params = t.params;
+    outputs[t.name] = TensorWire(
+      bytes: Uint8List.fromList(t.data),
+      shape: t.shape,
+      dtype: _dtypeOf(t),
+      scale: params.scale,
+      zeroPoint: params.zeroPoint,
+    );
   }
   return WorkerRunResult(outputs: outputs);
 }

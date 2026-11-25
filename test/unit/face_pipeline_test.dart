@@ -383,5 +383,8 @@ class _DetectingFake implements InferenceEngine {
   }
 
   @override
+  Future<ModelSpec> specFor(ModelSpec model) async => model;
+
+  @override
   Future<void> release() async {}
 }

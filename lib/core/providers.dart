@@ -81,7 +81,15 @@ InferenceEngine inferenceEngine(Ref ref) {
           .orderFor(accelerated: accelerated(), android: Platform.isAndroid, apple: Platform.isIOS || Platform.isMacOS)
           .length >
       1; // CPU-only ladder means no NPU/GPU delegate available.
-  final engine = EngineSelector(onnx: onnx, liteRt: liteRt, accelerated: accelerated, hasAccelerators: hasAccelerators);
+  final engine = EngineSelector(
+    onnx: onnx,
+    liteRt: liteRt,
+    accelerated: accelerated,
+    hasAccelerators: hasAccelerators,
+    // LiteRT variants are never downloaded on demand (optional-model
+    // policy): only a variant that is already installed is used.
+    liteInstalled: manager.isInstalled,
+  );
   ref.onDispose(() {
     unawaited(engine.release());
   });

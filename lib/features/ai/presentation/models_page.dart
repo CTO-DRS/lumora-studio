@@ -34,9 +34,15 @@ class _ModelsPageState extends ConsumerState<ModelsPage> {
   Future<void> _download(ModelSpec spec) async {
     setState(() => _progress[spec.id] = 0);
     try {
-      await ref
-          .read(modelManagerProvider)
-          .ensure(spec, onProgress: (p) => setState(() => _progress[spec.id] = p.fraction));
+      final manager = ref.read(modelManagerProvider);
+      await manager.ensure(spec, onProgress: (p) => setState(() => _progress[spec.id] = p.fraction));
+      // Fetch the LiteRT sibling too (same opt-in, one tap): NPU/GPU
+      // acceleration then needs no second visit to this page. Progress for
+      // the sibling rides the same indicator (it is the smaller file).
+      final lite = spec.lite;
+      if (lite != null && !await manager.isInstalled(lite)) {
+        await manager.ensure(lite, onProgress: (p) => setState(() => _progress[spec.id] = 0.9 + 0.1 * p.fraction));
+      }
     } on Object catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.errorGeneric('$e'))));
