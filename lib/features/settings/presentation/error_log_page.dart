@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:lumora/core/app_info.dart';
 import 'package:lumora/core/diagnostics/crash_log.dart';
+import 'package:lumora/core/diagnostics/inference_telemetry.dart';
 import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:material_ui/material_ui.dart';
@@ -38,7 +39,8 @@ class _ErrorLogPageState extends State<ErrorLogPage> {
   Future<void> _load() async {
     final log = CrashLog.instance;
     final device = await log.deviceSummary();
-    final body = await log.read();
+    final telemetry = InferenceTelemetry.instance.report();
+    final body = '${await log.read()}${telemetry.isEmpty ? '' : '\n$telemetry'}';
     final header = 'Lumora Studio v$kAppVersion${device == null ? '' : '\n$device'}\n\n';
     if (!mounted) return;
     setState(() => _text = body.trim().isEmpty ? '' : header + body);

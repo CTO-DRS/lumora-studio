@@ -1,6 +1,7 @@
 import 'dart:async' show unawaited;
 import 'dart:io' show Platform;
 
+import 'package:lumora/core/diagnostics/inference_telemetry.dart';
 import 'package:lumora/features/ai/data/model_manager.dart';
 import 'package:lumora/features/ai/data/onnx_engine.dart';
 import 'package:lumora/features/ai/engine/delegate_policy.dart';
@@ -93,7 +94,7 @@ InferenceEngine inferenceEngine(Ref ref) {
   ref.onDispose(() {
     unawaited(engine.release());
   });
-  return engine;
+  return TelemetryInferenceEngine(engine);
 }
 
 @Riverpod(keepAlive: true)
