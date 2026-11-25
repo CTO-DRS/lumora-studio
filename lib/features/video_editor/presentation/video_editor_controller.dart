@@ -6,7 +6,9 @@ import 'package:lumora/features/photo_editor/data/preset_store.dart';
 import 'package:lumora/features/photo_editor/domain/edit_history.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
 import 'package:lumora/features/video_editor/domain/audio_analysis.dart';
+import 'package:lumora/features/video_editor/domain/caption_timeline.dart';
 import 'package:lumora/features/video_editor/domain/look_keyframes.dart';
+import 'package:lumora/features/video_editor/domain/subtitles.dart';
 import 'package:lumora/features/video_editor/domain/timeline_ops.dart';
 import 'package:lumora/features/video_editor/domain/video_project.dart';
 import 'package:lumora/features/video_editor/engine/video_engine.dart';
@@ -239,6 +241,21 @@ class VideoEditorController extends _$VideoEditorController {
 
   void updateText(String id, VideoText Function(VideoText) f, {bool live = false}) =>
       update((p) => p.copyWith(texts: [for (final t in p.texts) t.id == id ? f(t) : t]), live: live);
+
+  /// Replaces the captions of [clipId] with [track] (source-file times),
+  /// mapped onto the timeline as burned-in text overlays.
+  void setCaptions(String clipId, SubtitleTrack track) {
+    final clips = state.project.clips;
+    final i = clips.indexWhere((c) => c.id == clipId);
+    if (i < 0) return;
+    final fresh = captionTexts(track, clips[i], state.project.clipStarts[i]);
+    update((p) => p.copyWith(texts: replaceClipCaptions(p.texts, clipId, fresh)));
+  }
+
+  void removeAllCaptions() {
+    update((p) => p.copyWith(texts: p.texts.where((t) => !isCaptionText(t)).toList()));
+    selectText(null);
+  }
 
   void removeText(String id) {
     update((p) => p.copyWith(texts: p.texts.where((t) => t.id != id).toList()));

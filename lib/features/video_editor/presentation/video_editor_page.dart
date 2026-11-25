@@ -18,13 +18,14 @@ import 'package:lumora/features/video_editor/domain/timeline_ops.dart';
 import 'package:lumora/features/video_editor/domain/video_project.dart';
 import 'package:lumora/features/video_editor/engine/video_engine.dart';
 import 'package:lumora/features/video_editor/presentation/video_editor_controller.dart';
+import 'package:lumora/features/video_editor/presentation/widgets/caption_panel.dart';
 import 'package:lumora/features/video_editor/presentation/widgets/timeline_view.dart';
 import 'package:lumora/features/video_editor/presentation/widgets/video_crop_sheet.dart';
 import 'package:lumora/features/video_editor/presentation/widgets/video_preview.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
 
-enum _VideoTool { clip, look, text, audio, format }
+enum _VideoTool { clip, look, text, captions, audio, format }
 
 enum _ExportKind { fast, studio, gif }
 
@@ -197,6 +198,7 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
       (_VideoTool.clip, Icons.movie_edit, l.trim),
       (_VideoTool.look, Icons.auto_awesome, l.filter),
       (_VideoTool.text, Icons.text_fields, l.toolText),
+      (_VideoTool.captions, Icons.closed_caption_outlined, l.captions),
       (_VideoTool.audio, Icons.music_note_outlined, l.music),
       (_VideoTool.format, Icons.aspect_ratio, l.aspectRatio),
     ];
@@ -494,6 +496,13 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
               ),
             ],
           ],
+        );
+      case _VideoTool.captions:
+        return CaptionPanel(
+          onSeek: (ms) {
+            ctrl.seek(ms);
+            _preview.currentState?.scrubTo(ms);
+          },
         );
       case _VideoTool.audio:
         final music = s.project.music;

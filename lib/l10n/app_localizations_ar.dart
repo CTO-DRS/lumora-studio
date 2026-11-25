@@ -1339,4 +1339,42 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get smartErrNoSky => 'لا توجد سماء واضحة في هذه الصورة.';
+
+  @override
+  String get captions => 'الترجمة';
+
+  @override
+  String get captionsGenerate => 'إنشاء الترجمة';
+
+  @override
+  String get captionsRegenerate => 'إعادة الإنشاء';
+
+  @override
+  String captionsProgress(int percent) {
+    return 'جارٍ التفريغ… $percent%';
+  }
+
+  @override
+  String get captionsNoAudio => 'هذا المقطع لا يحتوي على صوت للترجمة.';
+
+  @override
+  String get captionsNone => 'لم يتم العثور على كلام في هذا المقطع.';
+
+  @override
+  String get captionsLanguageAuto => 'لغة تلقائية';
+
+  @override
+  String get captionsExport => 'حفظ SRT و VTT';
+
+  @override
+  String get captionsRemoveAll => 'حذف الترجمة';
+
+  @override
+  String get captionsHint => 'تُدمج الترجمة في الفيديو المُصدَّر. اضغط على سطر لتعديله.';
+
+  @override
+  String get captionsNeedClip => 'أضف مقطعًا أولًا.';
+
+  @override
+  String get captionsSaved => 'تم حفظ ملفات الترجمة';
 }

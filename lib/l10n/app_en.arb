@@ -583,5 +583,18 @@
   "aiSkyReplaceClear": "Sky: clear blue",
   "aiSkyReplaceStorm": "Sky: storm",
   "aiSkyReplaceGolden": "Sky: golden hour",
-  "smartErrNoSky": "No clear sky found in this photo."
+  "smartErrNoSky": "No clear sky found in this photo.",
+  "captions": "Captions",
+  "captionsGenerate": "Generate captions",
+  "captionsRegenerate": "Regenerate",
+  "captionsProgress": "Transcribing… {percent}%",
+  "@captionsProgress": {"placeholders": {"percent": {"type": "int"}}},
+  "captionsNoAudio": "This clip has no audio to caption.",
+  "captionsNone": "No speech was found in this clip.",
+  "captionsLanguageAuto": "Auto language",
+  "captionsExport": "Save SRT and VTT",
+  "captionsRemoveAll": "Remove captions",
+  "captionsHint": "Captions are burned into the exported video. Tap a line to edit it.",
+  "captionsNeedClip": "Add a clip first.",
+  "captionsSaved": "Caption files saved"
 }

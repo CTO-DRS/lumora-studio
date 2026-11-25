@@ -1338,4 +1338,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get smartErrNoSky => 'No clear sky found in this photo.';
+
+  @override
+  String get captions => 'Captions';
+
+  @override
+  String get captionsGenerate => 'Generate captions';
+
+  @override
+  String get captionsRegenerate => 'Regenerate';
+
+  @override
+  String captionsProgress(int percent) {
+    return 'Transcribing… $percent%';
+  }
+
+  @override
+  String get captionsNoAudio => 'This clip has no audio to caption.';
+
+  @override
+  String get captionsNone => 'No speech was found in this clip.';
+
+  @override
+  String get captionsLanguageAuto => 'Auto language';
+
+  @override
+  String get captionsExport => 'Save SRT and VTT';
+
+  @override
+  String get captionsRemoveAll => 'Remove captions';
+
+  @override
+  String get captionsHint => 'Captions are burned into the exported video. Tap a line to edit it.';
+
+  @override
+  String get captionsNeedClip => 'Add a clip first.';
+
+  @override
+  String get captionsSaved => 'Caption files saved';
 }

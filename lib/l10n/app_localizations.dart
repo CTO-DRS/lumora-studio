@@ -2659,6 +2659,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No clear sky found in this photo.'**
   String get smartErrNoSky;
+
+  /// No description provided for @captions.
+  ///
+  /// In en, this message translates to:
+  /// **'Captions'**
+  String get captions;
+
+  /// No description provided for @captionsGenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate captions'**
+  String get captionsGenerate;
+
+  /// No description provided for @captionsRegenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get captionsRegenerate;
+
+  /// No description provided for @captionsProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Transcribing… {percent}%'**
+  String captionsProgress(int percent);
+
+  /// No description provided for @captionsNoAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'This clip has no audio to caption.'**
+  String get captionsNoAudio;
+
+  /// No description provided for @captionsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No speech was found in this clip.'**
+  String get captionsNone;
+
+  /// No description provided for @captionsLanguageAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto language'**
+  String get captionsLanguageAuto;
+
+  /// No description provided for @captionsExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Save SRT and VTT'**
+  String get captionsExport;
+
+  /// No description provided for @captionsRemoveAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove captions'**
+  String get captionsRemoveAll;
+
+  /// No description provided for @captionsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Captions are burned into the exported video. Tap a line to edit it.'**
+  String get captionsHint;
+
+  /// No description provided for @captionsNeedClip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a clip first.'**
+  String get captionsNeedClip;
+
+  /// No description provided for @captionsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Caption files saved'**
+  String get captionsSaved;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

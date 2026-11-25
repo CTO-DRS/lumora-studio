@@ -427,5 +427,18 @@
   "aiSkyReplaceClear": "سماء: زرقاء صافية",
   "aiSkyReplaceStorm": "سماء: عاصفة",
   "aiSkyReplaceGolden": "سماء: الساعة الذهبية",
-  "smartErrNoSky": "لا توجد سماء واضحة في هذه الصورة."
+  "smartErrNoSky": "لا توجد سماء واضحة في هذه الصورة.",
+  "captions": "الترجمة",
+  "captionsGenerate": "إنشاء الترجمة",
+  "captionsRegenerate": "إعادة الإنشاء",
+  "captionsProgress": "جارٍ التفريغ… {percent}%",
+  "@captionsProgress": {"placeholders": {"percent": {"type": "int"}}},
+  "captionsNoAudio": "هذا المقطع لا يحتوي على صوت للترجمة.",
+  "captionsNone": "لم يتم العثور على كلام في هذا المقطع.",
+  "captionsLanguageAuto": "لغة تلقائية",
+  "captionsExport": "حفظ SRT و VTT",
+  "captionsRemoveAll": "حذف الترجمة",
+  "captionsHint": "تُدمج الترجمة في الفيديو المُصدَّر. اضغط على سطر لتعديله.",
+  "captionsNeedClip": "أضف مقطعًا أولًا.",
+  "captionsSaved": "تم حفظ ملفات الترجمة"
 }
