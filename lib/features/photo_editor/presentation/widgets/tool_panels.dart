@@ -583,6 +583,11 @@ class CropPanel extends ConsumerWidget {
                     ),
                   ),
                 IconButton(
+                  tooltip: l.autoStraighten,
+                  icon: const Icon(Icons.auto_awesome_outlined),
+                  onPressed: ctrl.autoStraighten,
+                ),
+                IconButton(
                   tooltip: l.reset,
                   icon: const Icon(Icons.restart_alt),
                   onPressed: () => ctrl.update((s) => s.copyWith(geometry: const GeometryState())),

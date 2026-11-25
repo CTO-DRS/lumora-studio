@@ -23,6 +23,7 @@ import 'package:lumora/features/photo_editor/domain/edit_history.dart';
 import 'package:lumora/features/photo_editor/domain/edit_state.dart';
 import 'package:lumora/features/photo_editor/domain/geometry.dart';
 import 'package:lumora/features/photo_editor/domain/histogram.dart';
+import 'package:lumora/features/photo_editor/domain/horizon_detector.dart';
 import 'package:lumora/features/photo_editor/domain/layers.dart';
 import 'package:lumora/features/photo_editor/domain/presets.dart';
 import 'package:lumora/features/photo_editor/engine/finishing_renderer.dart';
@@ -657,6 +658,21 @@ class PhotoEditorController extends _$PhotoEditorController {
       state = state.copyWith(busy: false, progress: () => null);
     }
   }
+
+  /// Detects the dominant horizon and straightens the photo to it (v1.4).
+  /// The detector runs on a small copy in a background isolate.
+  Future<void> autoStraighten() => _busy(() async {
+    final src = await loadRgba(_currentRaster, maxSide: 256);
+    final tilt = await Isolate.run(() => HorizonDetector.detect(src.pixels, src.width, src.height));
+    if (tilt == null) {
+      state = state.copyWith(error: () => 'no horizon detected');
+      return;
+    }
+    CrashLog.instance.breadcrumb('Editor: auto straighten $tilt°');
+    final target = (-tilt).clamp(-10.0, 10.0);
+    update((s) => s.copyWith(geometry: s.geometry.copyWith(straightenDegrees: target)));
+    commit();
+  }, label: 'auto straighten');
 
   Future<void> autoEnhance() async {
     final preview = state.preview;

@@ -267,6 +267,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get straighten => 'Straighten';
 
   @override
+  String get autoStraighten => 'Auto straighten';
+
+  @override
   String get perspectiveV => 'Vertical perspective';
 
   @override

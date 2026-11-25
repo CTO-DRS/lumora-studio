@@ -608,6 +608,12 @@ abstract class AppLocalizations {
   /// **'Straighten'**
   String get straighten;
 
+  /// No description provided for @autoStraighten.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto straighten'**
+  String get autoStraighten;
+
   /// No description provided for @perspectiveV.
   ///
   /// In en, this message translates to:

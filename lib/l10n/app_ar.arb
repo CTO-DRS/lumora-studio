@@ -86,6 +86,7 @@
   "rotate": "تدوير",
   "flipH": "قلب",
   "straighten": "تعديل الميل",
+  "autoStraighten": "تسوية تلقائية",
   "perspectiveV": "المنظور العمودي",
   "perspectiveH": "المنظور الأفقي",
   "aspectFree": "حر",

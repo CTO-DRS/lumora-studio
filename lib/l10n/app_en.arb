@@ -86,6 +86,7 @@
   "rotate": "Rotate",
   "flipH": "Flip",
   "straighten": "Straighten",
+  "autoStraighten": "Auto straighten",
   "perspectiveV": "Vertical perspective",
   "perspectiveH": "Horizontal perspective",
   "aspectFree": "Free",

@@ -267,6 +267,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get straighten => 'تعديل الميل';
 
   @override
+  String get autoStraighten => 'تسوية تلقائية';
+
+  @override
   String get perspectiveV => 'المنظور العمودي';
 
   @override
