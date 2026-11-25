@@ -20,6 +20,7 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
 import 'package:lumora/features/ai/pipelines/tensor_utils.dart';
+import 'package:lumora/features/photo_editor/domain/raw/colour_render.dart';
 import 'package:lumora/features/photo_editor/domain/raw/dng_decoder.dart';
 import 'package:lumora/features/photo_editor/domain/raw/dng_document.dart';
 import 'package:lumora/features/photo_editor/domain/raw/tiff_parser.dart';
@@ -106,7 +107,14 @@ RawImportResult _decodeDng(Uint8List bytes) {
     try {
       final bayer = decodeCfa(bytes, doc);
       final demosaiced = demosaicBilinear(bayer, doc.cfa.pattern, doc.cfa.blackLevel, doc.cfa.whiteLevel);
-      final rgba = toRgba(demosaiced);
+      // M2-4: camera-neutral colour — white balance + ColorMatrix1 +
+      // highlight recovery. Files without colour metadata keep the legacy
+      // identity path inside renderRawSrgb (wb/matrix skipped, shoulder on).
+      final rgba = renderRawSrgb(
+        demosaiced,
+        asShotNeutral: doc.cfa.asShotNeutral.isEmpty ? null : doc.cfa.asShotNeutral,
+        colorMatrix1: doc.cfa.colorMatrix1.isEmpty ? null : doc.cfa.colorMatrix1,
+      );
       final path = _savePng(rgba, 'raw_open');
       return RawImportSuccess(path: path, width: rgba.width, height: rgba.height, fromPreview: false);
     } on TiffFormatException catch (e) {

@@ -35,6 +35,7 @@ class DngTags {
   static const colorMatrix2 = 50722;
   static const calibrationIlluminant1 = 50778;
   static const calibrationIlluminant2 = 50779;
+  static const asShotNeutral = 50728;
   static const previewColorSpace = 50832;
 }
 
@@ -95,6 +96,8 @@ class RawCfaInfo {
     required this.stripOffsets,
     required this.stripByteCounts,
     required this.rowsPerStrip,
+    this.colorMatrix1 = const [],
+    this.asShotNeutral = const [],
   });
 
   final int width;
@@ -114,6 +117,23 @@ class RawCfaInfo {
   final List<int> stripOffsets;
   final List<int> stripByteCounts;
   final int rowsPerStrip;
+
+  /// `ColorMatrix1` (tag 50721) as nine SRational doubles, row-major —
+  /// maps CIE XYZ (D50) → camera-native RGB under the calibration
+  /// illuminant. Empty when the tag is absent (pre-DNG files): the colour
+  /// renderer then falls back to the legacy identity path.
+  final List<double> colorMatrix1;
+
+  /// `AsShotNeutral` (tag 50728) — the shot-white's coordinates in
+  /// camera-native RGB; the white-balance gains derive from it. Empty when
+  /// absent.
+  final List<double> asShotNeutral;
+
+  /// Whether the camera-neutral colour pipeline (M2-4) has what it needs:
+  /// a 3×3 color matrix and a 3-channel AsShotNeutral, both finite and
+  /// non-degenerate.
+  bool get hasColourMetadata =>
+      colorMatrix1.length == 9 && asShotNeutral.length == 3;
 
   /// Whether the sample layout is directly decodable without falling back
   /// to the embedded preview (lossless JPEG included since M2-2).
@@ -273,6 +293,23 @@ RawCfaInfo _cfaInfo(TiffIfd ifd) {
   }
   final rowsPerStrip = ifd.intTag(DngTags.rowsPerStrip) ?? height;
 
+  // Colour pipeline inputs (M2-4). Both tags are optional at parse time —
+  // the renderer decides the fallback when they are absent or degenerate.
+  List<double> readMatrix(int tag) {
+    final m = ifd.doubleList(tag);
+    // Sanity: exactly nine finite values, else treat as absent.
+    if (m.length != 9 || m.any((v) => v.isNaN || v.isInfinite)) return const [];
+    return m;
+  }
+
+  List<double> readNeutral() {
+    final n = ifd.doubleList(DngTags.asShotNeutral);
+    if (n.length != 3 || n.any((v) => v.isNaN || v.isInfinite) || n.every((v) => v <= 0)) {
+      return const [];
+    }
+    return n;
+  }
+
   return RawCfaInfo(
     width: width,
     height: height,
@@ -285,6 +322,8 @@ RawCfaInfo _cfaInfo(TiffIfd ifd) {
     stripOffsets: offsets,
     stripByteCounts: counts,
     rowsPerStrip: rowsPerStrip,
+    colorMatrix1: readMatrix(DngTags.colorMatrix1),
+    asShotNeutral: readNeutral(),
   );
 }
 

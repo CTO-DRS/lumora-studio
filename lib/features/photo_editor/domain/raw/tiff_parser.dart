@@ -227,8 +227,13 @@ class TiffDocument {
         }
       case TiffType.rational || TiffType.srational:
         for (var i = 0; i < count; i++) {
-          final numerator = u32(valueOffset + i * 8);
+          final rawNumerator = u32(valueOffset + i * 8);
           final denominator = u32(valueOffset + i * 8 + 4);
+          // SRATIONAL stores a *signed* numerator over an unsigned
+          // denominator (TIFF spec §types) — DNG's ColorMatrix tags carry
+          // negative coefficients, so reading the numerator unsigned would
+          // turn -0.7 into ~4e9 and silently wreck the colour pipeline.
+          final numerator = type == TiffType.srational ? _sign32(rawNumerator) : rawNumerator;
           values.add(denominator == 0 ? 0.0 : numerator / denominator);
         }
       case TiffType.float || TiffType.double:
