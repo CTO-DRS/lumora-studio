@@ -1301,4 +1301,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get smartErrNoSelection => 'حدّد شيئًا أولًا.';
+
+  @override
+  String get aiFaceRetouch => 'تلميع الوجه (البشرة)';
+
+  @override
+  String get aiEyeBrighten => 'إضاءة العيون';
+
+  @override
+  String get aiTeethWhiten => 'تبييض الأسنان';
+
+  @override
+  String get smartErrNoFace => 'لم يُعثر على وجه في هذه الصورة.';
 }

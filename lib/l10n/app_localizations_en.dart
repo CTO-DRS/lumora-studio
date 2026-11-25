@@ -1300,4 +1300,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get smartErrNoSelection => 'Select something first.';
+
+  @override
+  String get aiFaceRetouch => 'Face retouch (skin)';
+
+  @override
+  String get aiEyeBrighten => 'Brighten eyes';
+
+  @override
+  String get aiTeethWhiten => 'Whiten teeth';
+
+  @override
+  String get smartErrNoFace => 'No face found in this photo.';
 }

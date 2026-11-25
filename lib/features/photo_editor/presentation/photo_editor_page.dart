@@ -6,6 +6,7 @@ import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
+import 'package:lumora/features/ai/pipelines/face_pipeline.dart';
 import 'package:lumora/features/ai/presentation/ai_error_text.dart';
 import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/data/preset_store.dart';
@@ -107,6 +108,18 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
         ctrl.setTool(EditorTool.ai);
         if (!await models(AiTool.selectObject)) return;
         await ctrl.startSelection();
+      case QuickAction.faceRetouch:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.faceRetouch)) return;
+        await ctrl.faceAdjustment(FaceRegion.skin);
+      case QuickAction.eyeBrighten:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.eyeBrighten)) return;
+        await ctrl.faceAdjustment(FaceRegion.eyes);
+      case QuickAction.teethWhiten:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.teethWhiten)) return;
+        await ctrl.faceAdjustment(FaceRegion.teeth);
     }
   }
 

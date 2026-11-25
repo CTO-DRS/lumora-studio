@@ -74,3 +74,17 @@ Every model carries a `mirrorUrl` pointing at release assets of this repository 
 * **History & favourites** (`SmartCommandBook`, SharedPreferences): the last 12 commands and starred commands appear as chip rows; tap to run again, long-press to star.
 * **Next commands** (`next_commands.dart`): after each applied plan the bar offers follow-ups mapped to real command phrases (remove a look, reverse a temperature change, sharpen after AI work…).
 * **Dialect lexicon**: Gulf (وايد، حيل، كلش، زين), Egyptian (اوي، خالص، حلو), Levantine (مره، منيح، بشويش), Maghrebi (بزاف، برشا، مليح، باهي، دير) intensifiers and "make it nice" words join the MSA/English lexicon.
+
+## 6. Models added in 1.4 (faces, all verified)
+| Model | File | Size | SHA-256 | Licence | Measured* |
+|---|---|---|---|---|---|
+| YuNet face detector (2023mar) | `opencv/face_detection_yunet@3cc26e7/face_detection_yunet_2023mar.onnx` | 232,589 B | `8f2383e4…2fa4` | MIT (OpenCV Zoo / libfacedetection) | ~20 ms per 640×640 frame |
+| MediaPipe Face Landmarker (478-point mesh) | `senty-au/face_landmarks_detector-ONNX@337d582/onnx/model.onnx` | 4,920,995 B | `7d6e82de…8beeb` | Apache-2.0 (weights © Google, unchanged TFLite→ONNX conversion) | ~15 ms per face |
+
+\*ONNX Runtime 1.32 (Python) on a 2-core x86 sandbox CPU; phone timings are tracked on the device farm. Verification: the YuNet decode was checked against the upstream reference implementation (empirically validated against `cv2.FaceDetectorYN`) and produces a 0.87-confidence box on a test portrait; the mesh reached presence 0.97 on the same portrait and correctly returned presence ≈ 0 on a face occluded by a camera. Together the pair costs 5.1 MB, inside the v1.4 budget of ≤ 15 MB.
+
+I/O contracts and geometry:
+* YuNet: `input` float `[1, 3, 640, 640]` BGR 0..255 (any photo resized to 640×640, boxes scaled back). Twelve raw outputs `cls_8/16/32 [1,N,1]`, `obj_8/16/32 [1,N,1]`, `bbox_8/16/32 [1,N,4]`, `kps_8/16/32 [1,N,10]` with N = 6400/1600/400 row-major grids. Decoding (`decodeYunet` in `face_pipeline.dart`): anchors at grid corners, centre = anchor + bbox[:2]·stride, w/h = exp(bbox[2:])·stride, keypoints = anchor + kps·stride, score = √(cls·obj) — the graph applies the sigmoids itself — then NMS (IoU 0.3), strongest first, ≤ 8 faces.
+* Face Landmarker: `input_12` float `[1, 256, 256, 3]` NHWC RGB 0..1 — a square crop of side = the detection box (long side), centred on the box and rolled so the eye line is level (`alignedCrop`). Outputs: `Identity [1,1,1,1434]` = 478×(x,y,z) in crop pixels (0..256), mapped back to the raster with `cropToSource`; `Identity_1` presence **logit** (sigmoid > 0.5 keeps the face — occlusions such as a camera in front of the face score ≈ 0); `Identity_2` auxiliary, ignored.
+* Masks (`buildFaceMask`): skin = the 36-point face oval minus the two 16-point eye rings, two 10-point brows and the 20-point outer lips; eyes = the eye rings dilated ×1.8; teeth = the 20-point inner-lip ring eroded ×0.8. Polygons are scanline-filled at ≤ 256 px and bilinearly stretched, giving soft edges like the other subject masks.
+* Wiring: `FacePipeline.analyze` (cached per raster path) → `photoEditorController.faceAdjustment(region)` → one `LocalAdjustment` of kind `subject` with a generated mask PNG — editable, undoable, copy-safe like every other local adjustment. Smart actions `faceRetouch` / `eyeBrighten` / `teethWhiten`; tools `AiTool.faceRetouch` etc. download both models (5.1 MB) on demand.

@@ -1,5 +1,14 @@
 /// What a model is used for.
-enum AiTask { segmentation, portraitMatting, upscale, inpainting, interactiveSegmentation, depth }
+enum AiTask {
+  segmentation,
+  portraitMatting,
+  upscale,
+  inpainting,
+  interactiveSegmentation,
+  depth,
+  faceDetection,
+  faceLandmarks,
+}
 
 /// Describes a downloadable on-device model. Every model is fetched from a
 /// public URL on demand, verified with SHA-256 and cached locally – nothing
@@ -209,6 +218,63 @@ class ModelRegistry {
     notes: 'NCHW ImageNet-normalised, sides multiples of 14 → relative inverse depth (larger = nearer).',
   );
 
+  // Revision-pinned URLs (v1.4): the file at that commit can never change;
+  // SHA-256 values were verified by downloading each file and running it with
+  // ONNX Runtime (YuNet decode checked against the reference implementation;
+  // landmark presence gated on a real photo). See docs/SMART_EDIT.md.
+
+  /// YuNet face detector (OpenCV Zoo 2023mar export). The ONNX graph ships 12
+  /// raw outputs (cls/obj/bbox/kps at strides 8/16/32); decoding happens in
+  /// [FacePipeline] — anchors at grid corners, centre = anchor + bbox[:2] *
+  /// stride, w/h = exp(bbox[2:]) * stride, keypoints = anchor + kps * stride,
+  /// score = sqrt(cls * obj) (the graph applies the sigmoids itself), NMS IoU
+  /// 0.3. Verified in the sandbox: 0.87 confidence on a test portrait,
+  /// ~20 ms per 640×640 frame on two x86 cores.
+  static const yunetFaceDetect = ModelSpec(
+    id: 'yunet_face_detect',
+    task: AiTask.faceDetection,
+    displayName: 'YuNet – face detection (2023mar)',
+    url:
+        'https://huggingface.co/opencv/face_detection_yunet/resolve/3cc26e7f1014a5ee5d74a42acee58bafc9d0a310/face_detection_yunet_2023mar.onnx',
+    sha256: '8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4',
+    sizeBytes: 232589,
+    license: 'MIT (OpenCV Zoo / libfacedetection)',
+    source: 'https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet',
+    inputNames: ['input'],
+    outputName: 'cls_8',
+    mirrorUrl: '$_kMirrorBase14/yunet_face_detect.onnx',
+    notes:
+        'Static 1x3x640x640 float BGR 0..255 (resize any photo to 640x640 and scale boxes back). 12 outputs: cls_8/16/32 [1,N,1], obj_8/16/32 [1,N,1], bbox_8/16/32 [1,N,4], kps_8/16/32 [1,N,10] with N = 6400/1600/400 (row-major grids).',
+  );
+
+  /// MediaPipe Face Landmarker (468-point mesh + 10 iris points = 478),
+  /// converted TFLite → ONNX with unchanged Google weights (Apache-2.0).
+  /// Input is a square crop around one face, rolled so the eyes are level —
+  /// exactly what MediaPipe builds from its face detector. Verified in the
+  /// sandbox: presence 0.97 on a real portrait, ~15 ms per face on two x86
+  /// cores.
+  static const faceLandmarks478 = ModelSpec(
+    id: 'face_landmarks_478',
+    task: AiTask.faceLandmarks,
+    displayName: 'MediaPipe Face Landmarker – 478-point mesh',
+    url:
+        'https://huggingface.co/senty-au/face_landmarks_detector-ONNX/resolve/337d58218b5b1cc597ca3c67360880b920f6ce7b/onnx/model.onnx',
+    sha256: '7d6e82dee82a1dca5fbddb282b3cc74571833a530de317fc22ae325c3358beeb',
+    sizeBytes: 4920995,
+    license: 'Apache-2.0 (MediaPipe Face Landmarker, weights © Google)',
+    source: 'https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker',
+    inputNames: ['input_12'],
+    outputName: 'Identity',
+    mirrorUrl: '$_kMirrorBase14/face_landmarks_478.onnx',
+    fixedInputSize: 256,
+    notes:
+        'NHWC float RGB 0..1 [1,256,256,3] aligned square crop → Identity [1,1,1,1434] = 478×(x,y,z) in crop pixels (0..256); Identity_1 = face presence logit (sigmoid, keep > 0.5); Identity_2 auxiliary (ignored).',
+  );
+
+  /// Base URL of the v1.4 project-hosted model mirrors (release assets of
+  /// this repository, tag `models-v1.4`; see `tool/sync_model_mirrors.py`).
+  static const _kMirrorBase14 = 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-v1.4';
+
   static const List<ModelSpec> all = [
     u2netp,
     modnet,
@@ -219,6 +285,8 @@ class ModelRegistry {
     mobileSamDecoder,
     mobileSamDecoderMulti,
     depthAnythingSmall,
+    yunetFaceDetect,
+    faceLandmarks478,
   ];
 
   static ModelSpec byId(String id) => all.firstWhere((m) => m.id == id);
@@ -238,6 +306,9 @@ enum AiTool {
   depthBlur,
   relight,
   erasePerson,
+  faceRetouch,
+  eyeBrighten,
+  teethWhiten,
 }
 
 /// Models a tool needs on the device before it can run.
@@ -249,4 +320,8 @@ List<ModelSpec> aiToolModels(AiTool tool) => switch (tool) {
   AiTool.selectObject => const [ModelRegistry.mobileSamEncoder, ModelRegistry.mobileSamDecoderMulti],
   AiTool.depthBlur || AiTool.relight => const [ModelRegistry.depthAnythingSmall],
   AiTool.erasePerson => const [ModelRegistry.modnet, ModelRegistry.migan],
+  AiTool.faceRetouch || AiTool.eyeBrighten || AiTool.teethWhiten => const [
+    ModelRegistry.yunetFaceDetect,
+    ModelRegistry.faceLandmarks478,
+  ],
 };

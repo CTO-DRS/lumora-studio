@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
+import 'package:lumora/features/ai/pipelines/face_pipeline.dart';
 import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/data/preset_store.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
@@ -90,6 +91,15 @@ Future<bool> runSmartAction(BuildContext context, WidgetRef ref, SmartAction act
     case SmartAction.erasePerson:
       if (!await models(AiTool.erasePerson)) return false;
       await ctrl.erasePerson();
+    case SmartAction.faceRetouch:
+      if (!await models(AiTool.faceRetouch)) return false;
+      await ctrl.faceAdjustment(FaceRegion.skin);
+    case SmartAction.eyeBrighten:
+      if (!await models(AiTool.eyeBrighten)) return false;
+      await ctrl.faceAdjustment(FaceRegion.eyes);
+    case SmartAction.teethWhiten:
+      if (!await models(AiTool.teethWhiten)) return false;
+      await ctrl.faceAdjustment(FaceRegion.teeth);
     case SmartAction.eraseObject:
       if (!await models(AiTool.eraser)) return false;
       ctrl
@@ -161,6 +171,9 @@ String smartActionLabel(AppLocalizations l, SmartAction a) => switch (a) {
   SmartAction.retouch => l.aiRetouch,
   SmartAction.upscale => l.aiUpscale,
   SmartAction.erasePerson => l.aiErasePerson,
+  SmartAction.faceRetouch => l.aiFaceRetouch,
+  SmartAction.eyeBrighten => l.aiEyeBrighten,
+  SmartAction.teethWhiten => l.aiTeethWhiten,
 };
 
 String suggestionLabel(AppLocalizations l, SuggestionKind k) => switch (k) {

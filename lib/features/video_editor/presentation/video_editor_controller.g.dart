@@ -42,7 +42,7 @@ final class VideoEditorControllerProvider
 }
 
 String _$videoEditorControllerHash() =>
-    r'5dd166f488330669a412ce4875a1819d4e997859';
+    r'4fcf2b7d80d98f3d2a8d27ea82d82178dd78d89b';
 
 abstract class _$VideoEditorController extends $Notifier<VideoEditorState> {
   VideoEditorState build();

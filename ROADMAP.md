@@ -38,7 +38,7 @@ Lumora's bet is the opposite: **the best intelligence is the one that runs where
 | Documents, batch, collage | ✅ scanner with PDF, batch edit, collage maker |
 | Video | ✅ timeline, transitions, speed/reverse, crop, stabilisation, filter keyframes, music, text (Arabic shaping), GIF, fast & studio export |
 | Platform | ✅ Android APKs per ABI, unsigned iOS build, glass design system, AR/EN + RTL, tablets layouts, CI + release workflows |
-| Known gaps | 🚧 1:1 loupe shows the 2048 px proxy · 🚧 retouch uses a person matte, not face landmarks · 🚧 suggestions use image statistics, not a scene model · 🚧 keyframes animate look strength only · 🚧 iOS builds unsigned |
+| Known gaps | 🚧 1:1 loupe shows the 2048 px proxy · 🚧 landmark-driven face retouch (skin-only, eyes, teeth) built on YuNet + MediaPipe landmarks lands in 1.4; the person-matte retouch stays as the fallback · 🚧 suggestions use image statistics, not a scene model · 🚧 keyframes animate look strength only · 🚧 iOS builds unsigned |
 
 ## 4. Competitive landscape (November 2026)
 
@@ -89,7 +89,7 @@ Each phase has themes, features, models (with size/latency targets on a **mid-ra
 ### v1.4 — "Pro foundations" (2027 Q1)
 | Theme | Features | Models / tech | Targets |
 |---|---|---|---|
-| Faces | skin-only retouch, eye brighten, teeth whiten, face-aware suggestions, blemish detection | face detection + 468-point landmarks (MediaPipe-class, ONNX/LiteRT), face parsing (BiSeNet-class, ~50 MB fp16 → int8) | ≤ 15 MB total int8; ≤ 60 ms per face |
+| Faces | skin-only retouch ✅, eye brighten ✅, teeth whiten ✅, face-aware suggestions, blemish detection | face detection (YuNet, MIT) + 478-point landmarks (MediaPipe Face Landmarker, Apache-2.0) — 5.1 MB total ✅; face parsing (BiSeNet-class) 🔜 licence-clean weights only | ≤ 15 MB total int8 ✅ (5.1 MB); ≤ 60 ms per face ✅ (~35 ms sandbox) |
 | Sky & scene | sky replacement & sky-only edits; scene classifier for suggestions | sky segmentation (U²-Net-p fine-tune or SAM prompt), MobileNetV3-class scene classifier (~5 MB) | ≤ 300 ms per photo |
 | Low light | denoise & low-light lift | Zero-DCE++-class curve estimation (tiny, ~10k params) + NAFNet-lite denoise 🧪 | ≤ 1.5 s at 12 MP tiled |
 | Runtime | **LiteRT backend** with NPU/GPU delegates; ONNX stays; per-SoC allow-list | `tflite_flutter`/LiteRT, Core ML on iOS | ≥ 2× faster encode on NPU devices; no native crash regressions |
@@ -98,6 +98,7 @@ Each phase has themes, features, models (with size/latency targets on a **mid-ra
 - **Acceptance:** device-farm integration tests run every model on ≥ 12 devices (3 tiers × 2 OS × 2 vendors); crash-free rate on farm ≥ 99.8 %; no model > 50 MB in this phase.
 - 🚧 **Started 2026-11:** auto-straighten — Hough-based horizon detection (pure Dart, model-free) wired into the crop panel and the Smart engine (AR/EN lexicon, benchmark 1,080 at 100 %). See CHANGELOG "Unreleased".
 - 🚧 **Started 2026-11:** audio waveform + beat detection & snap — one FFmpeg PCM decode (mono 22.05 kHz) per clip and the music track, then pure-Dart energy-flux onset detection and autocorrelation tempo estimate (no model, no network). Waveform strips on the timeline, looping waveform on the music track, beat markers and a "Snap to beats" toggle for splitting. Synthetic click tracks 75–140 BPM are detected within ±3 BPM with zero stray onsets in the unit benchmark. See CHANGELOG "Unreleased".
+- 🚧 **Started 2026-11:** face-aware retouch — YuNet face detection (OpenCV Zoo `2023mar`, MIT, 232 KB) finds faces, then MediaPipe Face Landmarker (478-point mesh, Apache-2.0, 4.7 MB — **5.1 MB total**, under the ≤ 15 MB budget) runs once per face on an eye-level square crop. Landmark geometry builds three editable masks: skin-only retouch (face oval minus eyes, brows and lips), eye brighten (dilated eye rings) and teeth whiten (eroded inner-lip ring), each applied as one undoable local adjustment; presence ≤ 0.5 (occluded faces) is rejected. New Smart commands in AR/EN ("نعم البشرة", "اضوء العيون", "بيض الاسنان", "smooth skin", "brighten eyes", "whiten teeth") and cards in the editor AI tab + home AI sheet; the intent benchmark grows to **1,096 commands** (564 AR / 532 EN), still **100 % exact plans**. Verified in the sandbox with ONNX Runtime: 0.87 detection confidence and mesh presence 0.97 on test portraits; ~20 ms detection + ~15 ms per face on two x86 cores. See CHANGELOG "Unreleased".
 
 ### v1.5 — "Semantic" (2027 Q2)
 - 🔜 **Smart search & auto-tags** across projects (on-device CLIP-class embeddings with open weights; ~90–150 MB fp16 → int8 target ≤ 60 MB); search in Arabic & English ("صور البحر عند الغروب").

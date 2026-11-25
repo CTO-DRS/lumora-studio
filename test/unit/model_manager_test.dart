@@ -36,10 +36,13 @@ void main() {
       expect(m.mirrorUrl, startsWith('https://github.com/CTO-DRS/lumora-studio/releases/download/'), reason: m.id);
       expect(m.mirrorUrl, endsWith('${m.id}.onnx'), reason: m.id);
       expect(RegExp(r'^[0-9a-f]{64}$').hasMatch(m.sha256), isTrue, reason: m.id);
-      expect(m.sizeBytes, greaterThan(1000000));
+      // Smallest shipped model is YuNet (232 KB); a stub would be far below.
+      expect(m.sizeBytes, greaterThan(100000));
     }
     expect(ModelRegistry.forTask(AiTask.inpainting).length, 2);
     expect(ModelRegistry.forTask(AiTask.interactiveSegmentation).length, 3);
+    expect(ModelRegistry.forTask(AiTask.faceDetection).length, 1);
+    expect(ModelRegistry.forTask(AiTask.faceLandmarks).length, 1);
   });
 
   test('downloads, verifies and caches', () async {

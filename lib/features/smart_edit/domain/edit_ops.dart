@@ -26,7 +26,11 @@ enum SmartAction {
   relight,
   retouch,
   upscale,
-  erasePerson;
+  erasePerson,
+  // Face-aware retouch (v1.4 "Faces", landmark-driven).
+  faceRetouch,
+  eyeBrighten,
+  teethWhiten;
 
   /// Whether the action changes the edit without any further input or
   /// model (applied immediately and atomically with slider changes).
@@ -173,7 +177,7 @@ GeometryState applyGeometryAction(GeometryState g, SmartAction action) => switch
 };
 
 /// Why a smart action could not run (shown in plain words).
-enum SmartEditFailure { noPerson, noSelection }
+enum SmartEditFailure { noPerson, noFace, noSelection }
 
 class SmartEditException implements Exception {
   const SmartEditException(this.failure);

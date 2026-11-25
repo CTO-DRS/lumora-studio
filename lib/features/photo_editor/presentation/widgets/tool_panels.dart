@@ -8,6 +8,7 @@ import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/core/widgets/labeled_slider.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
+import 'package:lumora/features/ai/pipelines/face_pipeline.dart';
 import 'package:lumora/features/ai/presentation/ai_tools_sheet.dart';
 import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
@@ -1183,6 +1184,28 @@ class AiPanel extends ConsumerWidget {
         label: l.aiErasePerson,
         tool: AiTool.erasePerson,
         onTap: withModels(AiTool.erasePerson, ctrl.erasePerson),
+      ),
+      // v1.4 "Faces": landmark-driven face retouch.
+      AiToolCard(
+        icon: Icons.spa_outlined,
+        color: t.mint,
+        label: l.aiFaceRetouch,
+        tool: AiTool.faceRetouch,
+        onTap: withModels(AiTool.faceRetouch, () => ctrl.faceAdjustment(FaceRegion.skin)),
+      ),
+      AiToolCard(
+        icon: Icons.visibility_outlined,
+        color: t.blue,
+        label: l.aiEyeBrighten,
+        tool: AiTool.eyeBrighten,
+        onTap: withModels(AiTool.eyeBrighten, () => ctrl.faceAdjustment(FaceRegion.eyes)),
+      ),
+      AiToolCard(
+        icon: Icons.sentiment_very_satisfied_outlined,
+        color: t.apricot,
+        label: l.aiTeethWhiten,
+        tool: AiTool.teethWhiten,
+        onTap: withModels(AiTool.teethWhiten, () => ctrl.faceAdjustment(FaceRegion.teeth)),
       ),
     ];
     return Column(

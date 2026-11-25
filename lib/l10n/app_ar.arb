@@ -415,5 +415,9 @@
   "flipV": "قلب عمودي",
   "removeLook": "إزالة النمط",
   "smartErrNoPerson": "لم يُعثر على شخص في هذه الصورة.",
-  "smartErrNoSelection": "حدّد شيئًا أولًا."
+  "smartErrNoSelection": "حدّد شيئًا أولًا.",
+  "aiFaceRetouch": "تلميع الوجه (البشرة)",
+  "aiEyeBrighten": "إضاءة العيون",
+  "aiTeethWhiten": "تبييض الأسنان",
+  "smartErrNoFace": "لم يُعثر على وجه في هذه الصورة."
 }

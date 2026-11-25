@@ -396,6 +396,47 @@ final class SegmentationPipelineProvider
 String _$segmentationPipelineHash() =>
     r'1098f33c9e79eda07036821ed67f1be71520ead0';
 
+@ProviderFor(facePipeline)
+final facePipelineProvider = FacePipelineProvider._();
+
+final class FacePipelineProvider
+    extends $FunctionalProvider<FacePipeline, FacePipeline, FacePipeline>
+    with $Provider<FacePipeline> {
+  FacePipelineProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'facePipelineProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$facePipelineHash();
+
+  @$internal
+  @override
+  $ProviderElement<FacePipeline> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  FacePipeline create(Ref ref) {
+    return facePipeline(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(FacePipeline value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<FacePipeline>(value),
+    );
+  }
+}
+
+String _$facePipelineHash() => r'5da7da04f04c9582768c0a7844843d24a8ded291';
+
 @ProviderFor(upscalePipeline)
 final upscalePipelineProvider = UpscalePipelineProvider._();
 

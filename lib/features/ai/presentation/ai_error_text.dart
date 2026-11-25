@@ -11,6 +11,7 @@ String aiErrorText(AppLocalizations l, Object error) {
   if (error is SmartEditException) {
     return switch (error.failure) {
       SmartEditFailure.noPerson => l.smartErrNoPerson,
+      SmartEditFailure.noFace => l.smartErrNoFace,
       SmartEditFailure.noSelection => l.smartErrNoSelection,
     };
   }

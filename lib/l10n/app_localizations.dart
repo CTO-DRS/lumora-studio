@@ -2587,6 +2587,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select something first.'**
   String get smartErrNoSelection;
+
+  /// No description provided for @aiFaceRetouch.
+  ///
+  /// In en, this message translates to:
+  /// **'Face retouch (skin)'**
+  String get aiFaceRetouch;
+
+  /// No description provided for @aiEyeBrighten.
+  ///
+  /// In en, this message translates to:
+  /// **'Brighten eyes'**
+  String get aiEyeBrighten;
+
+  /// No description provided for @aiTeethWhiten.
+  ///
+  /// In en, this message translates to:
+  /// **'Whiten teeth'**
+  String get aiTeethWhiten;
+
+  /// No description provided for @smartErrNoFace.
+  ///
+  /// In en, this message translates to:
+  /// **'No face found in this photo.'**
+  String get smartErrNoFace;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

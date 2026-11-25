@@ -33,6 +33,8 @@ enum _K {
   cut,
   subject,
   skin,
+  eyes,
+  teeth,
   filter,
   rotate,
   rotateWeak,
@@ -285,6 +287,16 @@ final Map<String, _E> _lexiconRaw = {
   'فاتح': _p(AdjustmentParam.exposure),
   'مشرق': _p(AdjustmentParam.exposure),
   'اغمق': _p(AdjustmentParam.exposure, -1),
+  // "brighten/whiten" steer other sliders ("brighten the shadows") and name
+  // the face-aware tools when eyes/teeth are present ("بيض الاسنان").
+  'اضيء': _p(AdjustmentParam.exposure),
+  'اضئ': _p(AdjustmentParam.exposure),
+  'اضوء': _p(AdjustmentParam.exposure),
+  'اضو': _p(AdjustmentParam.exposure),
+  'بيض': _p(AdjustmentParam.whites),
+  'ابيض': _p(AdjustmentParam.whites),
+  'brighten': _p(AdjustmentParam.exposure),
+  'whiten': _p(AdjustmentParam.whites),
   'غامق': _p(AdjustmentParam.exposure, -1),
   'داكن': _p(AdjustmentParam.exposure, -1),
   'اظلم': _p(AdjustmentParam.exposure, -1),
@@ -552,6 +564,18 @@ final Map<String, _E> _lexiconRaw = {
   'تنعيم': const _E(_K.skin),
   'جمل': const _E(_K.skin, exact: true),
   'تجميل': const _E(_K.skin),
+  // face-aware retouch (v1.4 "Faces")
+  'eyes': const _E(_K.eyes),
+  'eye': const _E(_K.eyes),
+  'teeth': const _E(_K.teeth),
+  'tooth': const _E(_K.teeth),
+  'عيون': const _E(_K.eyes),
+  'عينين': const _E(_K.eyes),
+  'عين': const _E(_K.eyes),
+  'اعين': const _E(_K.eyes),
+  'اسنان': const _E(_K.teeth),
+  'سنانه': const _E(_K.teeth),
+  'ضروس': const _E(_K.teeth),
   'filter': const _E(_K.filter),
   'preset': const _E(_K.filter),
   'look': const _E(_K.filter, exact: true),
@@ -716,8 +740,9 @@ bool _isLightVerb(String token) {
 const List<String> _starterVerbs = ['اجعل', 'خلي', 'طبق', 'اعط', 'حول'];
 
 /// Words that start a new instruction when glued to a leading "و"/"ف"
-/// ("زد السطوع وقلل التشبع").
-const Set<_K> _clauseStarters = {_K.inc, _K.dec, _K.remove, _K.action, _K.rotate, _K.cut, _K.blur};
+/// ("زد السطوع وقلل التشبع", "نعم البشره واضي العيون"). Slider names count
+/// too: "والتشبع" opens its own clause and inherits the previous direction.
+const Set<_K> _clauseStarters = {_K.inc, _K.dec, _K.remove, _K.action, _K.rotate, _K.cut, _K.blur, _K.param};
 
 /// Default step of one "more"/"less" for each slider (slider units).
 const Map<AdjustmentParam, double> _step = {
@@ -939,7 +964,13 @@ class RuleIntentEngine implements EditIntentEngine {
     } else if (has(_K.cut)) {
       ops.add(const ActionOp(SmartAction.removeBackground));
     } else if (skin) {
-      ops.add(const ActionOp(SmartAction.retouch));
+      ops.add(const ActionOp(SmartAction.faceRetouch));
+      consumedParams = true;
+    } else if (has(_K.eyes)) {
+      ops.add(const ActionOp(SmartAction.eyeBrighten));
+      consumedParams = true;
+    } else if (has(_K.teeth)) {
+      ops.add(const ActionOp(SmartAction.teethWhiten));
       consumedParams = true;
     } else if (has(_K.blemish)) {
       ops.add(const ActionOp(SmartAction.heal));

@@ -1,6 +1,7 @@
 import 'package:lumora/features/ai/data/model_manager.dart';
 import 'package:lumora/features/ai/data/onnx_engine.dart';
 import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
+import 'package:lumora/features/ai/pipelines/face_pipeline.dart';
 import 'package:lumora/features/ai/pipelines/smart_pipelines.dart';
 import 'package:lumora/features/photo_editor/engine/lut/lut_repository.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
@@ -69,6 +70,9 @@ InferenceEngine inferenceEngine(Ref ref) {
 
 @Riverpod(keepAlive: true)
 SegmentationPipeline segmentationPipeline(Ref ref) => SegmentationPipeline(ref.watch(inferenceEngineProvider));
+
+@Riverpod(keepAlive: true)
+FacePipeline facePipeline(Ref ref) => FacePipeline(ref.watch(inferenceEngineProvider));
 
 @Riverpod(keepAlive: true)
 UpscalePipeline upscalePipeline(Ref ref) => UpscalePipeline(ref.watch(inferenceEngineProvider));

@@ -10,6 +10,7 @@ import 'package:image/image.dart' as img;
 import 'package:lumora/core/diagnostics/crash_log.dart';
 import 'package:lumora/core/providers.dart';
 import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
+import 'package:lumora/features/ai/pipelines/face_pipeline.dart';
 import 'package:lumora/features/ai/pipelines/smart_pipelines.dart';
 import 'package:lumora/features/ai/pipelines/tensor_utils.dart';
 import 'package:lumora/features/photo_editor/data/preset_store.dart';
@@ -711,6 +712,26 @@ class PhotoEditorController extends _$PhotoEditorController {
         : const Adjustments(exposure: 0.3);
     addMask(MaskKind.subject, maskPath: r.maskPath, adjustments: adjustments, invert: blurBackground);
   }, label: retouch ? 'portrait retouch' : (blurBackground ? 'background blur' : 'subject mask'));
+
+  /// Face-aware retouch (v1.4 "Faces"): YuNet finds the faces, the 478-point
+  /// mesh builds the [region] mask (skin-only / eyes / teeth) and the fix is
+  /// applied as one editable, undoable local adjustment per face union.
+  Future<void> faceAdjustment(FaceRegion region) => _busy(() async {
+    final pipeline = ref.read(facePipelineProvider);
+    final analysis = await pipeline.analyze(_currentRaster);
+    if (analysis.faces.isEmpty) throw const SmartEditException(SmartEditFailure.noFace);
+    final maskPath = await pipeline.maskPath(analysis, region);
+    final adjustments = switch (region) {
+      FaceRegion.skin => const Adjustments(clarity: -0.4, structure: -0.25, exposure: 0.06),
+      FaceRegion.eyes => const Adjustments(exposure: 0.22, vibrance: 0.1),
+      FaceRegion.teeth => const Adjustments(saturation: -0.45, exposure: 0.12),
+    };
+    addMask(MaskKind.subject, maskPath: maskPath, adjustments: adjustments);
+  }, label: switch (region) {
+    FaceRegion.skin => 'face skin retouch',
+    FaceRegion.eyes => 'eye brighten',
+    FaceRegion.teeth => 'teeth whiten',
+  });
 
   /// Maps a point normalised to the output (cropped/rotated) image back to
   /// source pixels of the current raster (`buildInverseWarp` yields

@@ -564,5 +564,9 @@
   "flipV": "Flip vertical",
   "removeLook": "Remove look",
   "smartErrNoPerson": "No person found in this photo.",
-  "smartErrNoSelection": "Select something first."
+  "smartErrNoSelection": "Select something first.",
+  "aiFaceRetouch": "Face retouch (skin)",
+  "aiEyeBrighten": "Brighten eyes",
+  "aiTeethWhiten": "Whiten teeth",
+  "smartErrNoFace": "No face found in this photo."
 }
