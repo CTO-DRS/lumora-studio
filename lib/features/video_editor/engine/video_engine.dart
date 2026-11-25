@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
@@ -133,6 +134,23 @@ class VideoEngine {
     final waveform = AudioAnalysis.buildWaveform(bytes, sampleRate, bucketMs: bucketMs);
     final beats = AudioAnalysis.detectBeats(bytes, sampleRate);
     return ClipAudio(waveform: waveform, beats: beats);
+  }
+
+  /// Decodes the audio of [path] to mono 16 kHz PCM16 for speech
+  /// recognition (Whisper's native rate, so no resampling is needed).
+  /// Returns null when the file has no audio stream. Cached like
+  /// [analyseAudio], in its own file so the analysis decode is untouched.
+  Future<Int16List?> decodeSpeechAudio(String path) async {
+    final dir = await _work('speech_${path.hashCode.abs()}');
+    final pcmFile = File(p.join(dir.path, 'audio16k.pcm'));
+    if (!pcmFile.existsSync()) {
+      await _run(FfmpegCommandBuilder.audioPcmArgs(path, pcmFile.path, sampleRate: 16000), 0, null);
+      if (!pcmFile.existsSync()) return null;
+    }
+    final bytes = await pcmFile.readAsBytes();
+    if (bytes.length < 2) return null;
+    final even = bytes.length - (bytes.length % 2);
+    return Int16List.view(bytes.buffer, bytes.offsetInBytes, even ~/ 2);
   }
 
   /// Exports [project] to an MP4 and returns its path.
