@@ -13,7 +13,7 @@
 ![Dart](https://img.shields.io/badge/Dart-3.14-0175C2?logo=dart)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
-[English](#english) · [العربية](#arabic)
+[English](#english) · [العربية](#arabic) · [Privacy Policy / سياسة الخصوصية](docs/PRIVACY.md)
 
 | Home | Photo editor | AI tools | Templates |
 |:---:|:---:|:---:|:---:|
