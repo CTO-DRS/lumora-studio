@@ -10,7 +10,16 @@ pluginManagement {
 
     includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
 
+    // Optional Maven mirror (e.g. LUMORA_MAVEN_MIRROR=https://maven.aliyun.com/repository/public)
+    // for networks where repo.maven.apache.org is throttled; unset by default, so
+    // CI and normal builds resolve exactly as before.
+    val pluginMirror = System.getenv("LUMORA_MAVEN_MIRROR") ?: ""
+
     repositories {
+        if (pluginMirror.isNotEmpty()) {
+            maven { url = uri("$pluginMirror/gradle-plugin") }
+            maven { url = uri("$pluginMirror/public") }
+        }
         google()
         mavenCentral()
         gradlePluginPortal()
