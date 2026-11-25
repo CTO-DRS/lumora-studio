@@ -11,7 +11,7 @@ class _Script implements WhisperDecoderStep {
   final List<int> script;
   int calls = 0;
   @override
-  Float32List logits(List<int> tokens) {
+  Future<Float32List> logits(List<int> tokens) async {
     final l = Float32List(t.vocabSize)..fillRange(0, t.vocabSize, -10);
     final i = calls++;
     l[i < script.length ? script[i] : t.eot] = 10;
@@ -64,15 +64,15 @@ void main() {
   });
 
   group('greedy decode', () {
-    test('forces a timestamp first, pairs, then stops at eot', () {
+    test('forces a timestamp first, pairs, then stops at eot', () async {
       final d = _Script([ts(0), 1, ts(1.5), t.eot]);
-      final r = greedyDecode(d, t, language: 'en');
+      final r = await greedyDecode(d, t, language: 'en');
       expect(r.tokens, [ts(0), 1, ts(1.5)]);
       expect(r.truncated, isFalse);
       expect(r.language, 'en');
     });
 
-    test('text before the first timestamp is suppressed', () {
+    test('text before the first timestamp is suppressed', () async {
       final step = _FixedLogits((tokens) {
         final l = Float32List(t.vocabSize)..fillRange(0, t.vocabSize, -10);
         if (tokens.length == 3) {
@@ -83,11 +83,11 @@ void main() {
         }
         return l;
       });
-      final r = greedyDecode(step, t, language: 'en');
+      final r = await greedyDecode(step, t, language: 'en');
       expect(r.tokens, [ts(0.4)]);
     });
 
-    test('timestamps never go backwards', () {
+    test('timestamps never go backwards', () async {
       final d = _FixedLogits((tokens) {
         final l = Float32List(t.vocabSize)..fillRange(0, t.vocabSize, -10);
         final n = tokens.length - 3;
@@ -103,11 +103,11 @@ void main() {
         }
         return l;
       });
-      final r = greedyDecode(d, t, language: 'en');
+      final r = await greedyDecode(d, t, language: 'en');
       expect(r.tokens.last, ts(3));
     });
 
-    test('special control tokens are never emitted', () {
+    test('special control tokens are never emitted', () async {
       final d = _FixedLogits((tokens) {
         final l = Float32List(t.vocabSize)..fillRange(0, t.vocabSize, -10);
         l[t.noTimestamps] = 50;
@@ -117,22 +117,22 @@ void main() {
         if (tokens.length > 3) l[t.eot] = 1;
         return l;
       });
-      final r = greedyDecode(d, t, language: 'en');
+      final r = await greedyDecode(d, t, language: 'en');
       expect(r.tokens, [ts(0)]);
     });
 
-    test('repetition guard truncates a loop', () {
+    test('repetition guard truncates a loop', () async {
       final d = _FixedLogits((tokens) {
         final l = Float32List(t.vocabSize)..fillRange(0, t.vocabSize, -10);
         l[tokens.length == 3 ? ts(0) : 42] = 9;
         return l;
       });
-      final r = greedyDecode(d, t, language: 'en');
+      final r = await greedyDecode(d, t, language: 'en');
       expect(r.truncated, isTrue);
       expect(r.tokens.length, lessThan(30));
     });
 
-    test('token cap truncates', () {
+    test('token cap truncates', () async {
       const small = WhisperTokens(maxTokens: 6);
       var n = 0;
       final d = _FixedLogits((tokens) {
@@ -140,14 +140,14 @@ void main() {
         l[100 + (n++ % 2)] = 9;
         return l;
       });
-      final r = greedyDecode(d, small, timestamps: false);
+      final r = await greedyDecode(d, small, timestamps: false);
       expect(r.tokens.length, 6);
       expect(r.truncated, isTrue);
     });
 
-    test('wrong logits length is a StateError', () {
+    test('wrong logits length is a StateError', () async {
       final d = _FixedLogits((_) => Float32List(10));
-      expect(() => greedyDecode(d, t), throwsStateError);
+      await expectLater(greedyDecode(d, t), throwsStateError);
     });
   });
 
@@ -186,5 +186,5 @@ class _FixedLogits implements WhisperDecoderStep {
   _FixedLogits(this.fn);
   final Float32List Function(List<int>) fn;
   @override
-  Float32List logits(List<int> tokens) => fn(tokens);
+  Future<Float32List> logits(List<int> tokens) async => fn(tokens);
 }

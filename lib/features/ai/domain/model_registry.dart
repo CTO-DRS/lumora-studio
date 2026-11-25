@@ -10,6 +10,7 @@ enum AiTask {
   faceLandmarks,
   sceneClassification,
   skySegmentation,
+  speechRecognition,
 }
 
 /// Describes a downloadable on-device model. Every model is fetched from a
@@ -372,6 +373,67 @@ class ModelRegistry {
     notes:
         'uint8 NHWC [1, 224, 224, 3] RGB 0..255 → uint8 [1, 1001] probabilities (scale 1/256, zero point 0); class 0 is background and is dropped before tag aggregation. Same weights as the ONNX sibling.',
   );
+
+  // ---- Speech recognition (Wave 2 W3) -----------------------------------
+  //
+  // onnx-community/whisper-tiny (Apache-2.0, ONNX export of openai/whisper-tiny)
+  // pinned to an immutable Hugging Face commit. Verified in the build sandbox
+  // with ONNX Runtime on a real English clip: the log-mel from
+  // `whisper_frontend.dart` fed to this encoder/decoder pair transcribed the
+  // clip word for word. The uint8 encoder is used because the int8 export
+  // needs ConvInteger, which ONNX Runtime's CPU provider does not implement.
+  // These specs live in [speech], not in [all], until the project mirror
+  // (`models-v1.5`) carries the files; [all] requires a mirror per entry.
+
+  static const whisperTinyEncoder = ModelSpec(
+    id: 'whisper_tiny_encoder_q8',
+    task: AiTask.speechRecognition,
+    displayName: 'Whisper tiny - encoder (uint8)',
+    url:
+        'https://huggingface.co/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/onnx/encoder_model_quantized.onnx',
+    sha256: '2af4a414ca47aa30f61246017e5fe82b0a8d229281d1255ba666a2a7f6b84d19',
+    sizeBytes: 10124990,
+    license: 'Apache-2.0 (openai/whisper-tiny)',
+    source: 'https://huggingface.co/openai/whisper-tiny',
+    inputNames: ['input_features'],
+    outputName: 'last_hidden_state',
+    notes: 'float [1, 80, 3000] log-mel (whisper_frontend.dart) -> [1, 1500, 384] hidden states.',
+  );
+
+  static const whisperTinyDecoder = ModelSpec(
+    id: 'whisper_tiny_decoder_merged_q8',
+    task: AiTask.speechRecognition,
+    displayName: 'Whisper tiny - decoder with KV cache (int8)',
+    url:
+        'https://huggingface.co/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/onnx/decoder_model_merged_int8.onnx',
+    sha256: '25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3',
+    sizeBytes: 30719241,
+    license: 'Apache-2.0 (openai/whisper-tiny)',
+    source: 'https://huggingface.co/openai/whisper-tiny',
+    inputNames: ['input_ids', 'encoder_hidden_states', 'use_cache_branch'],
+    outputName: 'logits',
+    notes:
+        'Merged decoder: use_cache_branch bool, past_key_values.{0..3}.{decoder,encoder}.{key,value} [1, 6, len, 64] -> logits [1, n, 51865] + present.*.',
+  );
+
+  static const whisperTinyVocab = ModelSpec(
+    id: 'whisper_tiny_vocab',
+    task: AiTask.speechRecognition,
+    displayName: 'Whisper tiny - vocabulary',
+    url:
+        'https://huggingface.co/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/vocab.json',
+    sha256: '50d6a919f0a0601d56a04eb583c780d18553aa388254ba3158eb6a00f13e2c1a',
+    sizeBytes: 1036584,
+    license: 'Apache-2.0 (openai/whisper-tiny)',
+    source: 'https://huggingface.co/openai/whisper-tiny',
+    inputNames: [],
+    outputName: '',
+    format: 'json',
+    notes: 'Byte-level BPE vocabulary (token string -> id), parsed by parseWhisperVocab.',
+  );
+
+  /// The three files the Whisper captioning feature needs on the device.
+  static const List<ModelSpec> speech = [whisperTinyEncoder, whisperTinyDecoder, whisperTinyVocab];
 
   static const List<ModelSpec> all = [
     u2netp,

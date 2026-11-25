@@ -179,7 +179,7 @@ class WhisperTokens {
 /// (length [WhisperTokens.vocabSize]). Implementations may keep a KV cache
 /// keyed on the prefix length.
 abstract interface class WhisperDecoderStep {
-  Float32List logits(List<int> tokens);
+  Future<Float32List> logits(List<int> tokens);
 }
 
 /// GPT-2 byte <-> unicode table used by Whisper's byte-level BPE.
@@ -239,14 +239,14 @@ class WhisperWindowResult {
 /// * if the summed probability of timestamps beats the best text token,
 ///   a timestamp is forced.
 /// A repetition guard stops loops (same token 12 times in a row).
-WhisperWindowResult greedyDecode(WhisperDecoderStep step, WhisperTokens t, {String? language, bool timestamps = true}) {
+Future<WhisperWindowResult> greedyDecode(WhisperDecoderStep step, WhisperTokens t, {String? language, bool timestamps = true}) async {
   final prompt = t.prompt(language: language, timestamps: timestamps);
   final tokens = List<int>.of(prompt);
   var truncated = false;
   var run = 0;
   var prev = -1;
   while (tokens.length - prompt.length < t.maxTokens) {
-    final logits = Float32List.fromList(step.logits(tokens));
+    final logits = Float32List.fromList(await step.logits(tokens));
     if (logits.length < t.vocabSize) {
       throw StateError(
         'decoder returned ${logits.length} logits, '
