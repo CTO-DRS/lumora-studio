@@ -33,6 +33,8 @@ class ModelSpec {
     this.mirrorUrl,
     this.fixedInputSize,
     this.notes = '',
+    this.format = 'onnx',
+    this.lite,
   });
 
   final String id;
@@ -55,7 +57,19 @@ class ModelSpec {
   final int? fixedInputSize;
   final String notes;
 
-  String get fileName => '$id.onnx';
+  /// File format / extension: `onnx` (default) or `tflite` (LiteRT variant,
+  /// Wave 2 W1). [fileName] appends it, so the [ModelManager] download,
+  /// checksum and cache paths work unchanged for both formats.
+  final String format;
+
+  /// Optional LiteRT sibling of this model (a full spec with
+  /// `format: 'tflite'`), used by the engine selector when the device
+  /// offers an NPU/GPU delegate. The logical I/O contract must match this
+  /// spec's `inputNames`/`outputName` (renamed during conversion if the
+  /// converter changed graph tensor names).
+  final ModelSpec? lite;
+
+  String get fileName => '$id.$format';
 
   double get sizeMb => sizeBytes / (1024 * 1024);
 }

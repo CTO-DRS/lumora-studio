@@ -2,6 +2,11 @@
 
 All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **LiteRT/NPU runtime (Wave 2 "Pro Intelligence" W1 starts)**: a second inference engine beside ONNX Runtime. `LiteRtInferenceEngine` (via `tflite_flutter` 0.12.1, LiteRT) runs every `.tflite` model on the fastest accelerator the device offers — **NPU through Android NNAPI on an explicit SoC allow-list** (Snapdragon 8-series, Google Tensor, Dimensity 9000+; unknown SoCs never get the NPU because a native abort cannot be caught from Dart), then the **GPU delegate** (OpenGL on Android, Metal on iOS), then **CPU kernels**. A per-session blacklist never retries a delegate that failed once for a model, and `EngineSelector` picks LiteRT vs ONNX per model (LiteRT only when acceleration is on, the device offers a delegate, and the model ships a `.tflite` variant); any LiteRT failure transparently retries on ONNX, and two consecutive failures pin ONNX for the session. The interpreter lives in a **dedicated worker isolate** (raw byte-buffer tensor protocol), so no `invoke()` ever blocks the UI thread. Model specs gained `format` (`onnx`/`tflite`) and an optional `lite` sibling spec — the download/checksum/cache path works unchanged for both formats. CPU-only devices and acceleration-off keep today's behaviour bit-for-bit. 26 new tests (delegate policy + SoC parsing, wire protocol encode/decode, engine fallback & blacklist, selector pinning) — 491 green, `flutter analyze` clean.
+
 ## [1.4.0] - 2026-11-25
 
 ### Added

@@ -1,5 +1,11 @@
+import 'dart:async' show unawaited;
+import 'dart:io' show Platform;
+
 import 'package:lumora/features/ai/data/model_manager.dart';
 import 'package:lumora/features/ai/data/onnx_engine.dart';
+import 'package:lumora/features/ai/engine/delegate_policy.dart';
+import 'package:lumora/features/ai/engine/engine_selector.dart';
+import 'package:lumora/features/ai/engine/lite_rt_engine.dart';
 import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
 import 'package:lumora/features/ai/pipelines/face_pipeline.dart';
 import 'package:lumora/features/ai/pipelines/scene_pipeline.dart';
@@ -59,14 +65,26 @@ Future<PhotoRenderer> photoRenderer(Ref ref) async {
 ModelManager modelManager(Ref ref) => ModelManager();
 
 @Riverpod(keepAlive: true)
+DelegatePolicy delegatePolicy(Ref ref) => const DelegatePolicy();
+
+@Riverpod(keepAlive: true)
 InferenceEngine inferenceEngine(Ref ref) {
-  final engine = OnnxInferenceEngine(
-    ref.watch(modelManagerProvider),
-    // Read on every session load, so toggling the setting takes effect at the
-    // next model load (the setter releases the current session).
-    accelerated: () => ref.read(settingsControllerProvider).aiAcceleration,
-  );
-  ref.onDispose(engine.release);
+  final manager = ref.watch(modelManagerProvider);
+  final policy = ref.watch(delegatePolicyProvider);
+  // Read on every session load, so toggling the setting takes effect at the
+  // next model load (both engines release their session).
+  bool accelerated() => ref.read(settingsControllerProvider).aiAcceleration;
+  final onnx = OnnxInferenceEngine(manager, accelerated: accelerated);
+  final liteRt = LiteRtInferenceEngine(manager, policy: policy, accelerated: accelerated);
+  bool hasAccelerators() =>
+      policy
+          .orderFor(accelerated: accelerated(), android: Platform.isAndroid, apple: Platform.isIOS || Platform.isMacOS)
+          .length >
+      1; // CPU-only ladder means no NPU/GPU delegate available.
+  final engine = EngineSelector(onnx: onnx, liteRt: liteRt, accelerated: accelerated, hasAccelerators: hasAccelerators);
+  ref.onDispose(() {
+    unawaited(engine.release());
+  });
   return engine;
 }
 

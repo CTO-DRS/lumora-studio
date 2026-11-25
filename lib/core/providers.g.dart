@@ -306,6 +306,47 @@ final class ModelManagerProvider
 
 String _$modelManagerHash() => r'95d6ad03a96f213a3268a6a0375444d72b125b61';
 
+@ProviderFor(delegatePolicy)
+final delegatePolicyProvider = DelegatePolicyProvider._();
+
+final class DelegatePolicyProvider
+    extends $FunctionalProvider<DelegatePolicy, DelegatePolicy, DelegatePolicy>
+    with $Provider<DelegatePolicy> {
+  DelegatePolicyProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'delegatePolicyProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$delegatePolicyHash();
+
+  @$internal
+  @override
+  $ProviderElement<DelegatePolicy> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  DelegatePolicy create(Ref ref) {
+    return delegatePolicy(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DelegatePolicy value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DelegatePolicy>(value),
+    );
+  }
+}
+
+String _$delegatePolicyHash() => r'2473464d405e256a68c86bbaa48c6a5d06445e12';
+
 @ProviderFor(inferenceEngine)
 final inferenceEngineProvider = InferenceEngineProvider._();
 
@@ -346,7 +387,7 @@ final class InferenceEngineProvider
   }
 }
 
-String _$inferenceEngineHash() => r'221d6d25d04b5b7651bf1a546f99775e2ccb73b3';
+String _$inferenceEngineHash() => r'd38dd0d35fc0290bf92eed6bfd3dfd9d37f1c1e8';
 
 @ProviderFor(segmentationPipeline)
 final segmentationPipelineProvider = SegmentationPipelineProvider._();
