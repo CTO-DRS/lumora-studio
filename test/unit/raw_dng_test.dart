@@ -13,6 +13,7 @@ import 'package:lumora/features/photo_editor/domain/raw/dng_document.dart';
 import 'package:lumora/features/photo_editor/domain/raw/lossless_jpeg.dart';
 import 'package:lumora/features/photo_editor/domain/raw/raw_import.dart';
 import 'package:lumora/features/photo_editor/domain/raw/tiff_parser.dart';
+import 'package:lumora/features/photo_editor/domain/raw/tiff_writer.dart';
 
 /// A simple flat builder: writes header + IFDs + data blocks in one pass,
 /// patching offsets at the end.
@@ -620,6 +621,98 @@ void main() {
       expect(success.fromPreview, isFalse);
       expect(success.width, w);
       expect(success.height, h);
+    });
+  });
+
+  // ------------------------------------------------ tiff16 export (M2-3)
+  group('16-bit TIFF export (M2-3)', () {
+    Uint8List rgba(int w, int h, int Function(int x, int y, int c) at) {
+      final out = Uint8List(w * h * 4);
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          final i = (y * w + x) * 4;
+          out[i] = at(x, y, 0);
+          out[i + 1] = at(x, y, 1);
+          out[i + 2] = at(x, y, 2);
+          out[i + 3] = 255;
+        }
+      }
+      return out;
+    }
+
+    test('round-trips exact 16-bit values through the project parser', () {
+      const w = 3;
+      const h = 2;
+      final pixels = rgba(w, h, (x, y, c) => (x * 61 + y * 37 + c * 23) % 256);
+      final file = encodeTiff16(pixels, w, h);
+      final doc = TiffDocument.parse(file);
+      final ifd = doc.ifds.first;
+      expect(ifd.intTag(256), w); // ImageWidth
+      expect(ifd.intTag(257), h); // ImageLength
+      expect(ifd.intTag(259), 1); // uncompressed
+      expect(ifd.intTag(262), 2); // RGB
+      expect(ifd.intTag(277), 3); // SamplesPerPixel
+      expect(ifd.intList(258), [16, 16, 16]); // BitsPerSample
+      expect(ifd.intList(338), [1, 1, 1]); // SampleFormat uint
+      expect(ifd.intTag(296), 2); // inch
+
+      // Pixel round-trip: strip bytes are little-endian uint16 = v*257.
+      final offsets = ifd.intList(273);
+      final counts = ifd.intList(279);
+      expect(offsets, hasLength(1));
+      final strip = Uint8List.sublistView(file, offsets[0], offsets[0] + counts[0]);
+      final view = ByteData.sublistView(strip);
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          for (var c = 0; c < 3; c++) {
+            final v = view.getUint16(((y * w + x) * 3 + c) * 2, Endian.little);
+            expect(v, ((x * 61 + y * 37 + c * 23) % 256) * 257, reason: 'at ($x,$y,$c)');
+          }
+        }
+      }
+    });
+
+    test('multi-strip layout keeps every strip readable', () {
+      const w = 4;
+      const h = 7;
+      final pixels = rgba(w, h, (x, y, c) => (x * 3 + y * 11 + c) % 256);
+      final file = encodeTiff16(pixels, w, h, stripRowsOverride: 3);
+      final doc = TiffDocument.parse(file);
+      final ifd = doc.ifds.first;
+      final offsets = ifd.intList(273);
+      final counts = ifd.intList(279);
+      expect(offsets, hasLength(3)); // 7 rows / 3 = [3, 3, 1]
+      expect(ifd.intTag(278), 3); // RowsPerStrip
+
+      var row = 0;
+      for (var s = 0; s < offsets.length; s++) {
+        final strip = Uint8List.sublistView(file, offsets[s], offsets[s] + counts[s]);
+        final rows = strip.length ~/ (w * 6);
+        final view = ByteData.sublistView(strip);
+        for (var r = 0; r < rows; r++, row++) {
+          for (var x = 0; x < w; x++) {
+            final v = view.getUint16((r * w + x) * 6, Endian.little);
+            expect(v, ((x * 3 + row * 11) % 256) * 257, reason: 'at ($x,$row)');
+          }
+        }
+      }
+      expect(row, h);
+    });
+
+    test('full-range lift is exact at both ends', () {
+      final pixels = Uint8List.fromList([0, 0, 0, 255, 255, 255, 255, 255]);
+      final file = encodeTiff16(pixels, 2, 1);
+      final doc = TiffDocument.parse(file);
+      final ifd = doc.ifds.first;
+      final offsets = ifd.intList(273);
+      final counts = ifd.intList(279);
+      final view = ByteData.sublistView(Uint8List.sublistView(file, offsets[0], offsets[0] + counts[0]));
+      expect(view.getUint16(0, Endian.little), 0);
+      expect(view.getUint16(2, Endian.little), 0);
+      expect(view.getUint16(4, Endian.little), 0);
+      expect(view.getUint16(6, Endian.little), 65535);
+      expect(view.getUint16(8, Endian.little), 65535);
+      expect(view.getUint16(10, Endian.little), 65535);
     });
   });
 }

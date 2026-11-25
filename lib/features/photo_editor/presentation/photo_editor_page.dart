@@ -426,7 +426,7 @@ class _ExportSheetState extends State<ExportSheet> {
               selected: {_format},
               onSelectionChanged: (v) => setState(() => _format = v.first),
             ),
-            if (_format != ExportFormat.png) ...[
+            if (_format != ExportFormat.png && _format != ExportFormat.tiff) ...[
               const SizedBox(height: 12),
               Text('${l.quality}: ${_quality.round()}'),
               Slider(
