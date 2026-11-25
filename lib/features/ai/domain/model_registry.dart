@@ -8,6 +8,7 @@ enum AiTask {
   depth,
   faceDetection,
   faceLandmarks,
+  sceneClassification,
 }
 
 /// Describes a downloadable on-device model. Every model is fetched from a
@@ -275,6 +276,33 @@ class ModelRegistry {
   /// this repository, tag `models-v1.4`; see `tool/sync_model_mirrors.py`).
   static const _kMirrorBase14 = 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-v1.4';
 
+  /// MobileNetV2 (int8, ImageNet-1k) scene classifier, ~3.5 MB. Powers the
+  /// scene-aware suggestions of the Smart bar: the photo's proxy is
+  /// classified on-device and the result nudges which quick fixes are
+  /// offered (pets → soft warm portrait, food → vivid, nature → landscape…).
+  /// Never downloaded automatically — suggestions keep working with pure
+  /// statistics until the user installs the model (Settings › AI models).
+  /// Downloaded, verified and executed with ONNX Runtime before being
+  /// registered (see docs/SMART_EDIT.md); the pinned zoo commit can never
+  /// change the file.
+  static const mobilenetScene = ModelSpec(
+    id: 'mobilenetv2_224_q8',
+    task: AiTask.sceneClassification,
+    displayName: 'MobileNetV2 – scene classifier (int8)',
+    url:
+        'https://github.com/onnx/models/raw/4c46cd00fbdb7cd30b6c1c17ab54f2e1f4f7b177/validated/vision/classification/mobilenet/model/mobilenetv2-12-int8.onnx',
+    sha256: 'cc028fe6cae7bc11a4ff53cfc9b79c920e8be65ce33a904ec3e2a8f66d77f95f',
+    sizeBytes: 3655033,
+    license: 'MIT (ONNX model zoo MobileNetV2)',
+    source: 'https://github.com/onnx/models/tree/main/validated/vision/classification/mobilenet',
+    inputNames: ['input'],
+    outputName: 'output',
+    mirrorUrl: '$_kMirrorBase/mobilenetv2_224_q8.onnx',
+    fixedInputSize: 224,
+    notes:
+        'Static [batch, 3, 224, 224] float, RGB 0..1 with ImageNet mean/std normalisation → 1000 ImageNet logits (measurements on a 2-core x86 sandbox: 2.4 ms per frame).',
+  );
+
   static const List<ModelSpec> all = [
     u2netp,
     modnet,
@@ -287,6 +315,7 @@ class ModelRegistry {
     depthAnythingSmall,
     yunetFaceDetect,
     faceLandmarks478,
+    mobilenetScene,
   ];
 
   static ModelSpec byId(String id) => all.firstWhere((m) => m.id == id);

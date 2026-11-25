@@ -650,3 +650,51 @@ final class DepthPipelineProvider
 }
 
 String _$depthPipelineHash() => r'24c3c97446f0b93db16ddfff1ace71c32f68df6e';
+
+@ProviderFor(sceneClassifierPipeline)
+final sceneClassifierPipelineProvider = SceneClassifierPipelineProvider._();
+
+final class SceneClassifierPipelineProvider
+    extends
+        $FunctionalProvider<
+          SceneClassifierPipeline,
+          SceneClassifierPipeline,
+          SceneClassifierPipeline
+        >
+    with $Provider<SceneClassifierPipeline> {
+  SceneClassifierPipelineProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sceneClassifierPipelineProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sceneClassifierPipelineHash();
+
+  @$internal
+  @override
+  $ProviderElement<SceneClassifierPipeline> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SceneClassifierPipeline create(Ref ref) {
+    return sceneClassifierPipeline(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SceneClassifierPipeline value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SceneClassifierPipeline>(value),
+    );
+  }
+}
+
+String _$sceneClassifierPipelineHash() =>
+    r'58701b00f286e11ddd597fe56fd4f12acdd031b9';

@@ -9,6 +9,7 @@ import 'package:gal/gal.dart';
 import 'package:image/image.dart' as img;
 import 'package:lumora/core/diagnostics/crash_log.dart';
 import 'package:lumora/core/providers.dart';
+import 'package:lumora/features/ai/domain/model_registry.dart';
 import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
 import 'package:lumora/features/ai/pipelines/face_pipeline.dart';
 import 'package:lumora/features/ai/pipelines/smart_pipelines.dart';
@@ -904,7 +905,20 @@ class PhotoEditorController extends _$PhotoEditorController {
       small.dispose();
       if (data == null) return;
       final analysis = PhotoAnalysis.fromRgba(data.buffer.asUint8List(), w, h);
-      state = state.copyWith(suggestions: suggestFixes(analysis));
+      var suggestions = suggestFixes(analysis);
+      // Scene-aware refinement (v1.4): classify the same proxy with the
+      // small MobileNetV2 model **only when it is already installed** —
+      // suggestions never trigger a download, and any failure here keeps
+      // the statistics-based ranking.
+      try {
+        if (await ref.read(modelManagerProvider).isInstalled(ModelRegistry.mobilenetScene)) {
+          final scene = await ref.read(sceneClassifierPipelineProvider).run(RgbaImage(w, h, data.buffer.asUint8List()));
+          suggestions = suggestFixes(analysis, scene: scene);
+        }
+      } on Object catch (e, st) {
+        CrashLog.instance.record('scene', '$e', st);
+      }
+      state = state.copyWith(suggestions: suggestions);
     } on Object catch (e, st) {
       CrashLog.instance.record('analyse', '$e', st);
     }

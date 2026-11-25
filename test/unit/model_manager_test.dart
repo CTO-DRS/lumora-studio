@@ -32,7 +32,14 @@ void main() {
     final ids = <String>{};
     for (final m in ModelRegistry.all) {
       expect(ids.add(m.id), isTrue);
-      expect(m.url, startsWith('https://huggingface.co/'));
+      // Every model is pinned: Hugging Face URLs by revision (the v1.3
+      // models), the scene classifier by an immutable ONNX model zoo
+      // commit. Both carry a recorded SHA-256 checked after download.
+      expect(
+        m.url,
+        anyOf(startsWith('https://huggingface.co/'), startsWith('https://github.com/onnx/models/raw/')),
+        reason: m.id,
+      );
       expect(m.mirrorUrl, startsWith('https://github.com/CTO-DRS/lumora-studio/releases/download/'), reason: m.id);
       expect(m.mirrorUrl, endsWith('${m.id}.onnx'), reason: m.id);
       expect(RegExp(r'^[0-9a-f]{64}$').hasMatch(m.sha256), isTrue, reason: m.id);
