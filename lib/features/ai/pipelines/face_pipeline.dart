@@ -13,8 +13,42 @@ import 'package:lumora/features/ai/pipelines/tensor_utils.dart';
 
 /// The face contour, in order ([FACEMESH_FACE_OVAL]).
 const List<int> kFaceOval = [
-  10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150,
-  136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109,
+  10,
+  338,
+  297,
+  332,
+  284,
+  251,
+  389,
+  356,
+  454,
+  323,
+  361,
+  288,
+  397,
+  365,
+  379,
+  378,
+  400,
+  377,
+  152,
+  148,
+  176,
+  149,
+  150,
+  136,
+  172,
+  58,
+  132,
+  93,
+  234,
+  127,
+  162,
+  21,
+  54,
+  103,
+  67,
+  109,
 ];
 
 /// One eye ring ([FACEMESH_LEFT_EYE], 16 points).
@@ -28,10 +62,52 @@ const List<int> kBrowA = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46];
 const List<int> kBrowB = [300, 293, 334, 296, 336, 285, 295, 282, 283, 276];
 
 /// Outer lip ring ([FACEMESH_LIPS], outer loop).
-const List<int> kLipsOuter = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185];
+const List<int> kLipsOuter = [
+  61,
+  146,
+  91,
+  181,
+  84,
+  17,
+  314,
+  405,
+  321,
+  375,
+  291,
+  409,
+  270,
+  269,
+  267,
+  0,
+  37,
+  39,
+  40,
+  185,
+];
 
 /// Inner lip ring — the mouth opening (teeth region).
-const List<int> kLipsInner = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191];
+const List<int> kLipsInner = [
+  78,
+  95,
+  88,
+  178,
+  87,
+  14,
+  317,
+  402,
+  318,
+  324,
+  308,
+  415,
+  310,
+  311,
+  312,
+  13,
+  82,
+  81,
+  80,
+  191,
+];
 
 /// What a face mask covers.
 enum FaceRegion { skin, eyes, teeth }
@@ -305,8 +381,9 @@ List<(double, double)> scalePolygon(List<(double, double)> poly, double factor) 
   return [for (final p in poly) (sx + (p.$1 - sx) * factor, sy + (p.$2 - sy) * factor)];
 }
 
-List<(double, double)> _pointsOf(Float32List all, List<int> indices) =>
-    [for (final i in indices) (all[i * 2], all[i * 2 + 1])];
+List<(double, double)> _pointsOf(Float32List all, List<int> indices) => [
+  for (final i in indices) (all[i * 2], all[i * 2 + 1]),
+];
 
 /// Builds a soft grayscale face mask for [region] across every analysed
 /// face, rasterised at ≤ [rasterSide] and bilinearly stretched to

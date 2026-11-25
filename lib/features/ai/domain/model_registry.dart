@@ -320,8 +320,7 @@ List<ModelSpec> aiToolModels(AiTool tool) => switch (tool) {
   AiTool.selectObject => const [ModelRegistry.mobileSamEncoder, ModelRegistry.mobileSamDecoderMulti],
   AiTool.depthBlur || AiTool.relight => const [ModelRegistry.depthAnythingSmall],
   AiTool.erasePerson => const [ModelRegistry.modnet, ModelRegistry.migan],
-  AiTool.faceRetouch || AiTool.eyeBrighten || AiTool.teethWhiten => const [
-    ModelRegistry.yunetFaceDetect,
-    ModelRegistry.faceLandmarks478,
-  ],
+  AiTool.faceRetouch ||
+  AiTool.eyeBrighten ||
+  AiTool.teethWhiten => const [ModelRegistry.yunetFaceDetect, ModelRegistry.faceLandmarks478],
 };

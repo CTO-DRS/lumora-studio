@@ -87,7 +87,13 @@ class _HomePageState extends ConsumerState<HomePage> {
       // v1.4 "Faces": face-aware retouch on the home sheet too.
       card(Icons.spa_outlined, t.rose, l.aiFaceRetouch, QuickAction.faceRetouch, AiTool.faceRetouch),
       card(Icons.visibility_outlined, t.blue, l.aiEyeBrighten, QuickAction.eyeBrighten, AiTool.eyeBrighten),
-      card(Icons.sentiment_very_satisfied_outlined, t.teal, l.aiTeethWhiten, QuickAction.teethWhiten, AiTool.teethWhiten),
+      card(
+        Icons.sentiment_very_satisfied_outlined,
+        t.teal,
+        l.aiTeethWhiten,
+        QuickAction.teethWhiten,
+        AiTool.teethWhiten,
+      ),
     ];
   }
 

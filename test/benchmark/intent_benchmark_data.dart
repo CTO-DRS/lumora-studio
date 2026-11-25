@@ -12,11 +12,18 @@ class BenchmarkEntry {
   final List<Map<String, Object?>> expected;
 }
 
-Map<String, Object?> adj(String param, double amount, {bool absolute = false}) =>
-    {'op': 'adjust', 'param': param, 'amount': amount, 'absolute': absolute};
+Map<String, Object?> adj(String param, double amount, {bool absolute = false}) => {
+  'op': 'adjust',
+  'param': param,
+  'amount': amount,
+  'absolute': absolute,
+};
 
-Map<String, Object?> look(String preset, [double intensity = 1]) =>
-    {'op': 'look', 'preset': preset, 'intensity': intensity};
+Map<String, Object?> look(String preset, [double intensity = 1]) => {
+  'op': 'look',
+  'preset': preset,
+  'intensity': intensity,
+};
 
 Map<String, Object?> act(String action) => {'op': 'action', 'action': action};
 
@@ -1037,7 +1044,11 @@ final List<BenchmarkEntry> kIntentBenchmark = <BenchmarkEntry>[
   BenchmarkEntry('دور الصوره لليمين واعكسها', 'ar', [act('rotateRight'), act('flipHorizontal')]),
   BenchmarkEntry('سوي الافق وامسح الناس', 'ar', [act('autoStraighten'), act('erasePerson')]),
   BenchmarkEntry('ازل الضباب وارفع الظلال', 'ar', [adj('dehaze', 0.4), adj('shadows', 0.25)]),
-  BenchmarkEntry('warmer, more contrast, then black and white', 'en', [adj('temperature', 0.2), adj('contrast', 0.2), look('mono')]),
+  BenchmarkEntry('warmer, more contrast, then black and white', 'en', [
+    adj('temperature', 0.2),
+    adj('contrast', 0.2),
+    look('mono'),
+  ]),
   BenchmarkEntry('make it warmer and remove the person', 'en', [adj('temperature', 0.2), act('erasePerson')]),
   BenchmarkEntry('increase contrast and saturation', 'en', [adj('contrast', 0.2), adj('saturation', 0.2)]),
   BenchmarkEntry('reduce highlights and lift shadows', 'en', [adj('highlights', -0.25), adj('shadows', 0.25)]),
@@ -1107,14 +1118,30 @@ final List<BenchmarkEntry> kIntentBenchmark = <BenchmarkEntry>[
   BenchmarkEntry('make it سينمائي', 'en', [look('blockbuster')]),
   BenchmarkEntry('brighten الظلال', 'en', [adj('shadows', 0.25)]),
   BenchmarkEntry('اجعلها softer', 'ar', [adj('clarity', -0.25)]),
-  BenchmarkEntry('زد السطوع وزد التباين وابيض واسود', 'ar', [adj('exposure', 0.35), adj('contrast', 0.2), look('mono')]),
+  BenchmarkEntry('زد السطوع وزد التباين وابيض واسود', 'ar', [
+    adj('exposure', 0.35),
+    adj('contrast', 0.2),
+    look('mono'),
+  ]),
   BenchmarkEntry('ادفا ثم ابرد ثم سينمائي', 'ar', [adj('temperature', 0), look('blockbuster')]),
   BenchmarkEntry('زد السطوع قليلا وقلل التشبع كثيرا', 'ar', [adj('exposure', 0.175), adj('saturation', -0.36)]),
-  BenchmarkEntry('ازل الخلفيه وامسح الناس ودور الصوره', 'ar', [act('removeBackground'), act('erasePerson'), act('rotateRight')]),
+  BenchmarkEntry('ازل الخلفيه وامسح الناس ودور الصوره', 'ar', [
+    act('removeBackground'),
+    act('erasePerson'),
+    act('rotateRight'),
+  ]),
   BenchmarkEntry('warmer, cooler, cinematic', 'en', [adj('temperature', 0), look('blockbuster')]),
   BenchmarkEntry('more contrast, less contrast, mono', 'en', [adj('contrast', 0), look('mono')]),
-  BenchmarkEntry('remove background, upscale, rotate right', 'en', [act('removeBackground'), act('upscale'), act('rotateRight')]),
-  BenchmarkEntry('exposure +1, contrast 20%, vignette 30', 'en', [adj('exposure', 1), adj('contrast', 0.2, absolute: true), adj('vignette', -0.3, absolute: true)]),
+  BenchmarkEntry('remove background, upscale, rotate right', 'en', [
+    act('removeBackground'),
+    act('upscale'),
+    act('rotateRight'),
+  ]),
+  BenchmarkEntry('exposure +1, contrast 20%, vignette 30', 'en', [
+    adj('exposure', 1),
+    adj('contrast', 0.2, absolute: true),
+    adj('vignette', -0.3, absolute: true),
+  ]),
   BenchmarkEntry('smooth skin, sharpen a lot, undo', 'en', [act('faceRetouch'), adj('sharpen', 0.54), act('undo')]),
   BenchmarkEntry('black and white, then remove the filter', 'en', [look('mono'), act('clearLook')]),
 ];

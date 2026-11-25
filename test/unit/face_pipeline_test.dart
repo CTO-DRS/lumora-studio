@@ -9,7 +9,6 @@ import 'package:lumora/features/ai/domain/model_registry.dart';
 import 'package:lumora/features/ai/pipelines/face_pipeline.dart';
 import 'package:lumora/features/ai/pipelines/tensor_utils.dart';
 
-
 /// Gradient raster with distinct values per pixel (for sampling tests).
 RgbaImage _gradient(int w, int h) {
   final px = Uint8List(w * h * 4);
@@ -79,8 +78,7 @@ void main() {
         im.setPixelRgba(x, y, (x * 7) % 256, (y * 5) % 256, (x + y) % 256, 255);
       }
     }
-    photo = File('${Directory.systemTemp.path}/lumora_face_test.png')
-      ..writeAsBytesSync(img.encodePng(im));
+    photo = File('${Directory.systemTemp.path}/lumora_face_test.png')..writeAsBytesSync(img.encodePng(im));
   });
   group('YuNet decode', () {
     Map<String, List<num>> syntheticOutputs({
@@ -164,7 +162,13 @@ void main() {
     });
 
     test('below-threshold scores are dropped', () {
-      final out = syntheticOutputs(cell: 100, cols: 80, score: 0.1, bbox: [0, 0, 0, 0], kps: List<double>.filled(10, 0));
+      final out = syntheticOutputs(
+        cell: 100,
+        cols: 80,
+        score: 0.1,
+        bbox: [0, 0, 0, 0],
+        kps: List<double>.filled(10, 0),
+      );
       expect(decodeYunet(out, 640, 640), isEmpty);
     });
   });
@@ -214,16 +218,18 @@ void main() {
   group('face masks', () {
     late FaceAnalysis analysis;
     setUp(() {
-      analysis = _analysis(_syntheticMesh(
-        ovalTopLeft: (10, 10),
-        ovalSide: 80,
-        eyeTopLeft: (20, 20),
-        eyeSide: 10,
-        lipsTopLeft: (20, 60),
-        lipsSide: 20,
-        innerTopLeft: (23, 63),
-        innerSide: 8,
-      ));
+      analysis = _analysis(
+        _syntheticMesh(
+          ovalTopLeft: (10, 10),
+          ovalSide: 80,
+          eyeTopLeft: (20, 20),
+          eyeSide: 10,
+          lipsTopLeft: (20, 60),
+          lipsSide: 20,
+          innerTopLeft: (23, 63),
+          innerSide: 8,
+        ),
+      );
     });
 
     test('skin mask covers the oval, minus eyes, brows and lips', () {
