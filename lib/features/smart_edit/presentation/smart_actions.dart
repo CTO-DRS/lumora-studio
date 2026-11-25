@@ -116,6 +116,9 @@ Future<bool> runSmartAction(BuildContext context, WidgetRef ref, SmartAction act
     case SmartAction.skyReplaceGolden:
       if (!await models(AiTool.skyReplace)) return false;
       await ctrl.skyReplace(SkyPreset.golden);
+    case SmartAction.lowLightRescue:
+      // Model-free: no download needed.
+      await ctrl.lowLightRescue();
     case SmartAction.eraseObject:
       if (!await models(AiTool.eraser)) return false;
       ctrl
@@ -195,6 +198,7 @@ String smartActionLabel(AppLocalizations l, SmartAction a) => switch (a) {
   SmartAction.skyReplaceClear => l.aiSkyReplaceClear,
   SmartAction.skyReplaceStorm => l.aiSkyReplaceStorm,
   SmartAction.skyReplaceGolden => l.aiSkyReplaceGolden,
+  SmartAction.lowLightRescue => l.aiLowLight,
 };
 
 String suggestionLabel(AppLocalizations l, SuggestionKind k) => switch (k) {

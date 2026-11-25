@@ -37,7 +37,10 @@ enum SmartAction {
   skyReplaceSunset,
   skyReplaceClear,
   skyReplaceStorm,
-  skyReplaceGolden;
+  skyReplaceGolden,
+
+  // Low-light rescue (v1.5 W5): model-free denoise + exposure lift.
+  lowLightRescue;
 
   /// Whether the action changes the edit without any further input or
   /// model (applied immediately and atomically with slider changes).

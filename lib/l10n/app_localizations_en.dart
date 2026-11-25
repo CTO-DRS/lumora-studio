@@ -1376,4 +1376,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get captionsSaved => 'Caption files saved';
+
+  @override
+  String get aiLowLight => 'Low-light rescue';
+
+  @override
+  String get aiLowLightDone => 'Dark photo lifted and denoised';
 }

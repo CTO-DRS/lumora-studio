@@ -2731,6 +2731,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Caption files saved'**
   String get captionsSaved;
+
+  /// No description provided for @aiLowLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Low-light rescue'**
+  String get aiLowLight;
+
+  /// No description provided for @aiLowLightDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark photo lifted and denoised'**
+  String get aiLowLightDone;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

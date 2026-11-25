@@ -440,5 +440,7 @@
   "captionsRemoveAll": "حذف الترجمة",
   "captionsHint": "تُدمج الترجمة في الفيديو المُصدَّر. اضغط على سطر لتعديله.",
   "captionsNeedClip": "أضف مقطعًا أولًا.",
-  "captionsSaved": "تم حفظ ملفات الترجمة"
+  "captionsSaved": "تم حفظ ملفات الترجمة",
+  "aiLowLight": "إنقاذ الإضاءة المنخفضة",
+  "aiLowLightDone": "تم رفع الإضاءة وتقليل الضجيج"
 }

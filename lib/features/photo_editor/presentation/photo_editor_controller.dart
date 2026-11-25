@@ -30,6 +30,7 @@ import 'package:lumora/features/photo_editor/domain/presets.dart';
 import 'package:lumora/features/photo_editor/engine/finishing_renderer.dart';
 import 'package:lumora/features/photo_editor/engine/healing.dart';
 import 'package:lumora/features/photo_editor/engine/image_exporter.dart';
+import 'package:lumora/features/photo_editor/engine/low_light.dart' as low_light;
 import 'package:lumora/features/photo_editor/engine/overlay_painter.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
 import 'package:lumora/features/photo_editor/engine/pixel_ops.dart';
@@ -702,6 +703,16 @@ class PhotoEditorController extends _$PhotoEditorController {
         .run(_currentRaster, onProgress: (v) => state = state.copyWith(progress: () => v));
     update((s) => s.copyWith(rasterPath: path));
   }, label: 'upscale 4x');
+
+  /// Low-light rescue (W5, model-free): denoise then lift, written as a new
+  /// raster so it is one undo step like the other pixel tools.
+  Future<void> lowLightRescue({low_light.LowLightParams params = const low_light.LowLightParams()}) => _busy(() async {
+    final source = await loadRgba(_currentRaster);
+    final (w, h) = (source.width, source.height);
+    final out = await Isolate.run(() => low_light.lowLightRescue(source.pixels, w, h, params: params));
+    final path = await savePng(RgbaImage(w, h, out), 'low_light');
+    update((s) => s.copyWith(rasterPath: path));
+  }, label: 'low-light rescue');
 
   /// Subject mask → masked local adjustment ([retouch] = skin smoothing,
   /// [blurBackground] = background blur).

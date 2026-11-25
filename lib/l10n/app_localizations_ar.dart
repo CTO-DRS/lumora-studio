@@ -1377,4 +1377,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get captionsSaved => 'تم حفظ ملفات الترجمة';
+
+  @override
+  String get aiLowLight => 'إنقاذ الإضاءة المنخفضة';
+
+  @override
+  String get aiLowLightDone => 'تم رفع الإضاءة وتقليل الضجيج';
 }
