@@ -1,14 +1,17 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/return_code.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/services.dart';
 import 'package:lumora/features/photo_editor/domain/edit_state.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
+import 'package:lumora/features/video_editor/domain/audio_analysis.dart';
 import 'package:lumora/features/video_editor/domain/look_keyframes.dart';
 import 'package:lumora/features/video_editor/domain/timeline_ops.dart';
 import 'package:lumora/features/video_editor/domain/video_project.dart';
@@ -116,6 +119,61 @@ class VideoEngine {
       if (File(file).existsSync()) out.add(file);
     }
     return out;
+  }
+
+  /// Decodes the audio of [path] to mono 16-bit PCM at the analysis rate.
+  ///
+  /// Returns an empty buffer when the clip has no audio track.
+  Future<Int16List> extractAudioPcm(String path, {int sampleRate = AudioAnalysis.sampleRate}) async {
+    final dir = await _work('audio_${path.hashCode.abs()}');
+    final file = File(p.join(dir.path, 'audio.pcm'));
+    if (file.existsSync()) file.deleteSync();
+    await FFmpegKit.executeWithArguments([
+      '-y',
+      '-i',
+      path,
+      '-vn',
+      '-ac',
+      '1',
+      '-ar',
+      '$sampleRate',
+      '-f',
+      's16le',
+      file.path,
+    ]);
+    if (!file.existsSync()) return Int16List(0);
+    final bytes = await file.readAsBytes();
+    // The PCM cache of a long clip can be large; one analysis is enough.
+    try {
+      file.deleteSync();
+    } on Object {
+      // Best effort – the temp directory is cleared by the OS anyway.
+    }
+    final samples = Int16List(bytes.length ~/ 2);
+    for (var i = 0; i < samples.length; i++) {
+      // little-endian s16le → signed 16-bit
+      final lo = bytes[i * 2];
+      final hi = bytes[i * 2 + 1];
+      var v = (hi << 8) | lo;
+      if (v >= 0x8000) v -= 0x10000;
+      samples[i] = v;
+    }
+    return samples;
+  }
+
+  /// Beat detection + tempo for [path] (empty beats / null BPM when the
+  /// clip is silent or shorter than a second).
+  Future<(List<int>, int?)> detectBeats(String path) async {
+    final pcm = await extractAudioPcm(path);
+    if (pcm.isEmpty) return (<int>[], null);
+    return compute(AudioAnalysis.detectBeats, pcm);
+  }
+
+  /// Waveform peak envelope ([buckets] values 0..1) for the timeline.
+  Future<Float32List> waveform(String path, {int buckets = 240}) async {
+    final pcm = await extractAudioPcm(path);
+    if (pcm.isEmpty) return Float32List(buckets);
+    return compute((_) => AudioAnalysis.waveform(pcm, buckets), null);
   }
 
   /// Exports [project] to an MP4 and returns its path.
