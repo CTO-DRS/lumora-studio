@@ -2,7 +2,7 @@
 
 All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.4.0] - 2026-11-25
 
 ### Added
 - **Auto straighten (v1.4 "Pro foundations" starts)**: a Hough-based horizon detector (pure Dart, no model, ~2 ms on a 256 px proxy) finds the strongest near-horizontal structure and applies the correction angle in one undoable step — new "Auto straighten" button in the crop panel and a new Smart command ("سوي الصوره / سوي الافق", "straighten / level the horizon / align"). Detection runs on the preview proxy; low-confidence or already-level photos are left untouched.
