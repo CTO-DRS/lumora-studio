@@ -129,7 +129,7 @@ void main() {
   });
 
   group('registry', () {
-    test('Whisper specs are pinned, checksummed and routed to the speech list', () {
+    test('Whisper specs are pinned, checksummed and listed with a v1.5 mirror', () {
       expect(ModelRegistry.speech.length, 3);
       final ids = <String>{};
       for (final m in ModelRegistry.speech) {
@@ -139,7 +139,8 @@ void main() {
         expect(m.url, isNot(contains('/resolve/main/')), reason: 'revision-pinned');
         expect(RegExp(r'^[0-9a-f]{64}$').hasMatch(m.sha256), isTrue);
         expect(m.license, contains('Apache-2.0'));
-        expect(ModelRegistry.all, isNot(contains(m)), reason: 'no mirror yet');
+        expect(ModelRegistry.all, contains(m));
+        expect(m.mirrorUrl, startsWith('https://github.com/CTO-DRS/lumora-studio/releases/download/models-v1.5/'));
       }
       expect(ModelRegistry.whisperTinyEncoder.fileName, endsWith('.onnx'));
       expect(ModelRegistry.whisperTinyVocab.fileName, 'whisper_tiny_vocab.json');

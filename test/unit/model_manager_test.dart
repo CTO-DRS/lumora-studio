@@ -49,7 +49,7 @@ void main() {
       // The mirror asset keeps a graph-format extension; the name itself may
       // differ from the registry id (the v1.4 release publishes short asset
       // names such as yunet.onnx / facemesh.onnx / skyseg_int8.onnx).
-      expect(m.mirrorUrl, anyOf(endsWith('.onnx'), endsWith('.tflite')), reason: m.id);
+      expect(m.mirrorUrl, anyOf(endsWith('.onnx'), endsWith('.tflite'), endsWith('.json')), reason: m.id);
       expect(RegExp(r'^[0-9a-f]{64}$').hasMatch(m.sha256), isTrue, reason: m.id);
       // Smallest shipped model is YuNet (232 KB); a stub would be far below.
       expect(m.sizeBytes, greaterThan(100000));

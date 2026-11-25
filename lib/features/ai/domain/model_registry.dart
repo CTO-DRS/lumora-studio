@@ -382,8 +382,10 @@ class ModelRegistry {
   // `whisper_frontend.dart` fed to this encoder/decoder pair transcribed the
   // clip word for word. The uint8 encoder is used because the int8 export
   // needs ConvInteger, which ONNX Runtime's CPU provider does not implement.
-  // These specs live in [speech], not in [all], until the project mirror
-  // (`models-v1.5`) carries the files; [all] requires a mirror per entry.
+  // The project mirror (release `models-v1.5`) carries the same files with
+  // identical SHA-256 (checked after upload).
+
+  static const _kMirrorBase15 = 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-v1.5';
 
   static const whisperTinyEncoder = ModelSpec(
     id: 'whisper_tiny_encoder_q8',
@@ -397,6 +399,7 @@ class ModelRegistry {
     source: 'https://huggingface.co/openai/whisper-tiny',
     inputNames: ['input_features'],
     outputName: 'last_hidden_state',
+    mirrorUrl: '$_kMirrorBase15/whisper_tiny_encoder_q8.onnx',
     notes: 'float [1, 80, 3000] log-mel (whisper_frontend.dart) -> [1, 1500, 384] hidden states.',
   );
 
@@ -412,6 +415,7 @@ class ModelRegistry {
     source: 'https://huggingface.co/openai/whisper-tiny',
     inputNames: ['input_ids', 'encoder_hidden_states', 'use_cache_branch'],
     outputName: 'logits',
+    mirrorUrl: '$_kMirrorBase15/whisper_tiny_decoder_merged_q8.onnx',
     notes:
         'Merged decoder: use_cache_branch bool, past_key_values.{0..3}.{decoder,encoder}.{key,value} [1, 6, len, 64] -> logits [1, n, 51865] + present.*.',
   );
@@ -429,6 +433,7 @@ class ModelRegistry {
     inputNames: [],
     outputName: '',
     format: 'json',
+    mirrorUrl: '$_kMirrorBase15/whisper_tiny_vocab.json',
     notes: 'Byte-level BPE vocabulary (token string -> id), parsed by parseWhisperVocab.',
   );
 
@@ -449,6 +454,9 @@ class ModelRegistry {
     faceLandmarks478,
     mobilenetScene,
     skySegQ8,
+    whisperTinyEncoder,
+    whisperTinyDecoder,
+    whisperTinyVocab,
   ];
 
   static ModelSpec byId(String id) => all.firstWhere((m) => m.id == id);
