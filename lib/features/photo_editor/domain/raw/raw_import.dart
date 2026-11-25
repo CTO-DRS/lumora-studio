@@ -99,13 +99,21 @@ Future<RawImportResult> importDng(String sourcePath) async {
 RawImportResult _decodeDng(Uint8List bytes) {
   final doc = parseDng(bytes);
 
-  // 1. Direct CFA decode when the compression is one we implement.
+  // 1. Direct CFA decode attempt (any decode failure falls through to the
+  //    embedded preview — the user still gets their photo, with a reason).
+  var failure = 'raw data uses an unsupported compression';
   if (doc.cfa.isDirectlyDecodable) {
-    final bayer = decodeCfa(bytes, doc);
-    final demosaiced = demosaicBilinear(bayer, doc.cfa.pattern, doc.cfa.blackLevel, doc.cfa.whiteLevel);
-    final rgba = toRgba(demosaiced);
-    final path = _savePng(rgba, 'raw_open');
-    return RawImportSuccess(path: path, width: rgba.width, height: rgba.height, fromPreview: false);
+    try {
+      final bayer = decodeCfa(bytes, doc);
+      final demosaiced = demosaicBilinear(bayer, doc.cfa.pattern, doc.cfa.blackLevel, doc.cfa.whiteLevel);
+      final rgba = toRgba(demosaiced);
+      final path = _savePng(rgba, 'raw_open');
+      return RawImportSuccess(path: path, width: rgba.width, height: rgba.height, fromPreview: false);
+    } on TiffFormatException catch (e) {
+      failure = 'raw decode failed: ${e.reason}';
+    } on RawUnsupportedException catch (e) {
+      failure = e.message;
+    }
   }
 
   // 2. Preview fallback: embedded JPEG + the honest reason carried up.
@@ -117,24 +125,16 @@ RawImportResult _decodeDng(Uint8List bytes) {
       final rgba = decoded.convert(numChannels: 4, format: img.Format.uint8);
       final image = RgbaImage(rgba.width, rgba.height, Uint8List.fromList(rgba.getBytes(order: img.ChannelOrder.rgba)));
       final path = _savePng(image, 'raw_preview');
-      final String reason;
-      if (doc.cfa.compression == RawCompression.losslessJpeg) {
-        reason = 'raw data uses lossless JPEG — decode lands in the next RAW milestone';
-      } else if (doc.cfa.bitsPerSample == 32) {
-        reason = 'floating-point DNG samples — not supported yet';
-      } else {
-        reason = 'raw data uses an unsupported compression';
-      }
       return RawImportSuccess(
         path: path,
         width: image.width,
         height: image.height,
         fromPreview: true,
-        reason: reason,
+        reason: failure,
       );
     }
   }
-  return const RawImportFailure('unsupported DNG raw data and no decodable preview');
+  return RawImportFailure(failure);
 }
 
 /// Encodes [image] as PNG into the app's AI cache (same folder as the

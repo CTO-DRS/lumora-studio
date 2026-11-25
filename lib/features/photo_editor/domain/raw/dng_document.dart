@@ -70,7 +70,7 @@ enum RawCompression {
 /// Why a DNG's raw data cannot be decoded yet. Plain strings ship to the
 /// user through the editor's error path (roadmap: honest failures).
 enum RawUnsupportedReason {
-  losslessJpeg('DNG raw data uses lossless JPEG — full decode lands in the next RAW milestone'),
+  losslessJpeg('DNG raw data uses lossless JPEG that could not be decoded'),
   lossyJpeg('DNG raw data uses lossy JPEG (linear DNG) — not supported yet'),
   unknownCompression('unknown DNG compression'),
   floatingPoint('floating-point DNG samples — not supported yet'),
@@ -115,9 +115,12 @@ class RawCfaInfo {
   final List<int> stripByteCounts;
   final int rowsPerStrip;
 
-  /// Whether the sample layout is directly decodable without a JPEG decoder.
+  /// Whether the sample layout is directly decodable without falling back
+  /// to the embedded preview (lossless JPEG included since M2-2).
   bool get isDirectlyDecodable =>
-      compression == RawCompression.uncompressed || compression == RawCompression.deflateAdobe;
+      compression == RawCompression.uncompressed ||
+      compression == RawCompression.deflateAdobe ||
+      compression == RawCompression.losslessJpeg;
 }
 
 /// A parsed DNG document: raw + previews classified, metadata extracted.

@@ -1,11 +1,12 @@
-/// DNG CFA decoder — Wave 2 W2 (M2-1): uncompressed and Adobe-deflate raw
-/// strips → 16-bit Bayer planes → black/white-level normalisation →
-/// bilinear demosaic → sRGB-gamma 8-bit [RgbaImage] the editor already
-/// knows how to edit.
+/// DNG CFA decoder — Wave 2 W2 (M2-1 + M2-2): uncompressed, Adobe-deflate
+/// and **lossless-JPEG (SOF3)** raw strips → 16-bit Bayer planes →
+/// black/white-level normalisation → bilinear demosaic → sRGB-gamma 8-bit
+/// [RgbaImage] the editor already knows how to edit.
 ///
-/// Lossless-JPEG (the phone-default) is detected in the document layer and
-/// surfaces as [RawUnsupportedException] with a plain message until the
-/// dedicated decoder lands (ROADMAP W2). Fuzz gate: every strip access is
+/// Lossless JPEG (the phone-default compression) is decoded by the
+/// in-house T.81 decoder in [lossless_jpeg.dart]; genuinely broken or
+/// exotic payloads surface as [RawUnsupportedException] and the importer
+/// falls back to the embedded preview. Fuzz gate: every strip access is
 /// bounds-checked; corrupt input raises, never crashes.
 library;
 
@@ -15,6 +16,7 @@ import 'dart:typed_data';
 
 import 'package:lumora/features/ai/pipelines/tensor_utils.dart' show RgbaImage;
 import 'package:lumora/features/photo_editor/domain/raw/dng_document.dart';
+import 'package:lumora/features/photo_editor/domain/raw/lossless_jpeg.dart';
 import 'package:lumora/features/photo_editor/domain/raw/tiff_parser.dart';
 
 /// 16-bit single-channel Bayer buffer.
@@ -75,19 +77,45 @@ BayerImage decodeCfa(Uint8List file, DngDocument doc) {
     }
     final rowsLeft = fullH - s * cfa.rowsPerStrip;
     final expectedRows = rowsLeft <= 0 ? 0 : math.min(cfa.rowsPerStrip, rowsLeft);
-    if (payload.length < expectedRows * fullW * bytesPerSample) {
-      throw TiffFormatException('strip $s too small for $expectedRows rows');
-    }
-    final view = bytesPerSample == 2 ? ByteData.sublistView(payload) : null;
-    for (var r = 0; r < expectedRows; r++) {
-      final dstRow = rowCursor + r;
-      for (var x = 0; x < fullW; x++) {
-        if (bytesPerSample == 2) {
-          raw[dstRow * fullW + x] = littleEndian
-              ? view!.getUint16((r * fullW + x) * 2, Endian.little)
-              : view!.getUint16((r * fullW + x) * 2);
-        } else {
-          raw[dstRow * fullW + x] = payload[r * fullW + x];
+    if (cfa.compression == RawCompression.losslessJpeg) {
+      // Each strip is a complete lossless JPEG (SOI … EOI) covering
+      // expectedRows sensor rows of fullW CFA samples.
+      final LosslessJpegImage jpeg;
+      try {
+        jpeg = decodeLosslessJpeg(payload);
+      } on LosslessJpegFormatException catch (e) {
+        throw TiffFormatException('lossless-JPEG strip $s: ${e.reason}');
+      }
+      if (jpeg.width != fullW) {
+        throw TiffFormatException('lossless strip $s width ${jpeg.width} ≠ sensor $fullW');
+      }
+      if (jpeg.height != expectedRows) {
+        throw TiffFormatException('lossless strip $s height ${jpeg.height} ≠ $expectedRows rows');
+      }
+      if (jpeg.precision != cfa.bitsPerSample) {
+        throw TiffFormatException('lossless strip $s precision ${jpeg.precision} ≠ ${cfa.bitsPerSample}-bit');
+      }
+      for (var r = 0; r < expectedRows; r++) {
+        final dstRow = rowCursor + r;
+        for (var x = 0; x < fullW; x++) {
+          raw[dstRow * fullW + x] = jpeg.samples[r * fullW + x];
+        }
+      }
+    } else {
+      if (payload.length < expectedRows * fullW * bytesPerSample) {
+        throw TiffFormatException('strip $s too small for $expectedRows rows');
+      }
+      final view = bytesPerSample == 2 ? ByteData.sublistView(payload) : null;
+      for (var r = 0; r < expectedRows; r++) {
+        final dstRow = rowCursor + r;
+        for (var x = 0; x < fullW; x++) {
+          if (bytesPerSample == 2) {
+            raw[dstRow * fullW + x] = littleEndian
+                ? view!.getUint16((r * fullW + x) * 2, Endian.little)
+                : view!.getUint16((r * fullW + x) * 2);
+          } else {
+            raw[dstRow * fullW + x] = payload[r * fullW + x];
+          }
         }
       }
     }

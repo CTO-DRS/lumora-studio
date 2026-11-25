@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:lumora/features/photo_editor/domain/raw/dng_decoder.dart';
 import 'package:lumora/features/photo_editor/domain/raw/dng_document.dart';
+import 'package:lumora/features/photo_editor/domain/raw/lossless_jpeg.dart';
 import 'package:lumora/features/photo_editor/domain/raw/raw_import.dart';
 import 'package:lumora/features/photo_editor/domain/raw/tiff_parser.dart';
 
@@ -26,22 +27,40 @@ Uint8List buildDng({
   int compressionId = 1, // 1 uncompressed, 8 deflate, 7 lossless JPEG
   List<int>? stripData,
   int? rowsPerStrip,
+  List<int>? stripSplits, // byte length of each strip (multi-strip raws)
   bool withPreview = false,
   List<int>? previewJpeg,
   List<int>? dngVersion,
   bool cfaPhotometric = true,
 }) {
-  final data = stripData ??
-      List.filled(rawWidth * rawHeight * (bitsPerSample == 8 ? 1 : 2), 0x40);
+  final data = stripData ?? List.filled(rawWidth * rawHeight * (bitsPerSample == 8 ? 1 : 2), 0x40);
   final rps = rowsPerStrip ?? rawHeight;
   const little = Endian.little;
 
-  // --- collect variable-size blobs first to compute offsets -------------
-
-  // Strip payload (possibly deflate-compressed).
-  var payload = Uint8List.fromList(data);
+  // --- strip payloads -----------------------------------------------------
+  var full = Uint8List.fromList(data);
   if (compressionId == 8) {
-    payload = Uint8List.fromList(ZLibEncoder().convert(data));
+    full = Uint8List.fromList(ZLibEncoder().convert(data));
+  }
+  final List<Uint8List> stripPayloads;
+  if (stripSplits != null && stripSplits.length > 1) {
+    stripPayloads = [];
+    var cursor = 0;
+    for (final len in stripSplits) {
+      stripPayloads.add(Uint8List.sublistView(full, cursor, cursor + len));
+      cursor += len;
+    }
+  } else {
+    stripPayloads = [full];
+  }
+
+  // Strip offsets (payload-relative for now — rebased to absolute after
+  // the layout below; the entries hold a reference to this same list).
+  final stripOffsets = <int>[];
+  var stripAcc = 0;
+  for (final sp in stripPayloads) {
+    stripOffsets.add(stripAcc);
+    stripAcc += sp.length;
   }
 
   // JPEG preview payload.
@@ -75,10 +94,10 @@ Uint8List buildDng({
     (258, TiffType.short.id, [bitsPerSample]),
     (259, TiffType.short.id, [compressionId]),
     (262, TiffType.short.id, [cfaPhotometric ? 32803 : 2]), // CFA
-    (273, TiffType.long.id, [0]), // StripOffsets (patched)
+    (273, TiffType.long.id, stripOffsets), // StripOffsets (real values)
     (277, TiffType.short.id, [1]), // SamplesPerPixel
     (278, TiffType.long.id, [rps]),
-    (279, TiffType.long.id, [payload.length]), // StripByteCounts
+    (279, TiffType.long.id, [for (final sp in stripPayloads) sp.length]), // StripByteCounts
     (50707, TiffType.short.id, [2, 2]), // CFARepeatPatternDim
     (50708, TiffType.short.id, cfaPattern), // CFAPattern
     if (activeArea != null) (50829, TiffType.long.id, activeArea), // ActiveArea
@@ -123,7 +142,11 @@ Uint8List buildDng({
   final rawIfdOff = valuesOff + valuesSize;
   final previewIfdOff = rawIfdOff + rawSize;
   final payloadOff = previewIfdOff + previewSize;
-  final jpegOff = payloadOff + payload.length;
+  // Rebase the payload-relative strip offsets to absolute file offsets.
+  for (var i = 0; i < stripOffsets.length; i++) {
+    stripOffsets[i] += payloadOff;
+  }
+  final jpegOff = payloadOff + full.length;
 
   final total = jpegOff + jpeg.length;
   final bytes = Uint8List(total);
@@ -195,7 +218,9 @@ Uint8List buildDng({
   writeIfd(previewIfdOff, previewEntries);
 
   // Payloads
-  bytes.setRange(payloadOff, payloadOff + payload.length, payload);
+  for (var i = 0; i < stripPayloads.length; i++) {
+    bytes.setRange(stripOffsets[i], stripOffsets[i] + stripPayloads[i].length, stripPayloads[i]);
+  }
   if (jpeg.isNotEmpty) {
     bytes.setRange(jpegOff, jpegOff + jpeg.length, jpeg);
   }
@@ -220,7 +245,6 @@ Uint8List buildDng({
   patchEntry(ifd0Off, 330, [rawIfdOff]); // SubIFDs → raw
   patchEntry(ifd0Off, 273, [jpegOff]); // IFD0 strip = preview JPEG
   patchEntry(ifd0Off, 279, [jpeg.length]);
-  patchEntry(rawIfdOff, 273, [payloadOff]);
   if (withPreview) {
     patchEntry(previewIfdOff, 273, [jpegOff]);
     patchEntry(previewIfdOff, 279, [jpeg.length]);
@@ -228,15 +252,18 @@ Uint8List buildDng({
   return bytes;
 }
 
-Uint8List _strip16(int width, int height, int Function(int x, int y) at) {
+Uint16List _strip16(int width, int height, int Function(int x, int y) at) {
   final out = Uint16List(width * height);
   for (var y = 0; y < height; y++) {
     for (var x = 0; x < width; x++) {
       out[y * width + x] = at(x, y);
     }
   }
-  return Uint8List.view(out.buffer);
+  return out;
 }
+
+/// Byte (little-endian) view of a sample plane, for raw strip payloads.
+Uint8List _bytes16(Uint16List plane) => Uint8List.view(plane.buffer);
 
 void main() {
   // ---------------------------------------------------------------- parse
@@ -308,9 +335,10 @@ void main() {
       final bytes = buildDng(rawWidth: 4, rawHeight: 4, cfaPattern: [0, 1, 1, 2], compressionId: 7);
       final doc = parseDng(bytes);
       expect(doc.cfa.compression, RawCompression.losslessJpeg);
-      expect(doc.cfa.isDirectlyDecodable, isFalse);
-      // ...and the decoder is the one that rejects raw pixel decoding:
-      expect(() => decodeCfa(bytes, doc), throwsA(isA<RawUnsupportedException>()));
+      expect(doc.cfa.isDirectlyDecodable, isTrue);
+      // The fixture's strip payload is not valid lossless JPEG, so the
+      // decoder raises a bounded format error (wrapped as TIFF failure):
+      expect(() => decodeCfa(bytes, doc), throwsA(isA<TiffFormatException>()));
     });
 
     test('unknown compression ids are recorded as unknown', () {
@@ -326,7 +354,7 @@ void main() {
       const w = 4;
       const h = 6;
       final strip = _strip16(w, h, (x, y) => (x + y * w) % 65536);
-      final bytes = buildDng(rawWidth: w, rawHeight: h, cfaPattern: [0, 1, 1, 2], stripData: strip);
+      final bytes = buildDng(rawWidth: w, rawHeight: h, cfaPattern: [0, 1, 1, 2], stripData: _bytes16(strip));
       final doc = parseDng(bytes);
       final bayer = decodeCfa(bytes, doc);
       expect(bayer.width, w);
@@ -347,7 +375,7 @@ void main() {
         rawHeight: h,
         cfaPattern: [0, 1, 1, 2],
         compressionId: 8,
-        stripData: raw,
+        stripData: _bytes16(raw),
       );
       final doc = parseDng(bytes);
       expect(doc.cfa.compression, RawCompression.deflateAdobe);
@@ -368,7 +396,7 @@ void main() {
         rawHeight: h,
         cfaPattern: [0, 1, 1, 2],
         activeArea: [2, 1, 6, 5], // top, left, bottom, right
-        stripData: strip,
+        stripData: _bytes16(strip),
       );
       final doc = parseDng(bytes);
       final bayer = decodeCfa(bytes, doc);
@@ -381,7 +409,7 @@ void main() {
       const w = 4;
       const h = 4;
       final strip = _strip16(w, h, (_, _) => 32768);
-      final bytes = buildDng(rawWidth: w, rawHeight: h, cfaPattern: [0, 1, 1, 2], stripData: strip);
+      final bytes = buildDng(rawWidth: w, rawHeight: h, cfaPattern: [0, 1, 1, 2], stripData: _bytes16(strip));
       final doc = parseDng(bytes);
       final bayer = decodeCfa(bytes, doc);
       final d = demosaicBilinear(bayer, doc.cfa.pattern, doc.cfa.blackLevel, doc.cfa.whiteLevel);
@@ -412,7 +440,7 @@ void main() {
       const w = 4;
       const h = 4;
       final strip = _strip16(w, h, (x, y) => 20000 + x * 500);
-      final bytes = buildDng(rawWidth: w, rawHeight: h, cfaPattern: [0, 1, 1, 2], stripData: strip);
+      final bytes = buildDng(rawWidth: w, rawHeight: h, cfaPattern: [0, 1, 1, 2], stripData: _bytes16(strip));
       final tmp = Directory.systemTemp.createTempSync('lumora_raw_test');
       final file = File('${tmp.path}/shot.dng')..writeAsBytesSync(bytes);
       addTearDown(() => tmp.deleteSync(recursive: true));
@@ -426,14 +454,14 @@ void main() {
       expect(File(success.path).existsSync(), isTrue);
     });
 
-    test('lossless JPEG DNG falls back to the embedded preview honestly', () async {
+    test('a broken lossless-JPEG DNG falls back to the embedded preview honestly', () async {
       const w = 4;
       const h = 4;
       final bytes = buildDng(
         rawWidth: w,
         rawHeight: h,
         cfaPattern: [0, 1, 1, 2],
-        compressionId: 7, // lossless JPEG raw
+        compressionId: 7, // lossless JPEG raw — but the strip payload is garbage
         withPreview: true,
       );
       final tmp = Directory.systemTemp.createTempSync('lumora_raw_test');
@@ -444,7 +472,7 @@ void main() {
       expect(result, isA<RawImportSuccess>());
       final success = result as RawImportSuccess;
       expect(success.fromPreview, isTrue);
-      expect(success.reason, contains('lossless JPEG'));
+      expect(success.reason, contains('raw decode failed'));
     });
 
     test('a garbage file fails with a plain message', () async {
@@ -462,4 +490,328 @@ void main() {
       expect(looksLikeDng(Uint8List(2)), isFalse);
     });
   });
+
+  // ------------------------------------------- lossless JPEG (M2-2) strips
+  group('lossless JPEG raw strips (M2-2)', () {
+    test('predictor 1 round-trips exact sensor values', () {
+      const w = 8;
+      const h = 5;
+      final samples = _strip16(w, h, (x, y) => (5000 + x * 311 + y * 97) & 0xFFFF);
+      final jpeg = _encodeLosslessJpeg(width: w, height: h, precision: 16, samples: samples, predictor: 1);
+      final bytes = buildDng(rawWidth: w, rawHeight: h, cfaPattern: [0, 1, 1, 2], compressionId: 7, stripData: jpeg);
+      final doc = parseDng(bytes);
+      final bayer = decodeCfa(bytes, doc);
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          expect(bayer.at(x, y), (5000 + x * 311 + y * 97) & 0xFFFF, reason: 'at ($x,$y)');
+        }
+      }
+    });
+
+    test('predictor 5 (mixed Ra/Rb/Rc) round-trips', () {
+      const w = 6;
+      const h = 6;
+      final samples = _strip16(w, h, (x, y) => 32768 + ((x * 137) ^ (y * 89)) % 8192 - 4096);
+      final jpeg = _encodeLosslessJpeg(width: w, height: h, precision: 16, samples: samples, predictor: 5);
+      final bytes = buildDng(rawWidth: w, rawHeight: h, cfaPattern: [0, 1, 1, 2], compressionId: 7, stripData: jpeg);
+      final doc = parseDng(bytes);
+      final bayer = decodeCfa(bytes, doc);
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          expect(bayer.at(x, y), 32768 + ((x * 137) ^ (y * 89)) % 8192 - 4096, reason: 'at ($x,$y)');
+        }
+      }
+    });
+
+    test('8-bit precision round-trips', () {
+      const w = 4;
+      const h = 4;
+      final samples = Uint16List.fromList([for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) (x * 40 + y * 17) % 256]);
+      final jpeg = _encodeLosslessJpeg(width: w, height: h, precision: 8, samples: samples, predictor: 1);
+      final bytes = buildDng(
+        rawWidth: w,
+        rawHeight: h,
+        cfaPattern: [0, 1, 1, 2],
+        compressionId: 7,
+        stripData: jpeg,
+        bitsPerSample: 8,
+      );
+      final doc = parseDng(bytes);
+      final bayer = decodeCfa(bytes, doc);
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          expect(bayer.at(x, y), (x * 40 + y * 17) % 256, reason: 'at ($x,$y)');
+        }
+      }
+    });
+
+    test('restart intervals decode correctly (DRI + RSTn)', () {
+      const w = 8;
+      const h = 4;
+      final samples = _strip16(w, h, (x, y) => (20000 + x * 512 + y * 129) & 0xFFFF);
+      final jpeg = _encodeLosslessJpeg(width: w, height: h, precision: 16, samples: samples, predictor: 1, restartInterval: 5);
+      final bytes = buildDng(rawWidth: w, rawHeight: h, cfaPattern: [0, 1, 1, 2], compressionId: 7, stripData: jpeg);
+      final doc = parseDng(bytes);
+      final bayer = decodeCfa(bytes, doc);
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          expect(bayer.at(x, y), (20000 + x * 512 + y * 129) & 0xFFFF, reason: 'at ($x,$y)');
+        }
+      }
+    });
+
+    test('multi-strip lossless JPEG DNG (one complete JPEG per strip)', () {
+      const w = 4;
+      const h = 6;
+      final samples = _strip16(w, h, (x, y) => (100 + y * w + x) & 0xFFFF);
+      final strips = <int>[];
+      final stripSplits = <int>[];
+      for (var s = 0; s < 3; s++) {
+        final sub = Uint16List(w * 2);
+        for (var r = 0; r < 2; r++) {
+          for (var x = 0; x < w; x++) {
+            sub[r * w + x] = samples[(s * 2 + r) * w + x];
+          }
+        }
+        final jpg = _encodeLosslessJpeg(width: w, height: 2, precision: 16, samples: sub, predictor: 1);
+        stripSplits.add(jpg.length);
+        strips.addAll(jpg);
+      }
+      final bytes = buildDng(
+        rawWidth: w,
+        rawHeight: h,
+        cfaPattern: [0, 1, 1, 2],
+        compressionId: 7,
+        stripData: strips,
+        stripSplits: stripSplits,
+        rowsPerStrip: 2,
+      );
+      final doc = parseDng(bytes);
+      final bayer = decodeCfa(bytes, doc);
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          expect(bayer.at(x, y), (100 + y * w + x) & 0xFFFF, reason: 'at ($x,$y)');
+        }
+      }
+    });
+
+    test('truncated entropy raises a bounded format error (fuzz gate)', () {
+      const w = 8;
+      const h = 5;
+      final samples = _strip16(w, h, (x, y) => 4000 + x * 13);
+      final jpeg = _encodeLosslessJpeg(width: w, height: h, precision: 16, samples: samples, predictor: 1);
+      final cut = Uint8List.sublistView(jpeg, 0, jpeg.length - 6);
+      expect(() => decodeLosslessJpeg(cut), throwsA(isA<LosslessJpegFormatException>()));
+    });
+
+    test('a full lossless-JPEG DNG opens end-to-end via importDng', () async {
+      const w = 4;
+      const h = 4;
+      final samples = _strip16(w, h, (x, y) => 30000 + x * 777);
+      final jpeg = _encodeLosslessJpeg(width: w, height: h, precision: 16, samples: samples, predictor: 1);
+      final bytes = buildDng(rawWidth: w, rawHeight: h, cfaPattern: [0, 1, 1, 2], compressionId: 7, stripData: jpeg);
+      final tmp = Directory.systemTemp.createTempSync('lumora_raw_test');
+      final file = File('${tmp.path}/shot_phone.dng')..writeAsBytesSync(bytes);
+      addTearDown(() => tmp.deleteSync(recursive: true));
+
+      final result = await importDng(file.path);
+      expect(result, isA<RawImportSuccess>());
+      final success = result as RawImportSuccess;
+      expect(success.fromPreview, isFalse);
+      expect(success.width, w);
+      expect(success.height, h);
+    });
+  });
+}
+
+/// Minimal lossless (SOF3) JPEG encoder for fixtures — the exact mirror of
+/// [decodeLosslessJpeg]: single component, predictor 1-7, 8/16-bit
+/// precision, canonical Huffman with tree-shaped (Kraft-complete) code
+/// lengths, optional restart intervals.
+class _EntropyWriter {
+  final List<int> out = <int>[];
+  int _acc = 0;
+  int _n = 0;
+
+  void bit(int b) {
+    _acc = (_acc << 1) | (b & 1);
+    if (++_n == 8) {
+      _push(_acc);
+      _acc = 0;
+      _n = 0;
+    }
+  }
+
+  void bits(int v, int n) {
+    for (var i = n - 1; i >= 0; i--) {
+      bit((v >> i) & 1);
+    }
+  }
+
+  void align() {
+    while (_n != 0) {
+      bit(0);
+    }
+  }
+
+  void _push(int b) {
+    out.add(b);
+    if (b == 0xFF) out.add(0x00); // byte stuffing
+  }
+
+  void raw(int b) {
+    // Marker bytes bypass the bit writer and the stuffing.
+    if (_n != 0) align();
+    out.add(b);
+  }
+
+  List<int> finish() {
+    align();
+    return out;
+  }
+}
+
+
+Uint8List _encodeLosslessJpeg({
+  required int width,
+  required int height,
+  required int precision,
+  required Uint16List samples,
+  required int predictor,
+  int restartInterval = 0,
+}) {
+  final initValue = 1 << (precision - 1);
+  final mask = (1 << precision) - 1;
+
+  int category(int diff) => diff.abs().bitLength; // 0 → 0, 2^k ≤ |d| < 2^(k+1) → k+1
+
+  // Pass 1: diffs + category frequencies.
+  final freq = List<int>.filled(17, 0);
+  final freshFlags = <bool>[];
+  final diffs = <int>[];
+  for (var i = 0; i < width * height; i++) {
+    final x = i % width;
+    final y = i ~/ width;
+    final fresh = restartInterval > 0 && i % restartInterval == 0 && i > 0;
+    freshFlags.add(fresh);
+    int pred;
+    if (fresh || (x == 0 && y == 0)) {
+      pred = initValue;
+    } else if (x == 0) {
+      pred = samples[i - width];
+    } else if (y == 0) {
+      pred = samples[i - 1];
+    } else {
+      final (ra, rb, rc) = (samples[i - 1], samples[i - width], samples[i - width - 1]);
+      pred = switch (predictor) {
+        1 => ra,
+        2 => rb,
+        3 => rc,
+        4 => ra + rb - rc,
+        5 => ra + ((rb - rc) >> 1),
+        6 => rb + ((ra - rc) >> 1),
+        7 => (ra + rb) >> 1,
+        _ => throw ArgumentError('predictor $predictor'),
+      };
+    }
+    final diff = (samples[i] - pred) & mask;
+    final signed = diff > mask ~/ 2 ? diff - (mask + 1) : diff; // interpret as signed
+    diffs.add(signed);
+    freq[category(signed)]++;
+  }
+
+  // Huffman: Kraft-complete length assignment — symbol at rank i gets
+  // length i+1, the last two share the final length (sum = 1 exactly).
+  // Frequencies only order the symbols (frequent → shorter).
+  final symbols = <int>[for (var s = 0; s <= 16; s++) if (freq[s] > 0) s];
+  symbols.sort((a, b) => freq[b] - freq[a]);
+  final lengthOf = <int, int>{};
+  if (symbols.length == 1) {
+    lengthOf[symbols[0]] = 1;
+  } else {
+    for (var i = 0; i < symbols.length; i++) {
+      lengthOf[symbols[i]] = i == symbols.length - 1 ? symbols.length - 1 : i + 1;
+    }
+  }
+  // Canonical codes, assigned in (length, symbol) order — exactly the order
+  // the DHT lists symbols in, which the decoder replays.
+  final codeOf = <int, int>{};
+  var code = 0;
+  for (var len = 1; len <= 16; len++) {
+    final group = symbols.where((s) => lengthOf[s] == len).toList()..sort();
+    for (final s in group) {
+      codeOf[s] = code;
+      code++;
+    }
+    code <<= 1;
+  }
+
+  // Markers.
+  final w = _EntropyWriter();
+  w.raw(0xFF);
+  w.raw(0xD8); // SOI
+  w.raw(0xFF);
+  w.raw(0xC3); // SOF3
+  w.raw(0);
+  w.raw(11); // LEN = 8 + 3·1
+  w.raw(precision);
+  w.raw(height >> 8);
+  w.raw(height & 0xFF);
+  w.raw(width >> 8);
+  w.raw(width & 0xFF);
+  w.raw(1); // Ns
+  w.raw(1); // component id
+  w.raw(0x11); // H=V=1
+  w.raw(predictor << 4); // predictor + Pt=0
+
+  w.raw(0xFF);
+  w.raw(0xC4); // DHT
+  w.raw(0);
+  w.raw(3 + 16 + symbols.length); // LEN
+  w.raw(0x00); // class 0, id 0
+  for (var len = 1; len <= 16; len++) {
+    w.raw(symbols.where((s) => lengthOf[s] == len).length);
+  }
+  for (var len = 1; len <= 16; len++) {
+    symbols.where((s) => lengthOf[s] == len).toList()..sort()..forEach(w.raw);
+  }
+
+  if (restartInterval > 0) {
+    w.raw(0xFF);
+    w.raw(0xDD); // DRI
+    w.raw(0);
+    w.raw(4);
+    w.raw(restartInterval >> 8);
+    w.raw(restartInterval & 0xFF);
+  }
+
+  w.raw(0xFF);
+  w.raw(0xDA); // SOS
+  w.raw(0);
+  w.raw(6); // LEN
+  w.raw(1); // Ns
+  w.raw(1); // Cs
+  w.raw(0x00); // Td=0
+  w.raw(1); // Ss = 1 (lossless)
+
+  // Entropy.
+  var rstIndex = 0;
+  for (var i = 0; i < diffs.length; i++) {
+    if (freshFlags[i]) {
+      w.align();
+      w.raw(0xFF);
+      w.raw(0xD0 + (rstIndex++ & 7)); // RSTn
+    }
+    final s = category(diffs[i]);
+    w.bits(codeOf[s]!, lengthOf[s]!);
+    if (s == 16) {
+      w.bits(diffs[i] & 0xFFFF, 16);
+    } else if (s > 0) {
+      final v = diffs[i] >= 0 ? diffs[i] : diffs[i] + (1 << s) - 1;
+      w.bits(v, s);
+    }
+  }
+  w.raw(0xFF);
+  w.raw(0xD9); // EOI
+  return Uint8List.fromList(w.finish());
 }
