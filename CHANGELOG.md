@@ -2,6 +2,24 @@
 
 All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
+## [1.4.0] - 2026-11-25 (v1.4 "Pro foundations", first wave)
+
+### Added
+- **Face-aware retouching (on-device)**: OpenCV Zoo **YuNet** face detection (232 KB, pinned commit, SHA-256-verified; raw 12-output decode implemented in Dart and verified against `cv2.FaceDetectorYN`, ≈ 6 ms at 640×640 on the 2-core x86 sandbox) + **MediaPipe Face Mesh** 478 landmarks (4.9 MB, pinned HF revision, ≈ 12 ms per aligned pass). From the landmarks the editor builds feathered **skin / eyes / teeth** masks: *Skin retouch* (face oval minus eyes, brows and lips — smoothing no longer bleeds into eyes or lips, replacing the person-matte approximation), *Brighten eyes* and *Whiten teeth* as one-tap tools, all non-destructive masked local adjustments.
+- **Sky edits (on-device)**: **SkySeg** (U²-Net fine-tune) quantised by this project to static int8 (44 MB, IoU vs fp32 ≈ 0.99, ≈ 290 ms at 320×320): *Enhance sky* applies a "bluer, punchier sky" recipe through the feathered sky matte, and *Replace sky* composites any photo picked from the gallery into the sky region (cover-fit, feathered, non-destructive).
+- **Beat detection & waveform (video)**: pure-DSP, no model — log-energy-flux onset detection with adaptive thresholding, autocorrelation tempo (60–190 BPM) and a timeline waveform envelope. Validated on synthetic click tracks at 120/90/140/75 BPM: every click recovered within ±60 ms, zero strays, BPM within ±3 (`test/unit/audio_analysis_test.dart` mirrors `scripts/validate_beats.py`). `VideoEngine.extractAudioPcm/detectBeats/waveform` + `AudioAnalysis.snapToBeat` for cutting on the beat.
+- **Auto-straighten**: per-column sub-pixel horizon positions + weighted least-squares line fit with 2σ outlier rejection and a residual-spread gate (random texture is refused). ±4° tilts recovered within 0.7° on the synthetic tests; the Crop panel gains an *Auto straighten* button.
+- **Smart commands extended**: Arabic & English commands for the new tools — `بيّض أسناني`, `فحّت العيون`, `اجعل السماء أكثر زرقة`, `whiten teeth`, `brighten the eyes`, `make the sky bluer`, … — plus the intent-benchmark suite still at 100 % (the new phrases ride the same exact-plan gate).
+- **Model pack `models-1.4`**: the three new models are mirrored as GitHub Release assets with identical SHA-256; the registry test enforces the contract.
+
+### العربية
+- **تجميل واعٍ بالوجه (على الجهاز)**: كشف الوجوه بـ **YuNet** (232 كيلوبايت، التزام مثبّت، فك التشفير الخام في Dart مُتحقَّق مقابل `cv2.FaceDetectorYN`، ≈ 6 مللي ثانية) + **Face Mesh** بـ 478 نقطة معالم (≈ 12 مللي ثانية لكل تمريرة). تُبنى من المعالم أقنعة ناعمة **للبشرة/العيون/الأسنان**: *تنعيم البشرة* (بيضاوي الوجه ناقص العيون والحواجب والشفاه — لم يعد التنعيم يمتد إلى العينين)، و*تفتيح العيون* و*تبييض الأسنان* كأدوات بلمسة، وكلها تعديلات محلية غير مدمّرة.
+- **تحرير السماء (على الجهاز)**: **SkySeg** (U²-Net) كمّنتها المشروع إلى int8 ثابت (44 ميغابايت، IoU ≈ 0.99 مقابل fp32، ≈ 290 مللي ثانية): *تجميل السماء* يطبّق وصفة «سماء أكثر زرقة وحيوية» عبر قناع السماء الناعم، و*استبدال السماء* يركّب أي صورة من المعرض داخل منطقة السماء.
+- **كشف الإيقاع والموجة الصوتية (فيديو)**: معالجة إشارات صرفة دون نماذج — كشف البدايات بتدفق الطاقة اللوغاريتمي، عتبة تكيفية، تقدير الإيقاع بالارتباط الذاتي (60–190 BPM) ومغلف موجة للخط الزمني. مُتحقَّق على مسارات نقر اصطناعية: كل نقرة ضمن ±60 مللي ثانية، بلا شواذ، والإيقاع ضمن ±3.
+- **تسوية تلقائية**: مواقع أفق دون-بكسل لكل عمود + ملاءمة خطية موزونة مع رفض الشواذ وبوابة انتشار؛ تُستعاد ميول ±4° داخل 0.7°، وزر «تسوية تلقائية» في لوحة القص.
+- **أوامر ذكية جديدة**: `بيّض أسناني`، `فحّت العيون`، `اجعل السماء أكثر زرقة`، `whiten teeth`، `make the sky bluer` وغيرها — ومعيار الأوامر ما زال 100٪.
+- **حزمة نماذج `models-1.4`**: النماذج الثلاثة مروّعة في إصدار GitHub ببصمات متطابقة، واختبار السجل يفرض العقد.
+
 ## [1.3.3] - 2026-11-25
 
 ### Added

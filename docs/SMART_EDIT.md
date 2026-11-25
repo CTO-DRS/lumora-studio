@@ -64,3 +64,17 @@ I/O contracts:
 * Encoder: `input_image` float `[H, W, 3]`, values 0..255, long side 1024 (the graph normalises and pads) → `image_embeddings [1,256,64,64]`.
 * Decoder (multi-mask): same inputs as before — `image_embeddings`, `point_coords [1,N,2]` in the 1024 frame, `point_labels [1,N]` (1 add, 0 subtract, 2/3 box corners, −1 padding point when no box), `mask_input [1,1,256,256]` (zeros, or the painted refine strokes with `has_mask_input [1]` = 1), `orig_im_size [2]` = (h, w) → `masks [1,4,h,w]` logits (channel 0 = single-mask branch, 1..3 = the three candidates) + `iou_predictions [1,4]`. Verified with ONNX Runtime 1.32: point, box and mask-input prompts all decode in ≈ 100 ms on the 2-core x86 sandbox.
 * Depth: `pixel_values [1,3,h,w]` ImageNet-normalised, sides multiples of 14 → `predicted_depth [1,h,w]` relative inverse depth (larger = nearer), normalised with 2nd/98th percentiles.
+
+## 4. Models added in 1.4 (all verified)
+| Model | File | Size | SHA-256 | Licence | Measured* |
+|---|---|---|---|---|---|
+| YuNet face detection (2023mar) | `opencv/opencv_zoo@48b10fa5/models/face_detection_yunet/face_detection_yunet_2023mar.onnx` | 232,589 B | `8f2383e4…2fa4` | Apache-2.0 (OpenCV Zoo) | ≈ 6 ms at 640×640 |
+| MediaPipe Face Mesh (478 landmarks) | `senty-au/face_landmarks_detector-ONNX@337d5821/onnx/model.onnx` | 4,920,995 B | `7d6e82de…8beeb` | Apache-2.0 (Google MediaPipe) | ≈ 12 ms per 256×256 pass (2 passes per face) |
+| SkySeg U²-Net (int8, project-built) | project release `models-1.4/skyseg_int8.onnx` | 44,247,982 B | `01c60b73…f2076` | Apache-2.0 (U²-Net / JianyuanWang/skyseg) | ≈ 290 ms at 320×320 |
+
+The three files are mirrored on the project's `models-1.4` GitHub Release with identical bytes and SHA-256. SkySeg's fp32 weights (`JianyuanWang/skyseg@3ba8c6df`, 176 MB) are far too heavy for phones, so this project quantises them itself: static QOperator int8 (QUInt8 activations, QInt8 per-channel weights) calibrated on synthetic skies — IoU vs fp32 ≈ 0.99 on held-out scenes at ≈ 3× the speed (`scripts/quantize_skyseg.py`).
+
+I/O contracts:
+* **YuNet**: `input` float32 `[1,3,640,640]` **BGR 0..255** (static size — the pipeline letterboxes and maps back). Twelve raw outputs `cls_/obj_/bbox_/kps_{8,16,32}`; the Dart decode (anchors at grid corners, centre = anchor + bbox[:,:2]·stride, wh = exp(bbox[:,2:])·stride, kps = anchor + kps·stride, score = √(cls·obj), threshold 0.6, NMS IoU 0.3) was verified against `cv2.FaceDetectorYN` on real photos (`scripts/verify_yunet_decode.py`).
+* **Face Mesh**: `input_12` float32 NHWC `[1,256,256,3]` RGB 0..1, an eyes-level aligned crop (two passes: YuNet eye keypoints → refine from the mesh's own bounding box, roll-aware bilinear sampling) → `Identity [1,1,1434]` = 478×(x,y,z) in crop pixels, `Identity_1` face-presence logit (sigmoid), `Identity_2` scalar. Landmark contours build **skin** (face oval − eyes − brows − lips, feathered), **eyes** (eye rings ×1.6) and **teeth** (inner lips ×0.9) masks (`scripts/verify_face_models.py`).
+* **SkySeg**: `input.1` float32 `[1,3,320,320]` ImageNet-normalised RGB → first output `1959`: min–max normalise → soft sky matte (> 0.5 = sky), upsampled bilinearly to the source for feathered compositing (sky-only edits and sky replacement).

@@ -5,7 +5,7 @@
 > Arabic version: [docs/ROADMAP.ar.md](docs/ROADMAP.ar.md) · One-page vision: [docs/VISION.md](docs/VISION.md)
 
 Status legend: ✅ shipped · 🚧 partial / in progress · 🔜 planned · 🧪 research spike (may change)
-Last updated: 2026-11-25 (v1.3.3). Dates are targets, not promises; quality gates decide releases.
+Last updated: 2026-11-25 (v1.4.0, first wave). Dates are targets, not promises; quality gates decide releases.
 
 ---
 
@@ -34,6 +34,7 @@ Lumora's bet is the opposite: **the best intelligence is the one that runs where
 | Local & retouch | ✅ brush/linear/radial/subject masks, healing & clone (model-free), selective colour |
 | AI (ONNX Runtime) | ✅ background removal (U²-Net-p), portrait matting (MODNet), eraser (MI-GAN / LaMa), 4× upscale (Real-ESRGAN), safe CPU defaults, verified downloads |
 | **Smart (v1.3)** | ✅ **typed commands in Arabic & English** → one-step edit plan · ✅ **suggestions for this photo** · ✅ **tap to select** (MobileSAM) → erase / cut out / adjust / blur rest · ✅ **depth blur & relight** (Depth Anything V2) · ✅ **remove person** |
+| **Faces & sky (v1.4)** | ✅ **skin-only retouch** (YuNet + Face Mesh 478 landmarks) · ✅ eye brighten & teeth whiten · ✅ **sky-only edits & sky replacement** (SkySeg int8) · ✅ **auto-straighten** (horizon LSQ) · ✅ **beat detection & waveform** (DSP) |
 | Documents, batch, collage | ✅ scanner with PDF, batch edit, collage maker |
 | Video | ✅ timeline, transitions, speed/reverse, crop, stabilisation, filter keyframes, music, text (Arabic shaping), GIF, fast & studio export |
 | Platform | ✅ Android APKs per ABI, unsigned iOS build, glass design system, AR/EN + RTL, tablets layouts, CI + release workflows |
@@ -84,16 +85,13 @@ Each phase has themes, features, models (with size/latency targets on a **mid-ra
 - ✅ Mirror every model on a project-controlled host (GitHub Releases) with identical SHA-256 as an automatic fallback.
 - **Acceptance:** intent benchmark ≥ 95 % exact plans (AR & EN separately) — **met at 100 % / 100 %** (1,527 phrases; `test/unit/smart_intent_benchmark_test.dart`); select-tap p95 ≤ 150 ms on the reference phone — decoder measured at 96–105 ms per run on the 2-core x86 sandbox; device-farm confirmation pending.
 
-### v1.4 — "Pro foundations" (2027 Q1)
-| Theme | Features | Models / tech | Targets |
-|---|---|---|---|
-| Faces | skin-only retouch, eye brighten, teeth whiten, face-aware suggestions, blemish detection | face detection + 468-point landmarks (MediaPipe-class, ONNX/LiteRT), face parsing (BiSeNet-class, ~50 MB fp16 → int8) | ≤ 15 MB total int8; ≤ 60 ms per face |
-| Sky & scene | sky replacement & sky-only edits; scene classifier for suggestions | sky segmentation (U²-Net-p fine-tune or SAM prompt), MobileNetV3-class scene classifier (~5 MB) | ≤ 300 ms per photo |
-| Low light | denoise & low-light lift | Zero-DCE++-class curve estimation (tiny, ~10k params) + NAFNet-lite denoise 🧪 | ≤ 1.5 s at 12 MP tiled |
-| Runtime | **LiteRT backend** with NPU/GPU delegates; ONNX stays; per-SoC allow-list | `tflite_flutter`/LiteRT, Core ML on iOS | ≥ 2× faster encode on NPU devices; no native crash regressions |
-| Pro | RAW/DNG 16-bit pipeline, true full-res loupe, auto-straighten (horizon), perspective auto | Dart/Rust DNG decode 🧪, Hough-based horizon | open 24 MP DNG ≤ 2 s |
-| Video | **auto-captions AR/EN** (offline), waveform, **beat detection & snap** | Whisper tiny (~39 M params; ~40 MB int8) / base (~74 M) via whisper.cpp or ONNX; onset/BPM DSP (no model) | captions ≥ 1× real-time on reference phone |
-- **Acceptance:** device-farm integration tests run every model on ≥ 12 devices (3 tiers × 2 OS × 2 vendors); crash-free rate on farm ≥ 99.8 %; no model > 50 MB in this phase.
+### v1.4 — "Pro foundations" (2027 Q1) — 🚧 first wave shipped 2026-11-25
+- ✅ **Faces, wave 1**: YuNet face detection (232 KB, Dart decode verified vs `cv2.FaceDetectorYN`, ≈ 6 ms @ 640² on the x86 sandbox) + MediaPipe Face Mesh 478 landmarks (≈ 12 ms per pass) → feathered skin / eyes / teeth masks: skin-only retouch, eye brighten, teeth whiten. Face parsing (BiSeNet-class) and blemish detection still 🔜.
+- ✅ **Sky, wave 1**: SkySeg U²-Net int8 (project-quantised, 44 MB, IoU ≈ 0.99 vs fp32, ≈ 290 ms @ 320²) → sky-only edits ("enhance sky") and sky replacement with a gallery photo. Scene classifier for suggestions still 🔜.
+- ✅ **Video DSP, wave 1**: beat detection (log-energy flux + adaptive threshold), autocorrelation BPM (60–190), waveform envelope, `snapToBeat` — validated on synthetic click tracks (±60 ms, zero strays, BPM ±3). Auto-captions (Whisper-class) still 🔜.
+- ✅ **Auto-straighten**: sub-pixel horizon positions + weighted LSQ line fit with outlier rejection; ±4° recovered within 0.7°.
+- 🔜 Remaining v1.4: low light (Zero-DCE++-class curves + NAFNet-lite denoise 🧪, ≤ 1.5 s at 12 MP tiled), **LiteRT backend** with NPU/GPU delegates, RAW/DNG 16-bit pipeline, true full-res loupe, perspective auto, **auto-captions AR/EN** (Whisper tiny/base via whisper.cpp or ONNX), face parsing & blemish detection, scene classifier.
+- **Acceptance (when the phase closes):** device-farm integration tests run every model on ≥ 12 devices (3 tiers × 2 OS × 2 vendors); crash-free rate on farm ≥ 99.8 %; no model > 50 MB in this phase (SkySeg int8 = 44 MB ✓).
 
 ### v1.5 — "Semantic" (2027 Q2)
 - 🔜 **Smart search & auto-tags** across projects (on-device CLIP-class embeddings with open weights; ~90–150 MB fp16 → int8 target ≤ 60 MB); search in Arabic & English ("صور البحر عند الغروب").
