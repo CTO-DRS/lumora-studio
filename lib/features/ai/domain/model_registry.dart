@@ -1,5 +1,15 @@
 /// What a model is used for.
-enum AiTask { segmentation, portraitMatting, upscale, inpainting, interactiveSegmentation, depth }
+enum AiTask {
+  segmentation,
+  portraitMatting,
+  upscale,
+  inpainting,
+  interactiveSegmentation,
+  depth,
+  faceDetection,
+  faceLandmarks,
+  skySegmentation,
+}
 
 /// Describes a downloadable on-device model. Every model is fetched from a
 /// public URL on demand, verified with SHA-256 and cached locally – nothing
@@ -194,6 +204,80 @@ class ModelRegistry {
     mirrorUrl: 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.3/depth_anything_v2_small_q8.onnx',
   );
 
+  // v1.4 "Pro foundations" models. Same verification methodology as v1.3:
+  // every file was downloaded, SHA-256-checked and executed with ONNX
+  // Runtime before this entry was written (see docs/SMART_EDIT.md).
+
+  /// OpenCV Zoo YuNet pinned at commit 48b10fa5… – the Git LFS oid equals the
+  /// SHA-256 below. This export is the **raw 12-output** graph with a static
+  /// 640×640 input; the decode (anchors at grid corners, score = √(cls·obj),
+  /// NMS) lives in Dart in `FaceDetectionPipeline` and was verified against
+  /// `cv2.FaceDetectorYN` on real photos.
+  static const yunet = ModelSpec(
+    id: 'yunet',
+    task: AiTask.faceDetection,
+    displayName: 'YuNet – face detection (5 landmarks)',
+    url:
+        'https://github.com/opencv/opencv_zoo/raw/48b10fa505aeb51fbd127fc60a5c660040e823b7/models/face_detection_yunet/face_detection_yunet_2023mar.onnx',
+    sha256: '8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4',
+    sizeBytes: 232589,
+    license: 'Apache-2.0 (OpenCV Zoo)',
+    source: 'https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet',
+    inputNames: ['input'],
+    outputName: 'cls_8',
+    fixedInputSize: 640,
+    notes:
+        'Static 1x3x640x640 float32 **BGR 0..255** (no normalisation). Twelve raw outputs cls_/obj_/bbox_/kps_{8,16,32}: '
+        'score = sqrt(cls·obj), centre = anchor + bbox[:,:2]·stride, wh = exp(bbox[:,2:])·stride, kps = anchor + kps·stride; '
+        'threshold 0.6, NMS IoU 0.3. Decode verified against cv2.FaceDetectorYN.',
+    mirrorUrl: 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.4/yunet.onnx',
+  );
+
+  /// MediaPipe Face Mesh exported to ONNX (478 landmarks = 468 mesh + 10
+  /// iris points). URL pinned to the repo revision that carries the exact
+  /// file; SHA-256 verified locally before registration.
+  static const faceMesh = ModelSpec(
+    id: 'facemesh',
+    task: AiTask.faceLandmarks,
+    displayName: 'MediaPipe Face Mesh – 478 landmarks',
+    url:
+        'https://huggingface.co/senty-au/face_landmarks_detector-ONNX/resolve/337d58218b5b1cc597ca3c67360880b920f6ce7b/onnx/model.onnx',
+    sha256: '7d6e82dee82a1dca5fbddb282b3cc74571833a530de317fc22ae325c3358beeb',
+    sizeBytes: 4920995,
+    license: 'Apache-2.0 (Google MediaPipe)',
+    source: 'https://github.com/google-ai-edge/mediapipe',
+    inputNames: ['input_12'],
+    outputName: 'Identity',
+    notes:
+        'NHWC float32 **RGB 0..1** [N,256,256,3] eyes-level aligned face crop. '
+        'Identity [N,1,1434] = 478 landmarks × (x,y,z) in crop pixels; Identity_1 = face-presence logit (sigmoid); Identity_2 scalar.',
+    mirrorUrl: 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.4/facemesh.onnx',
+  );
+
+  /// SkySeg – a U²-Net fine-tune for sky segmentation (JianyuanWang/skyseg).
+  /// The fp32 weights (sha256 ab9c34c6…, 176 MB) are far too heavy for
+  /// phones, so this project ships a **static QOperator int8** quantisation
+  /// (QUInt8 activations, QInt8 per-channel weights) calibrated on synthetic
+  /// skies; IoU vs fp32 ≈ 0.99 on held-out scenes at ≈ 3× the speed. No
+  /// upstream serves the int8 file, so the project release is the primary
+  /// source – see the mirror workflow (`tool/mirror_models.py`).
+  static const skysegInt8 = ModelSpec(
+    id: 'skyseg_int8',
+    task: AiTask.skySegmentation,
+    displayName: 'SkySeg (U²-Net) – sky segmentation (int8)',
+    url: 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-1.4/skyseg_int8.onnx',
+    sha256: '01c60b73595450b6ceac707055b8315dacbd5019344f1ecbb1b8becaebef2076',
+    sizeBytes: 44247982,
+    license: 'Apache-2.0 (U²-Net / JianyuanWang/skyseg)',
+    source: 'https://huggingface.co/JianyuanWang/skyseg',
+    inputNames: ['input.1'],
+    outputName: '1959',
+    fixedInputSize: 320,
+    notes:
+        'Static 1x3x320x320, ImageNet-normalised RGB. First output (d0): min-max normalise → soft sky matte, > 0.5 = sky. '
+        'Locally quantised int8 of the fp32 weights (pinned HF revision 3ba8c6df…).',
+  );
+
   static const List<ModelSpec> all = [
     u2netp,
     modnet,
@@ -203,10 +287,16 @@ class ModelRegistry {
     mobileSamEncoder,
     mobileSamDecoderMulti,
     depthAnythingSmall,
+    yunet,
+    faceMesh,
+    skysegInt8,
   ];
 
   /// Mirror release that carries every model with the identical SHA-256.
   static const mirrorReleaseUrl = 'https://github.com/CTO-DRS/lumora-studio/releases/tag/models-1.3';
+
+  /// Mirror release for the v1.4 models.
+  static const mirrorReleaseUrl14 = 'https://github.com/CTO-DRS/lumora-studio/releases/tag/models-1.4';
 
   static ModelSpec byId(String id) => all.firstWhere((m) => m.id == id);
 
@@ -225,6 +315,12 @@ enum AiTool {
   depthBlur,
   relight,
   erasePerson,
+  // v1.4 – faces & sky.
+  faceSkin,
+  eyeBrighten,
+  teethWhiten,
+  skyEdit,
+  skyReplace,
 }
 
 /// Models a tool needs on the device before it can run.
@@ -236,4 +332,9 @@ List<ModelSpec> aiToolModels(AiTool tool) => switch (tool) {
   AiTool.selectObject => const [ModelRegistry.mobileSamEncoder, ModelRegistry.mobileSamDecoderMulti],
   AiTool.depthBlur || AiTool.relight => const [ModelRegistry.depthAnythingSmall],
   AiTool.erasePerson => const [ModelRegistry.modnet, ModelRegistry.migan],
+  AiTool.faceSkin || AiTool.eyeBrighten || AiTool.teethWhiten => const [
+    ModelRegistry.yunet,
+    ModelRegistry.faceMesh,
+  ],
+  AiTool.skyEdit || AiTool.skyReplace => const [ModelRegistry.skysegInt8],
 };

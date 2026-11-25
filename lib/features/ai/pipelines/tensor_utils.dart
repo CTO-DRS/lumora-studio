@@ -241,3 +241,163 @@ List<SrTile> planSrTiles(int w, int h, {int tile = 128, int overlap = 16}) {
       for (final x in starts(w)) SrTile(x, y, tile),
   ];
 }
+
+// ---------------------------------------------------------------------------
+// v1.4 helpers – faces (YuNet / Face Mesh) & sky (SkySeg)
+
+/// RGBA → planar `[1, 3, H, W]` float32 in **BGR order, 0..255 range** (no
+/// normalisation) – the input contract of the OpenCV Zoo YuNet graph.
+Float32List rgbaToNchwBgr255(RgbaImage img) {
+  final plane = img.width * img.height;
+  final out = Float32List(plane * 3);
+  final px = img.pixels;
+  for (var i = 0; i < plane; i++) {
+    final o = i * 4;
+    out[i] = px[o + 2].toDouble(); // B
+    out[plane + i] = px[o + 1].toDouble(); // G
+    out[2 * plane + i] = px[o].toDouble(); // R
+  }
+  return out;
+}
+
+/// RGBA → NHWC `[1, H, W, 3]` float32 RGB in 0..1 – the input contract of
+/// the MediaPipe Face Mesh graph.
+Float32List rgbaToNhwc01(RgbaImage img) {
+  final out = Float32List(img.width * img.height * 3);
+  final px = img.pixels;
+  var o = 0;
+  for (var i = 0; i < img.width * img.height; i++) {
+    out[o++] = px[i * 4] / 255;
+    out[o++] = px[i * 4 + 1] / 255;
+    out[o++] = px[i * 4 + 2] / 255;
+  }
+  return out;
+}
+
+/// Separable box blur (two passes) of a grayscale RGBA mask, used to
+/// feather AI masks so composited adjustments never show hard edges.
+RgbaImage blurMask(RgbaImage mask, int radius) {
+  if (radius <= 0) return mask;
+  final w = mask.width;
+  final h = mask.height;
+  final src = mask.pixels;
+  final tmp = Uint8List(w * h);
+  // Horizontal pass with a sliding window sum.
+  for (var y = 0; y < h; y++) {
+    var sum = 0;
+    final row = y * w;
+    for (var x = -radius; x <= radius; x++) {
+      sum += src[(row + x.clamp(0, w - 1)) * 4];
+    }
+    for (var x = 0; x < w; x++) {
+      tmp[row + x] = (sum / (2 * radius + 1)).round();
+      final outX = (x - radius).clamp(0, w - 1);
+      final inX = (x + radius + 1).clamp(0, w - 1);
+      sum += src[(row + inX) * 4] - src[(row + outX) * 4];
+    }
+  }
+  final out = RgbaImage(w, h);
+  // Vertical pass.
+  for (var x = 0; x < w; x++) {
+    var sum = 0;
+    for (var y = -radius; y <= radius; y++) {
+      sum += tmp[y.clamp(0, h - 1) * w + x];
+    }
+    for (var y = 0; y < h; y++) {
+      final v = (sum / (2 * radius + 1)).round();
+      final o = (y * w + x) * 4;
+      out.pixels[o] = v;
+      out.pixels[o + 1] = v;
+      out.pixels[o + 2] = v;
+      out.pixels[o + 3] = 255;
+      final outY = (y - radius).clamp(0, h - 1);
+      final inY = (y + radius + 1).clamp(0, h - 1);
+      sum += tmp[inY * w + x] - tmp[outY * w + x];
+    }
+  }
+  return out;
+}
+
+/// Fills a polygon (even–odd scanline rule) into a white-on-black RGBA mask
+/// of [width]×[height].
+RgbaImage polygonMask(List<(double, double)> polygon, int width, int height) {
+  final out = RgbaImage(width, height);
+  if (polygon.length < 3) return out;
+  var yMin = double.infinity;
+  var yMax = double.negativeInfinity;
+  for (final (_, y) in polygon) {
+    if (y < yMin) yMin = y;
+    if (y > yMax) yMax = y;
+  }
+  final y0 = math.max(0, yMin.floor());
+  final y1 = math.min(height - 1, yMax.ceil());
+  final n = polygon.length;
+  for (var y = y0; y <= y1; y++) {
+    final cy = y + 0.5;
+    final xs = <double>[];
+    for (var i = 0; i < n; i++) {
+      final (ax, ay) = polygon[i];
+      final (bx, by) = polygon[(i + 1) % n];
+      if ((ay <= cy && by > cy) || (by <= cy && ay > cy)) {
+        xs.add(ax + (cy - ay) / (by - ay) * (bx - ax));
+      }
+    }
+    if (xs.length < 2) continue;
+    xs.sort();
+    for (var k = 0; k + 1 < xs.length; k += 2) {
+      final from = xs[k].ceil().clamp(0, width - 1);
+      final to = xs[k + 1].floor().clamp(0, width - 1);
+      for (var x = from; x <= to; x++) {
+        final o = (y * width + x) * 4;
+        out.pixels[o] = 255;
+        out.pixels[o + 1] = 255;
+        out.pixels[o + 2] = 255;
+        out.pixels[o + 3] = 255;
+      }
+    }
+  }
+  return out;
+}
+
+/// Scales polygon points around its centroid – used to grow/shrink facial
+/// regions (eye rings, brows, lips) before painting masks.
+List<(double, double)> scalePolygon(List<(double, double)> polygon, double factor) {
+  if (polygon.isEmpty || factor == 1) return polygon;
+  var cx = 0.0;
+  var cy = 0.0;
+  for (final (x, y) in polygon) {
+    cx += x;
+    cy += y;
+  }
+  cx /= polygon.length;
+  cy /= polygon.length;
+  return [
+    for (final (x, y) in polygon) (cx + (x - cx) * factor, cy + (y - cy) * factor),
+  ];
+}
+
+/// out = base AND NOT subtract (per pixel, channel 0).
+RgbaImage subtractMask(RgbaImage base, RgbaImage subtract) {
+  assert(base.width == subtract.width && base.height == subtract.height, 'size mismatch');
+  final out = Uint8List.fromList(base.pixels);
+  for (var i = 0; i < base.width * base.height; i++) {
+    if (subtract.pixels[i * 4] > 127) out[i * 4] = 0;
+    out[i * 4 + 1] = out[i * 4];
+    out[i * 4 + 2] = out[i * 4];
+  }
+  return RgbaImage(base.width, base.height, out);
+}
+
+/// Union (max) of two masks.
+RgbaImage unionMask(RgbaImage a, RgbaImage b) {
+  assert(a.width == b.width && a.height == b.height, 'size mismatch');
+  final out = RgbaImage(a.width, a.height);
+  for (var i = 0; i < a.width * a.height; i++) {
+    final v = math.max(a.pixels[i * 4], b.pixels[i * 4]);
+    out.pixels[i * 4] = v;
+    out.pixels[i * 4 + 1] = v;
+    out.pixels[i * 4 + 2] = v;
+    out.pixels[i * 4 + 3] = 255;
+  }
+  return out;
+}
