@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:lumora/features/ai/domain/scene_tags.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
 import 'package:lumora/features/photo_editor/domain/auto_enhance.dart';
 import 'package:lumora/features/photo_editor/domain/presets.dart';
@@ -181,9 +182,26 @@ Suggestion? _library(SuggestionKind kind, String id, double score) {
 
 /// Ranks 3–5 suggestions for [a] (best first). Deterministic; every
 /// suggestion is a plain adjustment recipe, so nothing leaves the device.
-List<Suggestion> suggestFixes(PhotoAnalysis a, {int max = 5}) {
+///
+/// [scene] is the optional on-device scene classification
+/// (`SceneClassifierPipeline`, only run when its ~3.5 MB model is already
+/// installed). It never changes which *statistics* fire, it only adds or
+/// boosts suggestions the scene makes plausible (pets → soft warm
+/// treatment even without skin pixels, food → vivid, nature/plant →
+/// landscape, city → cinematic). `null` keeps the behaviour identical to
+/// the pure-statistics ranking.
+List<Suggestion> suggestFixes(PhotoAnalysis a, {SceneResult? scene, int max = 5}) {
   final s = a.stats;
   final out = <Suggestion>[];
+
+  // Optional scene scores (0 when the classifier is not installed): they
+  // only boost or add suggestions — statistics always fire on their own.
+  final petsScore = scene?.score(SceneTag.pets) ?? 0;
+  final foodScore = scene?.score(SceneTag.food) ?? 0;
+  final natureScore = scene?.score(SceneTag.nature) ?? 0;
+  final cityScore = scene?.score(SceneTag.city) ?? 0;
+  final plantScore = scene?.score(SceneTag.plant) ?? 0;
+  final sceneActive = scene != null && scene.activeTags.isNotEmpty;
 
   // Auto fix: always available, ranked by how much it would change, but
   // below a fix aimed at a specific problem.
@@ -280,12 +298,16 @@ List<Suggestion> suggestFixes(PhotoAnalysis a, {int max = 5}) {
             hsl: HslAdjustments(saturation: [0, 0, 0, 0, 0.15, 0.25, 0, 0], luminance: [0, 0, 0, 0, -0.1, -0.2, 0, 0]),
           ),
         ),
-        score: 0.7 + a.skyRatio * 0.5,
+        score: 0.7 + a.skyRatio * 0.5 + natureScore * 0.4 + plantScore * 0.2,
       ),
     );
   }
   if (a.looksLikeLandscape) {
-    final land = _library(SuggestionKind.landscape, 'vivid_landscape', 0.65 + a.foliageRatio * 0.5);
+    final land = _library(
+      SuggestionKind.landscape,
+      'vivid_landscape',
+      0.65 + a.foliageRatio * 0.5 + natureScore * 0.5 + plantScore * 0.3,
+    );
     if (land != null) out.add(land);
   }
   if (a.isFlat && !a.looksLikeDocument) {
@@ -300,17 +322,58 @@ List<Suggestion> suggestFixes(PhotoAnalysis a, {int max = 5}) {
       ),
     );
   }
-  if (a.isDull && !a.looksLikeDocument) {
+  if ((a.isDull || foodScore >= kSceneTagMinScore) && !a.looksLikeDocument) {
     out.add(
       Suggestion(
         kind: SuggestionKind.vivid,
         preset: _delta(SuggestionKind.vivid, const Adjustments(vibrance: 0.35, saturation: 0.05, contrast: 0.08)),
-        score: 0.6 + (0.18 - s.meanSaturation) * 2,
+        score: 0.6 + (a.isDull ? (0.18 - s.meanSaturation) * 2 : 0) + foodScore * 0.6,
       ),
     );
   }
+  // Scene-aware extras: the classifier found something the statistics
+  // cannot see. Pets get the soft warm portrait treatment even without
+  // skin pixels; a clear nature scene can surface the landscape look; a
+  // strong city scene lifts the cinematic fallback above the floor.
+  if (sceneActive) {
+    if (petsScore >= kSceneTagMinScore) {
+      out.add(
+        Suggestion(
+          kind: SuggestionKind.portrait,
+          preset: _delta(
+            SuggestionKind.portrait,
+            const Adjustments(
+              exposure: 0.1,
+              clarity: -0.15,
+              highlights: -0.1,
+              shadows: 0.12,
+              temperature: 0.06,
+              vibrance: 0.1,
+            ),
+          ),
+          score: 0.62 + petsScore * 0.5,
+        ),
+      );
+    }
+    if (!a.looksLikeLandscape && (natureScore >= kSceneTagMinScore || plantScore >= kSceneTagMinScore)) {
+      final land = _library(
+        SuggestionKind.landscape,
+        'vivid_landscape',
+        0.55 + math.max(natureScore, plantScore) * 0.5,
+      );
+      if (land != null) out.add(land);
+    }
+    if (cityScore >= kSceneTagMinScore) {
+      final cine = _library(SuggestionKind.cinematic, 'blockbuster', 0.3 + cityScore * 0.6);
+      if (cine != null) out.add(cine);
+    }
+  }
   // Creative fallbacks keep the row full (lower scores, always last).
-  final cine = _library(SuggestionKind.cinematic, a.looksLikePortrait ? 'golden_hour' : 'blockbuster', 0.3);
+  final cine = _library(
+    SuggestionKind.cinematic,
+    a.looksLikePortrait ? 'golden_hour' : 'blockbuster',
+    sceneActive ? 0.3 - cityScore * 0.1 : 0.3,
+  );
   if (cine != null) out.add(cine);
   final mono = _library(SuggestionKind.mono, 'mono', 0.25);
   if (mono != null) out.add(mono);

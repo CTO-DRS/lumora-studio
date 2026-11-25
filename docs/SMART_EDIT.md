@@ -47,7 +47,7 @@ Unknown fragments are reported back ("Didn't understand: …"), never guessed. `
 `param` is an `AdjustmentParam` name, `preset` a built-in look id, `action` a `SmartAction` name. A future on-device LLM engine (e.g. Gemma-class model through LiteRT-LM) only needs to implement `EditIntentEngine.parse` and emit this JSON; the rule engine stays as the instant, offline fallback and as the validator (unknown params/actions are rejected by `EditOp.fromJson`).
 
 ## 2. Suggestions
-`PhotoAnalysis.fromRgba` samples ≤ 65k pixels of a 256 px proxy: luminance histogram and clipping, gray-world colour cast, YCbCr skin tones (overall and centre), sky-like pixels in the top third, foliage, paper/ink ratios, histogram width. `suggestFixes` ranks 3–5 fixes; problem-specific fixes outrank the generic auto fix, creative looks fill the row. Suggestions are `Preset` deltas, so thumbnails come from the real GPU pipeline and applying one is a single undo step. These are heuristics, not face/scene detection; v2.0 replaces them with a scene classifier and face landmarks (ROADMAP.md).
+`PhotoAnalysis.fromRgba` samples ≤ 65k pixels of a 256 px proxy: luminance histogram and clipping, gray-world colour cast, YCbCr skin tones (overall and centre), sky-like pixels in the top third, foliage, paper/ink ratios, histogram width. `suggestFixes` ranks 3–5 fixes; problem-specific fixes outrank the generic auto fix, creative looks fill the row. Suggestions are `Preset` deltas, so thumbnails come from the real GPU pipeline and applying one is a single undo step. These heuristics stay the always-available baseline; from v1.4 an **optional** scene classifier (MobileNetV2 int8, §3a) refines the ranking on top — pets, food, nature, city and plant tags add or boost suggestions the statistics cannot see (a dog portrait has no skin pixels but still gets the soft warm treatment). The classifier is never downloaded automatically; without it the ranking is byte-for-byte the statistics path.
 
 ## 3. Models added in 1.3 (all verified)
 | Model | File | Size | SHA-256 | Licence | Measured* |
@@ -64,6 +64,13 @@ I/O contracts:
 * Decoder (single): `image_embeddings`, `point_coords [1,N+1,2]` in the 1024 frame, `point_labels [1,N+1]` (1 add, 0 subtract, −1 padding point), `mask_input [1,1,256,256]` zeros, `has_mask_input [1]` = 0, `orig_im_size [2]` = (h, w) → `masks [1,1,h,w]` logits (> 0 selected).
 * Decoder (multi, used from 1.3.3): same inputs; a drag box is encoded as two corner points with labels 2 (top-left) and 3 (bottom-right); brush strokes become `mask_input` logits (+8 painted, −8 elsewhere, `has_mask_input` = 1) → `masks [1,4,h,w]` + `iou_predictions [1,4]` + `low_res_masks [1,4,256,256]`. The UI ranks candidates by IoU and lets the user switch; the chosen mask is feathered with a 2 px ramp before use.
 * Depth: `pixel_values [1,3,h,w]` ImageNet-normalised, sides multiples of 14 → `predicted_depth [1,h,w]` relative inverse depth (larger = nearer), normalised with 2nd/98th percentiles.
+
+## 3a. Model added in 1.4 (Unreleased — scene-aware suggestions)
+| Model | File | Size | SHA-256 | Licence | Measured* |
+|---|---|---|---|---|---|
+| MobileNetV2 scene classifier (int8) | `onnx/models@4c46cd0/…/mobilenet/model/mobilenetv2-12-int8.onnx` | 3,655,033 B | `cc028fe6…f95f` | MIT (ONNX model zoo) | 2.4 ms per 224² frame |
+
+Verified like every model: downloaded from the pinned zoo commit (immutable), hashed, and executed with ONNX Runtime. Semantic check: an ImageNet-normalised photo of a white fluffy cat returned white-fluffy-animal classes (Angora rabbit, West Highland terrier) in the top-5 while the same pixels without normalisation returned unrelated objects (wall clock, spotlight) — the preprocessing contract is the zoo's `[0..1] → ImageNet mean/std`. I/O contract: `input` float `[batch,3,224,224]` (RGB, ImageNet-normalised via `rgbaToNchw`), `output` float `[batch,1000]` ImageNet-1k logits; `SceneResult.fromLogits` softmaxes them and sums the mass of hand-curated class subsets into the pets/food/nature/city/vehicle/plant tags (`scene_tags.dart`).
 
 ## 4. Model mirrors (v1.3.x)
 

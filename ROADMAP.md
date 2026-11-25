@@ -38,7 +38,7 @@ Lumora's bet is the opposite: **the best intelligence is the one that runs where
 | Documents, batch, collage | ✅ scanner with PDF, batch edit, collage maker |
 | Video | ✅ timeline, transitions, speed/reverse, crop, stabilisation, filter keyframes, music, text (Arabic shaping), GIF, fast & studio export |
 | Platform | ✅ Android APKs per ABI, unsigned iOS build, glass design system, AR/EN + RTL, tablets layouts, CI + release workflows |
-| Known gaps | 🚧 1:1 loupe shows the 2048 px proxy · 🚧 retouch uses a person matte, not face landmarks · 🚧 suggestions use image statistics, not a scene model · 🚧 keyframes animate look strength only · 🚧 iOS builds unsigned |
+| Known gaps | 🚧 1:1 loupe shows the 2048 px proxy · 🚧 retouch uses a person matte, not face landmarks · 🚧 suggestions use image statistics, refined by the optional v1.4 scene classifier when installed · 🚧 keyframes animate look strength only · 🚧 iOS builds unsigned |
 
 ## 4. Competitive landscape (November 2026)
 
@@ -97,6 +97,7 @@ Each phase has themes, features, models (with size/latency targets on a **mid-ra
 | Video | **auto-captions AR/EN** (offline), waveform, **beat detection & snap** | Whisper tiny (~39 M params; ~40 MB int8) / base (~74 M) via whisper.cpp or ONNX; onset/BPM DSP (no model) | captions ≥ 1× real-time on reference phone |
 - **Acceptance:** device-farm integration tests run every model on ≥ 12 devices (3 tiers × 2 OS × 2 vendors); crash-free rate on farm ≥ 99.8 %; no model > 50 MB in this phase.
 - 🚧 **Started 2026-11:** auto-straighten — Hough-based horizon detection (pure Dart, model-free) wired into the crop panel and the Smart engine (AR/EN lexicon, benchmark 1,080 at 100 %). See CHANGELOG "Unreleased".
+- 🚧 **Started 2026-11:** scene-aware suggestions — a MobileNetV2 int8 scene classifier (3.5 MB, MIT, commit-pinned ONNX zoo file, SHA-256-verified and executed: 2.4 ms per 224² frame on the 2-core x86 sandbox) aggregates the 1000 ImageNet logits into pets/food/nature/city/vehicle/plant tags and adds or boosts Smart-bar suggestions the statistics cannot see (pets → soft warm portrait without skin pixels, food → vivid, nature → landscape + deeper sky, city → cinematic). Optional by design: never auto-downloaded; without it the ranking is exactly the statistics path. See CHANGELOG "Unreleased" and docs/SMART_EDIT.md §3a.
 - 🚧 **Started 2026-11:** audio waveform + beat detection & snap — one FFmpeg PCM decode (mono 22.05 kHz) per clip and the music track, then pure-Dart energy-flux onset detection and autocorrelation tempo estimate (no model, no network). Waveform strips on the timeline, looping waveform on the music track, beat markers and a "Snap to beats" toggle for splitting. Synthetic click tracks 75–140 BPM are detected within ±3 BPM with zero stray onsets in the unit benchmark. See CHANGELOG "Unreleased".
 
 ### v1.5 — "Semantic" (2027 Q2)
