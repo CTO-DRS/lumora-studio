@@ -419,5 +419,11 @@
   "aiFaceRetouch": "تلميع الوجه (البشرة)",
   "aiEyeBrighten": "إضاءة العيون",
   "aiTeethWhiten": "تبييض الأسنان",
-  "smartErrNoFace": "لم يُعثر على وجه في هذه الصورة."
+  "smartErrNoFace": "لم يُعثر على وجه في هذه الصورة.",
+  "aiSkyDeepen": "عزز السماء",
+  "aiSkyReplaceSunset": "سماء: غروب",
+  "aiSkyReplaceClear": "سماء: زرقاء صافية",
+  "aiSkyReplaceStorm": "سماء: عاصفة",
+  "aiSkyReplaceGolden": "سماء: الساعة الذهبية",
+  "smartErrNoSky": "لا توجد سماء واضحة في هذه الصورة."
 }

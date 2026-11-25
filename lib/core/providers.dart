@@ -3,6 +3,7 @@ import 'package:lumora/features/ai/data/onnx_engine.dart';
 import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
 import 'package:lumora/features/ai/pipelines/face_pipeline.dart';
 import 'package:lumora/features/ai/pipelines/scene_pipeline.dart';
+import 'package:lumora/features/ai/pipelines/sky_pipeline.dart';
 import 'package:lumora/features/ai/pipelines/smart_pipelines.dart';
 import 'package:lumora/features/photo_editor/engine/lut/lut_repository.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
@@ -92,3 +93,6 @@ DepthPipeline depthPipeline(Ref ref) => DepthPipeline(ref.watch(inferenceEngineP
 
 @Riverpod(keepAlive: true)
 SceneClassifierPipeline sceneClassifierPipeline(Ref ref) => SceneClassifierPipeline(ref.watch(inferenceEngineProvider));
+
+@Riverpod(keepAlive: true)
+SkyPipeline skyPipeline(Ref ref) => SkyPipeline(ref.watch(inferenceEngineProvider));

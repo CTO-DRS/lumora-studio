@@ -33,6 +33,8 @@ enum QuickAction {
   faceRetouch,
   eyeBrighten,
   teethWhiten,
+  // v1.4 "Sky & scene": sky-only deepen from the home sheet.
+  skyDeepen,
 }
 
 /// Arguments for opening the photo editor.

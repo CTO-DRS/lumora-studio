@@ -33,11 +33,16 @@ void main() {
     for (final m in ModelRegistry.all) {
       expect(ids.add(m.id), isTrue);
       // Every model is pinned: Hugging Face URLs by revision (the v1.3
-      // models), the scene classifier by an immutable ONNX model zoo
-      // commit. Both carry a recorded SHA-256 checked after download.
+      // models), the scene classifier by an immutable ONNX model zoo commit,
+      // and the in-house int8 sky quantisation by its release asset. All
+      // carry a recorded SHA-256 checked after download.
       expect(
         m.url,
-        anyOf(startsWith('https://huggingface.co/'), startsWith('https://github.com/onnx/models/raw/')),
+        anyOf(
+          startsWith('https://huggingface.co/'),
+          startsWith('https://github.com/onnx/models/raw/'),
+          startsWith('https://github.com/CTO-DRS/lumora-studio/releases/download/'),
+        ),
         reason: m.id,
       );
       expect(m.mirrorUrl, startsWith('https://github.com/CTO-DRS/lumora-studio/releases/download/'), reason: m.id);
@@ -50,6 +55,16 @@ void main() {
     expect(ModelRegistry.forTask(AiTask.interactiveSegmentation).length, 3);
     expect(ModelRegistry.forTask(AiTask.faceDetection).length, 1);
     expect(ModelRegistry.forTask(AiTask.faceLandmarks).length, 1);
+    expect(ModelRegistry.forTask(AiTask.skySegmentation).length, 1);
+    // v1.4 budget (ROADMAP §5): models added in this phase stay ≤ 50 MB
+    // (older models such as LaMa are exempt).
+    const v14Tasks = [AiTask.faceDetection, AiTask.faceLandmarks, AiTask.sceneClassification, AiTask.skySegmentation];
+    final v14Models = [for (final t in v14Tasks) ...ModelRegistry.forTask(t)];
+    expect(
+      v14Models.every((m) => m.sizeBytes <= 50 * 1024 * 1024),
+      isTrue,
+      reason: v14Models.map((m) => '${m.id}: ${m.sizeBytes}').join(', '),
+    );
   });
 
   test('downloads, verifies and caches', () async {

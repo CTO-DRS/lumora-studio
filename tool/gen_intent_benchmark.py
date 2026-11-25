@@ -253,6 +253,13 @@ ACTIONS_AR = [
     ("تسويه الصوره", "autoStraighten"), ("سويها", "autoStraighten"),
     ("اعكس الصوره", "flipHorizontal"), ("اقلب الصوره عموديا", "flipVertical"),
     ("الغ الفلتر", "clearLook"), ("حدد العنصر", "selectObject"),
+    ("عمق السماء", "skyDeepen"), ("اغمق السماء", "skyDeepen"),
+    ("سماء اكثر عمقا", "skyDeepen"), ("عمق السما", "skyDeepen"),
+    ("بدل السماء لغروب", "skyReplaceGolden"), ("سماء غروب", "skyReplaceGolden"),
+    ("بدل السماء لبرتقاليه", "skyReplaceSunset"), ("سماء برتقاليه", "skyReplaceSunset"),
+    ("بدل السماء لصافيه", "skyReplaceClear"), ("سماء صافيه", "skyReplaceClear"),
+    ("بدل السماء لغيوم", "skyReplaceStorm"), ("سماء عاصفه", "skyReplaceStorm"),
+    ("بدل السماء لذهبي", "skyReplaceGolden"), ("سماء ذهبيه", "skyReplaceGolden"),
 ]
 for phrase, action in ACTIONS_AR:
     entries.append((phrase, "ar", [act(action)]))
@@ -277,6 +284,13 @@ ACTIONS_EN = [
     ("flip vertically", "flipVertical"), ("undo", "undo"),
     ("start over", "reset"), ("remove the filter", "clearLook"),
     ("select the cup", "selectObject"),
+    ("deepen the sky", "skyDeepen"), ("dramatic sky", "skyDeepen"),
+    ("deepen the sky more", "skyDeepen"), ("deepen the sky please", "skyDeepen"),
+    ("replace the sky with sunset", "skyReplaceGolden"), ("sunset sky", "skyReplaceGolden"),
+    ("replace the sky with an orange sky", "skyReplaceSunset"), ("orange sky", "skyReplaceSunset"),
+    ("replace the sky with clear skies", "skyReplaceClear"), ("clear sky", "skyReplaceClear"),
+    ("replace the sky with clouds", "skyReplaceStorm"), ("cloudy sky", "skyReplaceStorm"),
+    ("replace the sky with golden hour", "skyReplaceGolden"), ("golden hour sky", "skyReplaceGolden"),
 ]
 for phrase, action in ACTIONS_EN:
     entries.append((phrase, "en", [act(action)]))
@@ -298,6 +312,8 @@ COMPOUNDS_AR = [
     ("دور الصوره لليمين واعكسها", [act("rotateRight"), act("flipHorizontal")]),
     ("سوي الافق وامسح الناس", [act("autoStraighten"), act("erasePerson")]),
     ("ازل الضباب وارفع الظلال", [adj("dehaze", 0.4), adj("shadows", 0.25)]),
+    ("ازل الشخص وبدل السماء لغروب", [act("erasePerson"), act("skyReplaceGolden")]),
+    ("عمق السماء وزد التشبع", [act("skyDeepen"), adj("saturation", 0.2)]),
 ]
 for text, ops in COMPOUNDS_AR:
     entries.append((text, "ar", ops))
@@ -318,6 +334,8 @@ COMPOUNDS_EN = [
     ("smooth skin then whiten teeth", [act("faceRetouch"), act("teethWhiten")]),
     ("brighten the eyes and improve the skin", [act("eyeBrighten"), act("faceRetouch")]),
     ("warmer and cut out the person", [adj("temperature", 0.2), act("cutOutPerson")]),
+    ("remove the person and replace the sky with sunset", [act("erasePerson"), act("skyReplaceGolden")]),
+    ("deepen the sky and more saturation", [act("skyDeepen"), adj("saturation", 0.2)]),
     ("boost contrast and reduce haze", [adj("contrast", 0.2), adj("dehaze", 0.25)]),
     ("set contrast to 30 and black and white", [adj("contrast", 0.3, True), look("mono")]),
     ("remove the background and make it cooler", [act("removeBackground"), adj("temperature", -0.2)]),

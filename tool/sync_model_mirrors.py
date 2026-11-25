@@ -28,7 +28,7 @@ from pathlib import Path
 
 REGISTRY = Path(__file__).resolve().parent.parent / "lib/features/ai/domain/model_registry.dart"
 OWNER_REPO = "CTO-DRS/lumora-studio"
-TAG = "models-v1.3"
+TAG = "models-v1.4"
 
 CONST = re.compile(r"static const (\w+) = ModelSpec\((.*?)\n  \);", re.S)
 FIELD = r"(\w+):\s*'([^']+)'"
@@ -95,7 +95,7 @@ def ensure_release() -> None:
         gh(
             "release", "create", TAG,
             "--repo", OWNER_REPO,
-            "--title", "Model mirrors (v1.3)",
+            "--title", "Model mirrors — v1.4",
             "--notes",
             "Automatic fallback host for on-device model downloads. "
             "Every asset is byte-identical (same SHA-256) to the pinned "

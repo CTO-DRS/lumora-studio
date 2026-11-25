@@ -12,6 +12,7 @@ import 'package:lumora/core/providers.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
 import 'package:lumora/features/ai/pipelines/ai_pipelines.dart';
 import 'package:lumora/features/ai/pipelines/face_pipeline.dart';
+import 'package:lumora/features/ai/pipelines/sky_pipeline.dart';
 import 'package:lumora/features/ai/pipelines/smart_pipelines.dart';
 import 'package:lumora/features/ai/pipelines/tensor_utils.dart';
 import 'package:lumora/features/photo_editor/data/preset_store.dart';
@@ -736,6 +737,44 @@ class PhotoEditorController extends _$PhotoEditorController {
       FaceRegion.teeth => 'teeth whiten',
     },
   );
+
+  /// Sky tools (v1.4 "Sky & scene"): the skyseg matte (44.2 MB int8 U²-Net
+  /// model, min-max decoded on the 320² proxy) either restricts a deepen
+  /// look to the sky ([skyDeepen] — one editable, undoable local adjustment)
+  /// or drives a procedural gradient replacement ([skyReplace] — raster
+  /// step, undoable in history).
+  Future<SkyResult> _skyAnalysis(RgbaImage raster) async {
+    final sky = await ref.read(skyPipelineProvider).analyze(raster);
+    if (sky.fraction < 0.02 || sky.fraction > 0.95) {
+      throw const SmartEditException(SmartEditFailure.noSky);
+    }
+    return sky;
+  }
+
+  Future<void> skyDeepen() => _busy(() async {
+    final raster = await loadRgba(_currentRaster);
+    await _skyAnalysis(raster);
+    final maskPath = await ref.read(skyPipelineProvider).maskPath(raster);
+    addMask(
+      MaskKind.subject,
+      maskPath: maskPath,
+      adjustments: const Adjustments(
+        dehaze: 0.18,
+        highlights: -0.2,
+        vibrance: 0.22,
+        contrast: 0.14,
+        hsl: HslAdjustments(saturation: [0, 0, 0, 0, 0.15, 0.25, 0, 0], luminance: [0, 0, 0, 0, -0.1, -0.15, 0, 0]),
+      ),
+    );
+  }, label: 'sky deepen');
+
+  Future<void> skyReplace(SkyPreset preset) => _busy(() async {
+    final raster = await loadRgba(_currentRaster);
+    final sky = await _skyAnalysis(raster);
+    final out = await Isolate.run(() => compositeSky(raster, sky, preset));
+    final path = await savePng(out, 'sky_replace');
+    update((s) => s.copyWith(rasterPath: path));
+  }, label: 'sky replace ${preset.name}');
 
   /// Maps a point normalised to the output (cropped/rotated) image back to
   /// source pixels of the current raster (`buildInverseWarp` yields

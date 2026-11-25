@@ -1312,4 +1312,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get smartErrNoFace => 'No face found in this photo.';
+
+  @override
+  String get aiSkyDeepen => 'Deepen sky';
+
+  @override
+  String get aiSkyReplaceSunset => 'Sky: sunset';
+
+  @override
+  String get aiSkyReplaceClear => 'Sky: clear blue';
+
+  @override
+  String get aiSkyReplaceStorm => 'Sky: storm';
+
+  @override
+  String get aiSkyReplaceGolden => 'Sky: golden hour';
+
+  @override
+  String get smartErrNoSky => 'No clear sky found in this photo.';
 }

@@ -9,6 +9,7 @@ enum AiTask {
   faceDetection,
   faceLandmarks,
   sceneClassification,
+  skySegmentation,
 }
 
 /// Describes a downloadable on-device model. Every model is fetched from a
@@ -276,6 +277,31 @@ class ModelRegistry {
   /// this repository, tag `models-v1.4`; see `tool/sync_model_mirrors.py`).
   static const _kMirrorBase14 = 'https://github.com/CTO-DRS/lumora-studio/releases/download/models-v1.4';
 
+  /// U²-Net sky segmentation, quantised int8 (44.2 MB). The fp32 original
+  /// (176 MB) exceeds the v1.4 ≤ 50 MB budget, so the shipped asset is the
+  /// static-int8 quantisation produced by `tool/quantize_skyseg.py`
+  /// (calibrated, QOperator, per-channel weights): 2× faster than fp32 on
+  /// the 2-core x86 sandbox (~305 ms vs ~609 ms per 320² frame) and mask
+  /// IoU vs fp32 ≈ 0.93 over held-out scenes. Because the quantised bytes
+  /// only exist in this project, the release asset **is** both the primary
+  /// URL and the mirror — the SHA-256 pins the exact file either way.
+  static const skySegQ8 = ModelSpec(
+    id: 'skyseg_q8',
+    task: AiTask.skySegmentation,
+    displayName: 'U²-Net – sky segmentation (int8)',
+    url: '$_kMirrorBase14/skyseg_q8.onnx',
+    sha256: '01c60b73595450b6ceac707055b8315dacbd5019344f1ecbb1b8becaebef2076',
+    sizeBytes: 44247982,
+    license: 'MIT (U²-Net sky segmentation — xiongzhu666/Sky-Segmentation-and-Post-processing; base U²-Net Apache-2.0)',
+    source: 'https://github.com/xiongzhu666/Sky-Segmentation-and-Post-processing',
+    inputNames: ['input.1'],
+    outputName: '1959',
+    mirrorUrl: '$_kMirrorBase14/skyseg_q8.onnx',
+    fixedInputSize: 320,
+    notes:
+        'Static [1, 3, 320, 320] float, RGB 0..1 with ImageNet mean/std normalisation → 7 maps [1, 1, 320, 320]; output 0 is the final sky map, min-max normalised per image and thresholded at 0.5 (reference contract). int8 quantisation: 2.4× smaller, ~2× faster, IoU vs fp32 ≈ 0.93 (see docs/SMART_EDIT.md).',
+  );
+
   /// MobileNetV2 (int8, ImageNet-1k) scene classifier, ~3.5 MB. Powers the
   /// scene-aware suggestions of the Smart bar: the photo's proxy is
   /// classified on-device and the result nudges which quick fixes are
@@ -316,6 +342,7 @@ class ModelRegistry {
     yunetFaceDetect,
     faceLandmarks478,
     mobilenetScene,
+    skySegQ8,
   ];
 
   static ModelSpec byId(String id) => all.firstWhere((m) => m.id == id);
@@ -338,6 +365,10 @@ enum AiTool {
   faceRetouch,
   eyeBrighten,
   teethWhiten,
+
+  // Sky & scene (v1.4 "Sky & scene").
+  skyDeepen,
+  skyReplace,
 }
 
 /// Models a tool needs on the device before it can run.
@@ -352,4 +383,5 @@ List<ModelSpec> aiToolModels(AiTool tool) => switch (tool) {
   AiTool.faceRetouch ||
   AiTool.eyeBrighten ||
   AiTool.teethWhiten => const [ModelRegistry.yunetFaceDetect, ModelRegistry.faceLandmarks478],
+  AiTool.skyDeepen || AiTool.skyReplace => const [ModelRegistry.skySegQ8],
 };

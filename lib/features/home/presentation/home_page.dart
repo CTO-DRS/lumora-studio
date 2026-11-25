@@ -94,6 +94,8 @@ class _HomePageState extends ConsumerState<HomePage> {
         QuickAction.teethWhiten,
         AiTool.teethWhiten,
       ),
+      // v1.4 "Sky & scene": sky deepen on the home sheet too.
+      card(Icons.filter_drama_outlined, t.blue, l.aiSkyDeepen, QuickAction.skyDeepen, AiTool.skyDeepen),
     ];
   }
 

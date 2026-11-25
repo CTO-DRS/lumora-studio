@@ -2611,6 +2611,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No face found in this photo.'**
   String get smartErrNoFace;
+
+  /// No description provided for @aiSkyDeepen.
+  ///
+  /// In en, this message translates to:
+  /// **'Deepen sky'**
+  String get aiSkyDeepen;
+
+  /// No description provided for @aiSkyReplaceSunset.
+  ///
+  /// In en, this message translates to:
+  /// **'Sky: sunset'**
+  String get aiSkyReplaceSunset;
+
+  /// No description provided for @aiSkyReplaceClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Sky: clear blue'**
+  String get aiSkyReplaceClear;
+
+  /// No description provided for @aiSkyReplaceStorm.
+  ///
+  /// In en, this message translates to:
+  /// **'Sky: storm'**
+  String get aiSkyReplaceStorm;
+
+  /// No description provided for @aiSkyReplaceGolden.
+  ///
+  /// In en, this message translates to:
+  /// **'Sky: golden hour'**
+  String get aiSkyReplaceGolden;
+
+  /// No description provided for @smartErrNoSky.
+  ///
+  /// In en, this message translates to:
+  /// **'No clear sky found in this photo.'**
+  String get smartErrNoSky;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

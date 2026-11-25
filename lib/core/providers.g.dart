@@ -698,3 +698,44 @@ final class SceneClassifierPipelineProvider
 
 String _$sceneClassifierPipelineHash() =>
     r'58701b00f286e11ddd597fe56fd4f12acdd031b9';
+
+@ProviderFor(skyPipeline)
+final skyPipelineProvider = SkyPipelineProvider._();
+
+final class SkyPipelineProvider
+    extends $FunctionalProvider<SkyPipeline, SkyPipeline, SkyPipeline>
+    with $Provider<SkyPipeline> {
+  SkyPipelineProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'skyPipelineProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$skyPipelineHash();
+
+  @$internal
+  @override
+  $ProviderElement<SkyPipeline> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  SkyPipeline create(Ref ref) {
+    return skyPipeline(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SkyPipeline value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SkyPipeline>(value),
+    );
+  }
+}
+
+String _$skyPipelineHash() => r'b4110713f583bfc864cdef6d9a703c1cd6320bc0';

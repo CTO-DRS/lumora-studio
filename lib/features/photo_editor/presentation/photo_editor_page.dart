@@ -120,6 +120,10 @@ class _PhotoEditorPageState extends ConsumerState<PhotoEditorPage> {
         ctrl.setTool(EditorTool.ai);
         if (!await models(AiTool.teethWhiten)) return;
         await ctrl.faceAdjustment(FaceRegion.teeth);
+      case QuickAction.skyDeepen:
+        ctrl.setTool(EditorTool.ai);
+        if (!await models(AiTool.skyDeepen)) return;
+        await ctrl.skyDeepen();
     }
   }
 

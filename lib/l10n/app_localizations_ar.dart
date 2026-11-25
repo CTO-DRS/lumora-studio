@@ -1313,4 +1313,22 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get smartErrNoFace => 'لم يُعثر على وجه في هذه الصورة.';
+
+  @override
+  String get aiSkyDeepen => 'عزز السماء';
+
+  @override
+  String get aiSkyReplaceSunset => 'سماء: غروب';
+
+  @override
+  String get aiSkyReplaceClear => 'سماء: زرقاء صافية';
+
+  @override
+  String get aiSkyReplaceStorm => 'سماء: عاصفة';
+
+  @override
+  String get aiSkyReplaceGolden => 'سماء: الساعة الذهبية';
+
+  @override
+  String get smartErrNoSky => 'لا توجد سماء واضحة في هذه الصورة.';
 }

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
 import 'package:lumora/features/ai/pipelines/face_pipeline.dart';
+import 'package:lumora/features/ai/pipelines/sky_pipeline.dart';
 import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/data/preset_store.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
@@ -100,6 +101,21 @@ Future<bool> runSmartAction(BuildContext context, WidgetRef ref, SmartAction act
     case SmartAction.teethWhiten:
       if (!await models(AiTool.teethWhiten)) return false;
       await ctrl.faceAdjustment(FaceRegion.teeth);
+    case SmartAction.skyDeepen:
+      if (!await models(AiTool.skyDeepen)) return false;
+      await ctrl.skyDeepen();
+    case SmartAction.skyReplaceSunset:
+      if (!await models(AiTool.skyReplace)) return false;
+      await ctrl.skyReplace(SkyPreset.sunset);
+    case SmartAction.skyReplaceClear:
+      if (!await models(AiTool.skyReplace)) return false;
+      await ctrl.skyReplace(SkyPreset.clear);
+    case SmartAction.skyReplaceStorm:
+      if (!await models(AiTool.skyReplace)) return false;
+      await ctrl.skyReplace(SkyPreset.storm);
+    case SmartAction.skyReplaceGolden:
+      if (!await models(AiTool.skyReplace)) return false;
+      await ctrl.skyReplace(SkyPreset.golden);
     case SmartAction.eraseObject:
       if (!await models(AiTool.eraser)) return false;
       ctrl
@@ -174,6 +190,11 @@ String smartActionLabel(AppLocalizations l, SmartAction a) => switch (a) {
   SmartAction.faceRetouch => l.aiFaceRetouch,
   SmartAction.eyeBrighten => l.aiEyeBrighten,
   SmartAction.teethWhiten => l.aiTeethWhiten,
+  SmartAction.skyDeepen => l.aiSkyDeepen,
+  SmartAction.skyReplaceSunset => l.aiSkyReplaceSunset,
+  SmartAction.skyReplaceClear => l.aiSkyReplaceClear,
+  SmartAction.skyReplaceStorm => l.aiSkyReplaceStorm,
+  SmartAction.skyReplaceGolden => l.aiSkyReplaceGolden,
 };
 
 String suggestionLabel(AppLocalizations l, SuggestionKind k) => switch (k) {

@@ -568,5 +568,11 @@
   "aiFaceRetouch": "Face retouch (skin)",
   "aiEyeBrighten": "Brighten eyes",
   "aiTeethWhiten": "Whiten teeth",
-  "smartErrNoFace": "No face found in this photo."
+  "smartErrNoFace": "No face found in this photo.",
+  "aiSkyDeepen": "Deepen sky",
+  "aiSkyReplaceSunset": "Sky: sunset",
+  "aiSkyReplaceClear": "Sky: clear blue",
+  "aiSkyReplaceStorm": "Sky: storm",
+  "aiSkyReplaceGolden": "Sky: golden hour",
+  "smartErrNoSky": "No clear sky found in this photo."
 }

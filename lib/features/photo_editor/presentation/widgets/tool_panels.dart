@@ -9,6 +9,7 @@ import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/core/widgets/labeled_slider.dart';
 import 'package:lumora/features/ai/domain/model_registry.dart';
 import 'package:lumora/features/ai/pipelines/face_pipeline.dart';
+import 'package:lumora/features/ai/pipelines/sky_pipeline.dart';
 import 'package:lumora/features/ai/presentation/ai_tools_sheet.dart';
 import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
@@ -1206,6 +1207,42 @@ class AiPanel extends ConsumerWidget {
         label: l.aiTeethWhiten,
         tool: AiTool.teethWhiten,
         onTap: withModels(AiTool.teethWhiten, () => ctrl.faceAdjustment(FaceRegion.teeth)),
+      ),
+      // v1.4 "Sky & scene": sky segmentation tools.
+      AiToolCard(
+        icon: Icons.filter_drama_outlined,
+        color: t.blue,
+        label: l.aiSkyDeepen,
+        tool: AiTool.skyDeepen,
+        onTap: withModels(AiTool.skyDeepen, ctrl.skyDeepen),
+      ),
+      AiToolCard(
+        icon: Icons.wb_twilight_outlined,
+        color: t.apricot,
+        label: l.aiSkyReplaceSunset,
+        tool: AiTool.skyReplace,
+        onTap: withModels(AiTool.skyReplace, () => ctrl.skyReplace(SkyPreset.sunset)),
+      ),
+      AiToolCard(
+        icon: Icons.wb_sunny_outlined,
+        color: t.teal,
+        label: l.aiSkyReplaceClear,
+        tool: AiTool.skyReplace,
+        onTap: withModels(AiTool.skyReplace, () => ctrl.skyReplace(SkyPreset.clear)),
+      ),
+      AiToolCard(
+        icon: Icons.thunderstorm_outlined,
+        color: t.violet,
+        label: l.aiSkyReplaceStorm,
+        tool: AiTool.skyReplace,
+        onTap: withModels(AiTool.skyReplace, () => ctrl.skyReplace(SkyPreset.storm)),
+      ),
+      AiToolCard(
+        icon: Icons.light_mode_outlined,
+        color: t.rose,
+        label: l.aiSkyReplaceGolden,
+        tool: AiTool.skyReplace,
+        onTap: withModels(AiTool.skyReplace, () => ctrl.skyReplace(SkyPreset.golden)),
       ),
     ];
     return Column(

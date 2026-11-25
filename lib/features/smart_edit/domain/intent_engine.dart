@@ -35,6 +35,11 @@ enum _K {
   skin,
   eyes,
   teeth,
+  sky,
+  replace,
+  sunsetSky,
+  clearSky,
+  stormSky,
   filter,
   rotate,
   rotateWeak,
@@ -576,6 +581,26 @@ final Map<String, _E> _lexiconRaw = {
   'اسنان': const _E(_K.teeth),
   'سنانه': const _E(_K.teeth),
   'ضروس': const _E(_K.teeth),
+  // sky & scene (v1.4 "Sky & scene")
+  'sky': const _E(_K.sky),
+  'سماء': const _E(_K.sky),
+  'سما': const _E(_K.sky),
+  'replace': const _E(_K.replace),
+  'swap': const _E(_K.replace),
+  'استبدل': const _E(_K.replace),
+  'بدل': const _E(_K.replace),
+  'orange': const _E(_K.sunsetSky),
+  'برتقالي': const _E(_K.sunsetSky),
+  'برتقاليه': const _E(_K.sunsetSky),
+  'صافيه': const _E(_K.clearSky),
+  'صافي': const _E(_K.clearSky),
+  'clear': const _E(_K.clearSky),
+  'cloud': const _E(_K.stormSky),
+  'stormy': const _E(_K.stormSky),
+  'overcast': const _E(_K.stormSky),
+  'غيوم': const _E(_K.stormSky),
+  'عاصفه': const _E(_K.stormSky),
+  'عاصف': const _E(_K.stormSky),
   'filter': const _E(_K.filter),
   'preset': const _E(_K.filter),
   'look': const _E(_K.filter, exact: true),
@@ -742,7 +767,17 @@ const List<String> _starterVerbs = ['اجعل', 'خلي', 'طبق', 'اعط', '�
 /// Words that start a new instruction when glued to a leading "و"/"ف"
 /// ("زد السطوع وقلل التشبع", "نعم البشره واضي العيون"). Slider names count
 /// too: "والتشبع" opens its own clause and inherits the previous direction.
-const Set<_K> _clauseStarters = {_K.inc, _K.dec, _K.remove, _K.action, _K.rotate, _K.cut, _K.blur, _K.param};
+const Set<_K> _clauseStarters = {
+  _K.inc,
+  _K.dec,
+  _K.remove,
+  _K.action,
+  _K.rotate,
+  _K.cut,
+  _K.blur,
+  _K.param,
+  _K.replace,
+};
 
 /// Default step of one "more"/"less" for each slider (slider units).
 const Map<AdjustmentParam, double> _step = {
@@ -971,6 +1006,29 @@ class RuleIntentEngine implements EditIntentEngine {
       consumedParams = true;
     } else if (has(_K.teeth)) {
       ops.add(const ActionOp(SmartAction.teethWhiten));
+      consumedParams = true;
+    } else if (has(_K.sky)) {
+      // Sky-style words choose the replacement gradient: "replace the sky
+      // with a sunset" / "سماء غروب" / "clear sky" / "sunset sky".
+      final goldenLook = looks.contains('golden_hour');
+      final replace = has(_K.replace) || has(_K.sunsetSky) || has(_K.clearSky) || has(_K.stormSky) || goldenLook;
+      if (replace) {
+        final action = has(_K.stormSky)
+            ? SmartAction.skyReplaceStorm
+            : has(_K.clearSky)
+            ? SmartAction.skyReplaceClear
+            : has(_K.sunsetSky)
+            ? SmartAction.skyReplaceSunset
+            : goldenLook
+            ? SmartAction.skyReplaceGolden
+            : SmartAction.skyReplaceSunset;
+        ops.add(ActionOp(action));
+        looks.clear();
+      } else {
+        // "deepen the sky" / "اغمق السماء" — masked, editable local edit.
+        ops.add(const ActionOp(SmartAction.skyDeepen));
+        looks.clear();
+      }
       consumedParams = true;
     } else if (has(_K.blemish)) {
       ops.add(const ActionOp(SmartAction.heal));

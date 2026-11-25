@@ -12,6 +12,7 @@ String aiErrorText(AppLocalizations l, Object error) {
     return switch (error.failure) {
       SmartEditFailure.noPerson => l.smartErrNoPerson,
       SmartEditFailure.noFace => l.smartErrNoFace,
+      SmartEditFailure.noSky => l.smartErrNoSky,
       SmartEditFailure.noSelection => l.smartErrNoSelection,
     };
   }
