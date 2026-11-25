@@ -578,6 +578,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String rawImportFailed(String reason) {
+    return 'Couldn\'t open this RAW file: $reason';
+  }
+
+  @override
+  String get rawPreviewOnly => 'Opened the embedded preview — full RAW decode arrives with the next RAW milestone';
+
+  @override
   String get noFavorites => 'Long-press any look to add it here';
 
   @override

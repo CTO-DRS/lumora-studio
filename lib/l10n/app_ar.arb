@@ -184,6 +184,8 @@
   "importPresets": "استيراد أنماط",
   "presetsImported": "تم استيراد {count} من الأنماط",
   "importFailed": "فشل الاستيراد: {error}",
+  "rawImportFailed": "تعذر فتح ملف RAW: {reason}",
+  "rawPreviewOnly": "تم فتح المعاينة المدمجة — فك ترميز RAW الكامل يصل مع معلم RAW القادم",
   "noFavorites": "اضغط مطولاً على أي نمط لإضافته هنا",
   "copyEdits": "نسخ التعديلات",
   "pasteEdits": "لصق التعديلات",

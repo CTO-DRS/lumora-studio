@@ -578,6 +578,14 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String rawImportFailed(String reason) {
+    return 'تعذر فتح ملف RAW: $reason';
+  }
+
+  @override
+  String get rawPreviewOnly => 'تم فتح المعاينة المدمجة — فك ترميز RAW الكامل يصل مع معلم RAW القادم';
+
+  @override
   String get noFavorites => 'اضغط مطولاً على أي نمط لإضافته هنا';
 
   @override

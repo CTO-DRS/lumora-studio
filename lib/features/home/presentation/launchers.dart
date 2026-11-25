@@ -1,23 +1,82 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lumora/core/router/app_router.dart';
 import 'package:lumora/core/ui/ui.dart';
 import 'package:lumora/core/utils/haptics.dart';
 import 'package:lumora/core/utils/l10n_ext.dart';
+import 'package:lumora/features/photo_editor/domain/raw/raw_import.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// Picks a photo from the gallery and opens it in the editor, optionally
+/// Extensions the photo picker accepts — everyday images plus the RAW
+/// formats the W2 pipeline handles (DNG/TIFF) and the ones it reports
+/// honestly about.
+const _photoPickerExtensions = [
+  'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'bmp', 'gif',
+  'dng', 'tif', 'tiff',
+];
+
+/// Picks a photo (or a RAW/DNG file) and opens it in the editor, optionally
 /// running a quick action or applying a look right away.
 Future<void> pickAndEditPhoto(BuildContext context, {QuickAction? action, String? presetId}) async {
-  final file = await ImagePicker().pickImage(source: ImageSource.gallery);
-  if (file != null && context.mounted) {
-    await context.push(
-      '/photo',
-      extra: PhotoEditorArgs(sourcePath: file.path, initialAction: action, initialPresetId: presetId),
-    );
+  final file = await FilePicker.pickFile(
+    type: FileType.custom,
+    allowedExtensions: _photoPickerExtensions,
+  );
+  if (file?.path == null || !context.mounted) return;
+  final sourcePath = file!.path!;
+
+  // RAW path: sniff the header, decode on-device, open the result.
+  if (_rawExtension(sourcePath)) {
+    // Captured before the async gaps so the honest-failure snackbars never
+    // touch a deactivated BuildContext.
+    final l = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final bytes = await File(sourcePath).readAsBytes();
+    if (!looksLikeDng(Uint8List.sublistView(bytes, 0, bytes.length.clamp(0, 4096)))) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.rawImportFailed('not a TIFF/DNG file'))),
+      );
+      return;
+    }
+    final result = await importDng(sourcePath);
+    if (result is RawImportFailure) {
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l.rawImportFailed(result.message))),
+        );
+      }
+      return;
+    }
+    final success = result as RawImportSuccess;
+    if (context.mounted) {
+      if (success.fromPreview) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l.rawPreviewOnly)),
+        );
+      }
+      await _pushEditor(context, success.path, action, presetId);
+    }
+    return;
   }
+
+  await _pushEditor(context, sourcePath, action, presetId);
+}
+
+bool _rawExtension(String path) {
+  final ext = path.toLowerCase().split('.').last;
+  return rawImportExtensions.contains(ext);
+}
+
+Future<void> _pushEditor(BuildContext context, String path, QuickAction? action, String? presetId) async {
+  await context.push(
+    '/photo',
+    extra: PhotoEditorArgs(sourcePath: path, initialAction: action, initialPresetId: presetId),
+  );
 }
 
 /// Picks one or more clips and opens the video editor.

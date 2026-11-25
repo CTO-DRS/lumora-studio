@@ -1196,6 +1196,18 @@ abstract class AppLocalizations {
   /// **'Import failed: {error}'**
   String importFailed(String error);
 
+  /// No description provided for @rawImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open this RAW file: {reason}'**
+  String rawImportFailed(String reason);
+
+  /// No description provided for @rawPreviewOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened the embedded preview — full RAW decode arrives with the next RAW milestone'**
+  String get rawPreviewOnly;
+
   /// No description provided for @noFavorites.
   ///
   /// In en, this message translates to:

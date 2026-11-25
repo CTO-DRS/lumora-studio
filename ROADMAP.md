@@ -38,7 +38,7 @@ Wave 2 = **v1.5 "Pro Intelligence"** (target: 2027 Q1–Q2), five workstreams, o
 | **Targets** | MobileSAM encode ≥ 2× faster on NPU flagships vs CPU ONNX; scene classifier ≤ 5 ms on GPU path; sky 320² ≤ 150 ms on NPU; no native crash regressions on the farm (crash-free ≥ 99.8 %); CPU-only devices keep today's behaviour bit-for-bit. |
 | **Acceptance** | `flutter analyze` clean; unit tests for delegate selection + fallback + blacklist; farm matrix (≥ 12 devices) green with auto-fallback proven on a deliberately broken delegate; benchmark table (engine × delegate × model) published per release. |
 
-### W2 · RAW/DNG 16-bit pipeline 🔜
+### W2 · RAW/DNG 16-bit pipeline 🚧 *M2-1 shipped (open path)*
 
 | | |
 |---|---|
@@ -47,6 +47,7 @@ Wave 2 = **v1.5 "Pro Intelligence"** (target: 2027 Q1–Q2), five workstreams, o
 | **Models / tech** | Dart/Rust DNG decoder 🧪 (libraw-class semantics, MIT/Apache parts only), existing GLSL pipeline extended to RGBA16F. |
 | **Targets** | Open a 24 MP DNG ≤ 2 s (preview-first < 300 ms); peak memory ≤ 900 MB for 24 MP 16-bit; no regression for 8-bit photos (same shaders, one code path). |
 | **Acceptance** | Decoder fuzz-tested on malformed DNGs (crash-free); colour accuracy vs reference decode (ΔE ≤ 2 on a calibration set); golden tests for 16-bit shader path. |
+| **Shipped — M2-1 (2026-11-25)** | In-house pure-Dart DNG open path: fuzz-safe TIFF/IFD parser → DNG document layer (CFA metadata, ActiveArea, black/white levels, embedded previews, compression classification) → strip decoder (uncompressed + Adobe-deflate, 8/12/14/16-bit-in-16) → bilinear demosaic → sRGB 8-bit PNG handed to the normal editor pipeline; lossless-JPEG raw payloads fall back honestly to the largest embedded preview with the reason surfaced in AR/EN UI; the picker accepts `.dng`/`.tif` next to everyday images. 17 new tests (structure fuzz gates, strip bounds, ActiveArea crop, deflate round-trip, preview fallback, honest failures) — 514 green, `flutter analyze` clean. Two real bugs caught and fixed by the tests before they could ship: the zero-ActiveArea sentinel crashed the decoder, and the preview fallback was unreachable behind an over-eager parse-time rejection. |
 
 ### W3 · Whisper auto-captions (AR/EN, offline) 🔜
 

@@ -236,6 +236,15 @@
     }
   },
   "importFailed": "Import failed: {error}",
+  "rawImportFailed": "Couldn't open this RAW file: {reason}",
+  "@rawImportFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "rawPreviewOnly": "Opened the embedded preview — full RAW decode arrives with the next RAW milestone",
   "@importFailed": {
     "placeholders": {
       "error": {
