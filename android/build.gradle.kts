@@ -24,7 +24,15 @@ subprojects {
 // Plugin (e.g. tflite_flutter) otherwise compile Java at the AGP default (11)
 // and Kotlin at the toolchain default (21) and fail the consistency check.
 subprojects {
-    afterEvaluate {
+    val alignJvm: Project.() -> Unit = {
+        try {
+            (extensions.findByName("android") as? com.android.build.gradle.BaseExtension)?.compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+            }
+        } catch (e: Exception) {
+            logger.info("compileOptions already finalized for $name")
+        }
         tasks.withType<JavaCompile>().configureEach {
             sourceCompatibility = JavaVersion.VERSION_17.toString()
             targetCompatibility = JavaVersion.VERSION_17.toString()
@@ -32,6 +40,11 @@ subprojects {
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
             compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
+    }
+    if (state.executed) {
+        alignJvm()
+    } else {
+        afterEvaluate { alignJvm() }
     }
 }
 
