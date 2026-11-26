@@ -4,6 +4,8 @@ All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepach
 
 ## [Unreleased]
 
+> **Version reset (2026-11-26):** at the owner's request the project's numbering restarts at **0.1.0** (pubspec `0.1.0+10`). Entries below this line that mention 1.x are history and stay as written; existing 1.x tags and releases are kept. The build number (`+10`) keeps rising so Android can still update over earlier installs. Future tags run from v0.1.0 upward.
+
 ### Added
 - **Lip colour and brow enhance (Wave 2 W4-M1)**: two new face tools built from the existing 478-point landmark masks, so no new model weights. Lips are the lip ring minus the mouth opening (teeth untouched); brows are the brow rings. Both are editable local adjustments, available as tool cards and as Smart commands in Arabic and English ("lip colour", "red lips", "enhance brows", "احمر الشفاه", "حسن الحواجب"). Full 19-class face parsing is deferred: the common weights are trained on CelebAMask-HQ (non-commercial research licence).
 - **Low-light rescue (Wave 2 W5-M1)**: model-free denoise plus exposure lift in pure Dart: shadow-weighted luma denoise, edge-guarded chroma-noise suppression, and a Zero-DCE-style exposure curve with bounded chroma follow (no colour cast). One undo step, runs in an isolate, no download. Smart commands in Arabic and English ("fix this dark photo", "denoise", "حسّن الصورة الليلية", "قلل الضجيج"). Intent benchmark: 1,185 commands, 100 % AR and EN.

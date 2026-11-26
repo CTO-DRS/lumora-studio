@@ -1,4 +1,6 @@
-# Lumora Studio v1.5.0 "Pro Intelligence" - release notes (DRAFT, NOT RELEASED)
+# Lumora Studio v0.1.0 "Pro Intelligence" - release notes (DRAFT, NOT RELEASED)
+
+> Numbering was reset to 0.1.0 on 2026-11-26; this draft was written as "v1.5.0" and keeps that file name. Read every "1.5.0" below as the next tag, v0.1.0.
 
 Status: **pre-release draft**. No version bump and no tag yet. Tagging waits for the release gates below.
 
@@ -24,4 +26,4 @@ Status: **pre-release draft**. No version bump and no tag yet. Tagging waits for
 6. Low-light speed on a phone (about 3.6 s at 12 MP measured on a desktop; budget 1.5 s) and a before/after quality set.
 7. The `models-v1.5` mirror assets are published (Whisper tiny done).
 
-Last step after the gates pass: bump version in pubspec and app info, move [Unreleased] in CHANGELOG.md under 1.5.0, tag v1.5.0.
+Last step after the gates pass: version is already 0.1.0 in pubspec and app info, move [Unreleased] in CHANGELOG.md under 0.1.0, tag v0.1.0 (the tag triggers the release workflow).

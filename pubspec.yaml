@@ -1,7 +1,7 @@
 name: lumora
 description: "Lumora Studio – a 100% on-device, open-source AI photo & video editor."
 publish_to: 'none'
-version: 1.4.0+9
+version: 0.1.0+10
 
 environment:
   sdk: ^3.12.0
