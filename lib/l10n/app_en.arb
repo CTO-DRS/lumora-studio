@@ -599,6 +599,9 @@
   "captionsSaved": "Caption files saved",
   "aiLowLight": "Low-light rescue",
   "aiLowLightDone": "Dark photo lifted and denoised",
+  "aiLowLightStrength": "Lift and denoise",
+  "aiLowLightDetail": "Preserve detail",
+  "aiLowLightColour": "Colour noise",
   "aiLipColour": "Lip colour",
   "aiBrowEnhance": "Enhance brows"
 }

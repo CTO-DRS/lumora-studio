@@ -1385,6 +1385,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get aiLowLightDone => 'تم رفع الإضاءة وتقليل الضجيج';
 
   @override
+  String get aiLowLightStrength => 'قوة الرفع وتقليل الضجيج';
+
+  @override
+  String get aiLowLightDetail => 'الحفاظ على التفاصيل';
+
+  @override
+  String get aiLowLightColour => 'ضجيج الألوان';
+
+  @override
   String get aiLipColour => 'لون الشفاه';
 
   @override

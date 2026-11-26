@@ -1384,6 +1384,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiLowLightDone => 'Dark photo lifted and denoised';
 
   @override
+  String get aiLowLightStrength => 'Lift and denoise';
+
+  @override
+  String get aiLowLightDetail => 'Preserve detail';
+
+  @override
+  String get aiLowLightColour => 'Colour noise';
+
+  @override
   String get aiLipColour => 'Lip colour';
 
   @override

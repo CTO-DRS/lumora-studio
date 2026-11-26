@@ -443,6 +443,9 @@
   "captionsSaved": "تم حفظ ملفات الترجمة",
   "aiLowLight": "إنقاذ الإضاءة المنخفضة",
   "aiLowLightDone": "تم رفع الإضاءة وتقليل الضجيج",
+  "aiLowLightStrength": "قوة الرفع وتقليل الضجيج",
+  "aiLowLightDetail": "الحفاظ على التفاصيل",
+  "aiLowLightColour": "ضجيج الألوان",
   "aiLipColour": "لون الشفاه",
   "aiBrowEnhance": "تحسين الحواجب"
 }

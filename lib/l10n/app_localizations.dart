@@ -2744,6 +2744,24 @@ abstract class AppLocalizations {
   /// **'Dark photo lifted and denoised'**
   String get aiLowLightDone;
 
+  /// No description provided for @aiLowLightStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'Lift and denoise'**
+  String get aiLowLightStrength;
+
+  /// No description provided for @aiLowLightDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Preserve detail'**
+  String get aiLowLightDetail;
+
+  /// No description provided for @aiLowLightColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour noise'**
+  String get aiLowLightColour;
+
   /// No description provided for @aiLipColour.
   ///
   /// In en, this message translates to:
