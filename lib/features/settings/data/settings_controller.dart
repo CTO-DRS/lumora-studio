@@ -70,7 +70,9 @@ class AppSettings {
 /// Persisted user preferences (SharedPreferences).
 @Riverpod(keepAlive: true)
 class SettingsController extends _$SettingsController {
-  SharedPreferences? _prefs;
+  // One shared future so a setter called before the first load finishes
+  // still persists (it used to be dropped while the prefs were null).
+  late final Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
 
   @override
   AppSettings build() {
@@ -79,7 +81,7 @@ class SettingsController extends _$SettingsController {
   }
 
   Future<void> _load() async {
-    final prefs = _prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     final lang = prefs.getString('locale');
     final maxDim = prefs.getInt('exportMaxDimension');
     final themeIndex = prefs.getInt('themeMode') ?? ThemeMode.dark.index;
@@ -103,42 +105,42 @@ class SettingsController extends _$SettingsController {
   Future<void> setLocale(Locale? locale) async {
     state = state.copyWith(locale: () => locale);
     if (locale == null) {
-      await _prefs?.remove('locale');
+      await (await _prefs).remove('locale');
     } else {
-      await _prefs?.setString('locale', locale.languageCode);
+      await (await _prefs).setString('locale', locale.languageCode);
     }
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
     state = state.copyWith(themeMode: mode);
-    await _prefs?.setInt('themeMode', mode.index);
+    await (await _prefs).setInt('themeMode', mode.index);
   }
 
   Future<void> setExport({ExportFormat? format, int? quality, bool? keepExif}) async {
     state = state.copyWith(exportFormat: format, exportQuality: quality, keepExif: keepExif);
-    await _prefs?.setInt('exportFormat', state.exportFormat.index);
-    await _prefs?.setInt('exportQuality', state.exportQuality);
-    await _prefs?.setBool('keepExif', state.keepExif);
+    await (await _prefs).setInt('exportFormat', state.exportFormat.index);
+    await (await _prefs).setInt('exportQuality', state.exportQuality);
+    await (await _prefs).setBool('keepExif', state.keepExif);
   }
 
   Future<void> setExportMaxDimension(int? px) async {
     state = state.copyWith(exportMaxDimension: () => px);
-    await _prefs?.setInt('exportMaxDimension', px ?? 0);
+    await (await _prefs).setInt('exportMaxDimension', px ?? 0);
   }
 
   Future<void> setHaptics({required bool enabled}) async {
     state = state.copyWith(haptics: enabled);
     Haptics.enabled = enabled;
-    await _prefs?.setBool('haptics', enabled);
+    await (await _prefs).setBool('haptics', enabled);
   }
 
   Future<void> setAiAcceleration({required bool enabled}) async {
     state = state.copyWith(aiAcceleration: enabled);
-    await _prefs?.setBool('aiAcceleration', enabled);
+    await (await _prefs).setBool('aiAcceleration', enabled);
   }
 
   Future<void> setOnboardingDone({bool done = true}) async {
     state = state.copyWith(onboardingDone: done);
-    await _prefs?.setBool('onboardingDone', done);
+    await (await _prefs).setBool('onboardingDone', done);
   }
 }

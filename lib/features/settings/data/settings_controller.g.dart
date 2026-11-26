@@ -14,8 +14,7 @@ part of 'settings_controller.dart';
 final settingsControllerProvider = SettingsControllerProvider._();
 
 /// Persisted user preferences (SharedPreferences).
-final class SettingsControllerProvider
-    extends $NotifierProvider<SettingsController, AppSettings> {
+final class SettingsControllerProvider extends $NotifierProvider<SettingsController, AppSettings> {
   /// Persisted user preferences (SharedPreferences).
   SettingsControllerProvider._()
     : super(
@@ -37,15 +36,11 @@ final class SettingsControllerProvider
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(AppSettings value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<AppSettings>(value),
-    );
+    return $ProviderOverride(origin: this, providerOverride: $SyncValueProvider<AppSettings>(value));
   }
 }
 
-String _$settingsControllerHash() =>
-    r'3facda61f747fed87ac9154e304370b1b7883fcb';
+String _$settingsControllerHash() => r'3facda61f747fed87ac9154e304370b1b7883fcb';
 
 /// Persisted user preferences (SharedPreferences).
 
@@ -56,13 +51,7 @@ abstract class _$SettingsController extends $Notifier<AppSettings> {
   WhenComplete runBuild() {
     final ref = this.ref as $Ref<AppSettings, AppSettings>;
     final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<AppSettings, AppSettings>,
-              AppSettings,
-              Object?,
-              Object?
-            >;
+        ref.element as $ClassProviderElement<AnyNotifier<AppSettings, AppSettings>, AppSettings, Object?, Object?>;
     return element.handleCreate(ref, build);
   }
 }
