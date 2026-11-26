@@ -72,11 +72,12 @@ class AppSettings {
 class SettingsController extends _$SettingsController {
   // One shared future so a setter called before the first load finishes
   // still persists (it used to be dropped while the prefs were null).
+  Future<void> _loaded = Future<void>.value();
   late final Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
 
   @override
   AppSettings build() {
-    _load();
+    _loaded = _load();
     return const AppSettings();
   }
 
@@ -103,6 +104,7 @@ class SettingsController extends _$SettingsController {
   }
 
   Future<void> setLocale(Locale? locale) async {
+    await _loaded;
     state = state.copyWith(locale: () => locale);
     if (locale == null) {
       await (await _prefs).remove('locale');
@@ -112,11 +114,13 @@ class SettingsController extends _$SettingsController {
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
+    await _loaded;
     state = state.copyWith(themeMode: mode);
     await (await _prefs).setInt('themeMode', mode.index);
   }
 
   Future<void> setExport({ExportFormat? format, int? quality, bool? keepExif}) async {
+    await _loaded;
     state = state.copyWith(exportFormat: format, exportQuality: quality, keepExif: keepExif);
     await (await _prefs).setInt('exportFormat', state.exportFormat.index);
     await (await _prefs).setInt('exportQuality', state.exportQuality);
@@ -124,22 +128,26 @@ class SettingsController extends _$SettingsController {
   }
 
   Future<void> setExportMaxDimension(int? px) async {
+    await _loaded;
     state = state.copyWith(exportMaxDimension: () => px);
     await (await _prefs).setInt('exportMaxDimension', px ?? 0);
   }
 
   Future<void> setHaptics({required bool enabled}) async {
+    await _loaded;
     state = state.copyWith(haptics: enabled);
     Haptics.enabled = enabled;
     await (await _prefs).setBool('haptics', enabled);
   }
 
   Future<void> setAiAcceleration({required bool enabled}) async {
+    await _loaded;
     state = state.copyWith(aiAcceleration: enabled);
     await (await _prefs).setBool('aiAcceleration', enabled);
   }
 
   Future<void> setOnboardingDone({bool done = true}) async {
+    await _loaded;
     state = state.copyWith(onboardingDone: done);
     await (await _prefs).setBool('onboardingDone', done);
   }
