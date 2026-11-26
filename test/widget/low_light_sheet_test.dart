@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumora/features/photo_editor/engine/low_light.dart';
-import 'package:lumora/features/photo_editor/presentation/widgets/tool_panels.dart';
+import 'package:lumora/features/photo_editor/presentation/widgets/low_light_sheet.dart';
 import 'package:lumora/l10n/app_localizations.dart';
 import 'package:material_ui/material_ui.dart';
 

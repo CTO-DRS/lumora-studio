@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumora/features/photo_editor/domain/adjustments.dart';
+import 'package:lumora/features/photo_editor/domain/presets.dart';
 import 'package:lumora/features/photo_editor/presentation/photo_editor_controller.dart';
 import 'package:lumora/features/smart_edit/data/command_store.dart';
 import 'package:lumora/features/smart_edit/domain/edit_ops.dart';
+import 'package:lumora/features/smart_edit/domain/photo_analysis.dart';
 import 'package:lumora/features/smart_edit/presentation/smart_actions.dart';
 import 'package:lumora/features/smart_edit/presentation/smart_panel.dart';
 import 'package:lumora/l10n/app_localizations.dart';
@@ -21,6 +23,21 @@ Widget _wrap(Widget child, {Locale locale = const Locale('en')}) => ProviderScop
 );
 
 ProviderContainer _container(WidgetTester tester) => ProviderScope.containerOf(tester.element(find.byType(SmartPanel)));
+
+class _SuggestingController extends PhotoEditorController {
+  void setSuggestions(List<SuggestionKind> kinds) {
+    state = state.copyWith(
+      suggestions: [
+        for (final k in kinds)
+          Suggestion(
+            kind: k,
+            preset: const Preset.custom(id: 'x', name: 'x', adjustments: Adjustments()),
+            score: 1,
+          ),
+      ],
+    );
+  }
+}
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -129,6 +146,35 @@ void main() {
     await tester.tap(find.text('a bit cooler'));
     await tester.pumpAndSettle();
     expect(_container(tester).read(photoEditorControllerProvider).edit.adjustments.temperature, closeTo(0, 1e-9));
+  });
+
+  testWidgets('low-light chip appears only with the Brighten suggestion and opens the sliders', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [photoEditorControllerProvider.overrideWith(_SuggestingController.new)],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: [AppLocalizations.delegate, ...GlobalMaterialLocalizations.delegates],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: SizedBox(height: 460, child: SmartPanel())),
+        ),
+      ),
+    );
+    await tester.pump();
+    final c = _container(tester);
+    final ctrl = c.read(photoEditorControllerProvider.notifier) as _SuggestingController;
+    expect(find.byKey(const ValueKey('smart-low-light')), findsNothing);
+
+    ctrl.setSuggestions([SuggestionKind.autoFix]);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('smart-low-light')), findsNothing);
+
+    ctrl.setSuggestions([SuggestionKind.autoFix, SuggestionKind.brighten]);
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('smart-low-light')));
+    await tester.tap(find.byKey(const ValueKey('smart-low-light')));
+    await tester.pumpAndSettle();
+    expect(find.text('Preserve detail'), findsOneWidget);
   });
 
   test('plan summaries are readable', () {

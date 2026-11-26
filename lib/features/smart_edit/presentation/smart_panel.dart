@@ -9,9 +9,11 @@ import 'package:lumora/features/ai/pipelines/smart_pipelines.dart' show SelectPr
 import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/engine/preset_thumbnails.dart';
 import 'package:lumora/features/photo_editor/presentation/photo_editor_controller.dart';
+import 'package:lumora/features/photo_editor/presentation/widgets/low_light_sheet.dart';
 import 'package:lumora/features/photo_editor/presentation/widgets/presets_panel.dart';
 import 'package:lumora/features/smart_edit/data/command_store.dart';
 import 'package:lumora/features/smart_edit/domain/next_commands.dart';
+import 'package:lumora/features/smart_edit/domain/photo_analysis.dart' show SuggestionKind;
 import 'package:lumora/features/smart_edit/presentation/smart_actions.dart';
 import 'package:lumora/l10n/app_localizations.dart';
 import 'package:material_ui/material_ui.dart';
@@ -220,6 +222,21 @@ class _SmartPanelState extends ConsumerState<SmartPanel> {
               ],
             ),
           ),
+          // A photo dark enough to get the Brighten suggestion also gets the
+          // heavier denoise-and-lift path, with its own sliders.
+          if (s.suggestions.any((sg) => sg.kind == SuggestionKind.brighten))
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 0),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: ActionChip(
+                  key: const ValueKey('smart-low-light'),
+                  avatar: const Icon(Icons.nightlight_outlined, size: 16),
+                  label: Text(l.aiLowLight),
+                  onPressed: s.busy ? null : () => showLowLightSheet(context, (p) => ctrl.lowLightRescue(params: p)),
+                ),
+              ),
+            ),
         ],
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
