@@ -5,6 +5,23 @@ import 'package:lumora/core/utils/l10n_ext.dart';
 import 'package:lumora/features/video_editor/domain/crop_math.dart';
 import 'package:material_ui/material_ui.dart';
 
+/// Shows [VideoCropSheet] as a bottom sheet and returns the chosen rect
+/// (null = cancelled). Swipe-to-dismiss is off: its vertical-drag recogniser
+/// beat the crop handles' pan gesture, so dragging a handle moved the sheet
+/// instead of the box. Cancel, the scrim and back still close it.
+Future<List<double>?> showVideoCropSheet(
+  BuildContext context, {
+  required List<double> initial,
+  required double frameAspect,
+  String? framePath,
+}) => showModalBottomSheet<List<double>>(
+  context: context,
+  isScrollControlled: true,
+  showDragHandle: true,
+  enableDrag: false,
+  builder: (_) => VideoCropSheet(initial: initial, frameAspect: frameAspect, framePath: framePath),
+);
+
 /// Free-form crop editor for a clip: drag the corners or the whole box,
 /// optionally locked to an aspect ratio. Pops the new `[l, t, r, b]`.
 class VideoCropSheet extends StatefulWidget {

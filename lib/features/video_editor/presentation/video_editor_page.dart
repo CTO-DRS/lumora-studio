@@ -597,15 +597,11 @@ class _VideoEditorPageState extends ConsumerState<VideoEditorPage> {
     final s = ref.read(videoEditorControllerProvider);
     final thumbs = s.thumbnails[clip.path];
     final frameAspect = clip.sourceWidth > 0 && clip.sourceHeight > 0 ? clip.sourceWidth / clip.sourceHeight : 16 / 9;
-    final pick = await showModalBottomSheet<List<double>>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (c) => VideoCropSheet(
-        initial: clip.crop,
-        frameAspect: frameAspect,
-        framePath: thumbs == null || thumbs.isEmpty ? null : thumbs[thumbs.length ~/ 2],
-      ),
+    final pick = await showVideoCropSheet(
+      context,
+      initial: clip.crop,
+      frameAspect: frameAspect,
+      framePath: thumbs == null || thumbs.isEmpty ? null : thumbs[thumbs.length ~/ 2],
     );
     if (pick != null) ref.read(videoEditorControllerProvider.notifier).update((p) => p.cropClip(clip.id, pick));
   }
