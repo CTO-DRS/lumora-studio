@@ -13,7 +13,7 @@ dependencies:
   crypto: ^3.0.8
   drift: ^2.35.4
   drift_flutter: ^0.3.1
-  ffmpeg_kit_flutter_new_min_gpl: ^2.7.2
+  ffmpeg_kit_flutter_new_min_gpl: ^3.0.0
   file_picker: ^13.4.0
   flutter:
     sdk: flutter
