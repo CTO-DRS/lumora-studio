@@ -5,7 +5,7 @@
 > النسخة العربية: [docs/ROADMAP.ar.md](docs/ROADMAP.ar.md)
 
 Status legend: ✅ shipped · 🚧 partial / in progress · 🔜 planned · 🧪 research spike (may change)
-Last updated: 2026-11-25 (v1.4.0 released). Dates are targets, not promises; quality gates decide releases.
+Last updated: 2026-11-27 (version numbering reset to v0.1.0; see section 9). Dates are targets, not promises; quality gates decide releases.
 
 ---
 
@@ -133,3 +133,34 @@ M1 ships first because every later workstream inherits its speed. W2/W3 can run 
 ## 8. What stays fixed
 
 100 % on-device · no accounts, no analytics, no ads · MIT code + open model licences only · every smart action stays an editable, undoable recipe · Arabic-first with full RTL · graceful CPU floor on every phone · optional models only, never auto-downloaded · local diagnostics, shared only by the user.
+
+## 9. Path to a complete product (v0.1.x to v1.0)
+
+Numbering restarted at v0.1.0 (2026-11-26). Wave 2 (sections 3 to 6) is the imaging and intelligence core. This section is the full plan to a finished, store-ready product. Ordered by impact. Items marked **[device]** can only be verified on a phone and stay on the owner's on-device checklist.
+
+**Track A. Finish Wave 2 without new model weights (now)**
+- A1. Widget and golden coverage for every remaining screen (Models, video crop done; next: export sheet, history sheet, AI tools hub, batch). 
+- A2. W5 low-light: tune the model-free path against SSIM/PSNR fixtures; RAW linear-data hook once W2 export lands.
+- A3. W2 RAW: export path (16-bit TIFF/PNG and JPEG) and the published support matrix.
+- A4. W3 captions: caption editor (retime, merge, split), SRT/VTT export, burn-in styles with RTL shaping. **[device]**
+- A5. Video editor polish: crop handles **[device]**, speed ramps, per-clip audio, undo coverage.
+
+**Track B. Learned models, licence-gated**
+- B1. Low-light: Zero-DCE++ is blocked (the source repo is CC BY-NC 4.0, checked 2026-11-27). Find a model whose own card says Apache-2.0 or MIT, or train in-house on permissive data. Nothing ships without a verified licence and a pinned SHA-256 mirrored on models-v1.5.
+- B2. Face parsing and hair tint: blocked. Training sets such as CelebAMask-HQ are non-commercial. Landmark-built masks stay the shipped path.
+- B3. Runtime: LiteRT/NPU farm benchmarks, per-SoC allow-list. **[device]**
+
+**Track C. Product quality**
+- C1. Accessibility: TalkBack/VoiceOver labels on every control, 48 dp targets, contrast pass, RTL audit. **[device]**
+- C2. Performance: startup time, memory caps for 12 MP+ and RAW, export speed, budgets in section 5.
+- C3. Reliability: crash-free onboarding, project autosave and recovery, error log page, fuzz tests for importers.
+- C4. Localisation: AR/EN complete; review strings for the remaining languages.
+- C5. Privacy: keep no accounts, no analytics. Update the privacy policy with each model.
+
+**Track D. Release**
+- D1. Signed release builds (a release build needs more RAM than the current build machine; use CI). 
+- D2. Store listing assets, screenshots, AR/EN descriptions.
+- D3. Release candidate cycle: on-device checklist passes, then the official v0.1.0 tag (held by the owner until the checks pass).
+- D4. v1.0 criteria: Wave 2 gates green, zero known crashers, accessibility pass, store listing ready.
+
+Rules for all tracks: small verified commits, analyze clean, full tests green before every push, CHANGELOG [Unreleased] kept current, no claim of on-device correctness without a device.
