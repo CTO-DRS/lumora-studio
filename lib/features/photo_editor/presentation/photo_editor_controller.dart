@@ -317,6 +317,7 @@ class PhotoEditorController extends _$PhotoEditorController {
     // `state` may not be read inside life-cycle callbacks, so GPU images
     // are tracked in fields as well.
     ref.onDispose(() {
+      _autosaveTimer?.cancel();
       _histogramTimer?.cancel();
       _renderer?.dispose();
       _renderer = null;
@@ -358,21 +359,42 @@ class PhotoEditorController extends _$PhotoEditorController {
     final h = live ? state.history.replace(next) : state.history.push(next);
     state = state.copyWith(history: h);
     unawaited(_render());
+    if (!live) _scheduleAutosave();
+  }
+
+  Timer? _autosaveTimer;
+
+  /// Debounced autosave (C3): a crash must never lose more than a couple of
+  /// seconds of edits. Live gestures do not save; their [commit] does.
+  void _scheduleAutosave() {
+    _autosaveTimer?.cancel();
+    _autosaveTimer = Timer(const Duration(seconds: 2), () async {
+      try {
+        await save();
+      } on Object catch (e) {
+        debugPrint('autosave: $e');
+      }
+    });
   }
 
   void updateAdjustments(Adjustments Function(Adjustments) f, {bool live = false}) =>
       update((s) => s.copyWith(adjustments: f(s.adjustments)), live: live);
 
-  void commit() => state = state.copyWith(history: state.history.commit());
+  void commit() {
+    state = state.copyWith(history: state.history.commit());
+    _scheduleAutosave();
+  }
 
   void undo() {
     state = state.copyWith(history: state.history.undo());
     unawaited(_render());
+    _scheduleAutosave();
   }
 
   void redo() {
     state = state.copyWith(history: state.history.redo());
     unawaited(_render());
+    _scheduleAutosave();
   }
 
   void setTool(EditorTool tool) {

@@ -86,7 +86,25 @@ const _uuid = Uuid();
 @riverpod
 class VideoEditorController extends _$VideoEditorController {
   @override
-  VideoEditorState build() => VideoEditorState(history: EditHistory(const VideoProject()));
+  VideoEditorState build() {
+    ref.onDispose(() => _autosaveTimer?.cancel());
+    return VideoEditorState(history: EditHistory(const VideoProject()));
+  }
+
+  Timer? _autosaveTimer;
+
+  /// Debounced autosave (C3): a crash must never lose more than a couple of
+  /// seconds of edits. Live gestures do not save; their [commit] does.
+  void _scheduleAutosave() {
+    _autosaveTimer?.cancel();
+    _autosaveTimer = Timer(const Duration(seconds: 2), () async {
+      try {
+        await save();
+      } on Object catch (e) {
+        debugPrint('autosave: $e');
+      }
+    });
+  }
 
   VideoEngine get _engine => ref.read(videoEngineProvider);
 
@@ -198,11 +216,25 @@ class VideoEditorController extends _$VideoEditorController {
   void _set(VideoProject p, {bool live = false}) =>
       state = state.copyWith(history: live ? state.history.replace(p) : state.history.push(p));
 
-  void update(VideoProject Function(VideoProject) f, {bool live = false}) => _set(f(state.project), live: live);
+  void update(VideoProject Function(VideoProject) f, {bool live = false}) {
+    _set(f(state.project), live: live);
+    if (!live) _scheduleAutosave();
+  }
 
-  void commit() => state = state.copyWith(history: state.history.commit());
-  void undo() => state = state.copyWith(history: state.history.undo());
-  void redo() => state = state.copyWith(history: state.history.redo());
+  void commit() {
+    state = state.copyWith(history: state.history.commit());
+    _scheduleAutosave();
+  }
+
+  void undo() {
+    state = state.copyWith(history: state.history.undo());
+    _scheduleAutosave();
+  }
+
+  void redo() {
+    state = state.copyWith(history: state.history.redo());
+    _scheduleAutosave();
+  }
 
   void select(String? clipId) => state = state.copyWith(selectedClipId: () => clipId);
   void selectText(String? id) => state = state.copyWith(selectedTextId: () => id);
