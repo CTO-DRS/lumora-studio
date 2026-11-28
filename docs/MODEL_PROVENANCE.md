@@ -20,7 +20,13 @@ Nothing ships without all three. This file is the audit trail.
 - SHA-256: `8a5b5c5ce85e56371ee8574790ff41d9be4827cefc563da62ad8480e42bf2788`
 - Mirror: `https://github.com/CTO-DRS/lumora-studio/releases/download/models-v1.5/maxim_2s_lol_enhancement.npz` (byte-identical).
 - Architecture: MAXIM-2S, 14.1 M params, 216 GFLOPs at full res, JAX/Flax `.npz` checkpoint. Reported 23.43 dB PSNR / 0.863 SSIM on LOL.
-- **Integration gap (open):** the checkpoint is JAX, not ONNX/LiteRT, and 216 GFLOPs is desktop-class, so it is not yet wired into `model_registry.dart`. Next steps: convert to ONNX (or TFLite) with dynamic shapes, evaluate tile/overlap inference on-device, and only then add a `ModelSpec` entry (task `lowLightEnhancement`, same SHA-256 recorded alongside the converted artifact's own hash). The current tuned heuristic pipeline (A2) stays the shipped path until then.
+- **Integration gap (partly closed 2026-11-28):** the checkpoint is converted to ONNX, verified numerically against the JAX reference, and mirrored:
+  - Artifact: `maxim_2s_lol_256x256.onnx` — fixed 256×256 tile, fp32, opset 17, 61,914,873 bytes.
+  - SHA-256: `7294e4928031e5aafdb332877604bccc92900b6795c0e7be9add6b0fa794236c`
+  - Mirror: `https://github.com/CTO-DRS/lumora-studio/releases/download/models-v1.5/maxim_2s_lol_256x256.onnx`
+  - Conversion: `tool/convert_maxim_to_onnx.py` (jax2tf, XLA disabled → frozen GraphDef → tf2onnx). MAXIM pads inputs to multiples of 64, so 256×256 tiles need no internal padding.
+  - Numerics: max abs diff 1.85e-6 / mean 2.24e-7 vs the JAX fp32 reference on a random 256×256 input — bit-faithful.
+  - Open: fp16 quantization (halves the download; the naive float16 pass produced mixed-type constants in LeakyRelu comparisons and needs an op-blocked retry or graph surgery), on-device tile/overlap evaluation, then a `ModelSpec` entry (task `lowLightEnhancement`). 61.9 MB exceeds the 50 MB model budget in ROADMAP §5 — fp16 (~31 MB) is the intended fix. The tuned heuristic pipeline (A2) stays the shipped path until then.
 
 ## Hair tint / face parsing (ROADMAP Track B2)
 
