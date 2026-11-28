@@ -97,6 +97,7 @@ All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepach
 ## [1.3.2] - 2026-11-23
 
 ### Fixed
+- **Corrupt project recipes no longer crash (Track C3 recovery)**: a damaged edit JSON (disk corruption, a write cut off mid-flight) previously threw out of the projects loader; photo and video loads now catch, record to the on-device crash log and return null, so the project stays listed and the app keeps running. Covered by new `project_repository_test.dart` (round-trip, corrupt JSON, unknown id).
 - **iOS build**: the `onnxruntime_extensions` archive that SwiftPM insisted on downloading is now gone from Microsoft's origin storage too (HTTP 404), after `download.onnxruntime.ai` started serving a wrong TLS certificate. Lumora never links it, so `tool/ios_fix_onnxruntime_spm.sh` now removes that product and its targets from the pinned local copy of `onnxruntime-swift-package-manager` 1.28.0. Only the `onnxruntime` binary (a GitHub release asset, checksum-verified) is downloaded. No app code changed.
 - **إصلاح بناء iOS**: حُذفت حزمة `onnxruntime_extensions` غير المستخدمة التي لم تعد متاحة للتحميل، فلم يعد البناء يعتمد عليها.
 

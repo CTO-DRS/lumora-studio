@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:lumora/core/diagnostics/crash_log.dart';
 import 'package:lumora/features/photo_editor/domain/edit_state.dart';
 import 'package:lumora/features/projects/data/app_database.dart';
 import 'package:lumora/features/video_editor/domain/video_project.dart';
@@ -103,13 +104,25 @@ class ProjectRepository {
   Future<(String, EditState)?> loadPhoto(String id) async {
     final row = await _db.byId(id);
     if (row == null) return null;
-    return (row.sourcePath, EditState.fromJson(jsonDecode(row.editJson) as Map<String, dynamic>));
+    try {
+      return (row.sourcePath, EditState.fromJson(jsonDecode(row.editJson) as Map<String, dynamic>));
+    } on Object catch (e, st) {
+      // A corrupt or truncated recipe must never crash the app (C3): the
+      // project stays listed, the error is logged, opening just yields null.
+      CrashLog.instance.record('Project', 'photo recipe of $id unreadable: $e', st);
+      return null;
+    }
   }
 
   Future<VideoProject?> loadVideo(String id) async {
     final row = await _db.byId(id);
     if (row == null) return null;
-    return VideoProject.fromJson(jsonDecode(row.editJson) as Map<String, dynamic>);
+    try {
+      return VideoProject.fromJson(jsonDecode(row.editJson) as Map<String, dynamic>);
+    } on Object catch (e, st) {
+      CrashLog.instance.record('Project', 'video recipe of $id unreadable: $e', st);
+      return null;
+    }
   }
 
   Future<void> delete(String id) => _db.deleteById(id);
