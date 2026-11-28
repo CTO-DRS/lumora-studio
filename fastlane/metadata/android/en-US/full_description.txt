@@ -1,0 +1,20 @@
+Lumora Studio is a 100% on-device, open-source AI photo and video editor. Every edit runs on your phone: nothing is uploaded, no account is needed, and there are no ads, credits or watermarks.
+
+PHOTO EDITING
+- Full manual control: exposure, colour, curves, HSL, geometry, finishing.
+- RAW/DNG import with a true 16-bit pipeline and PNG 16 / TIFF 16 export.
+- One-tap smart edits: type what you want in Arabic or English ("brighten the sky", "warmer skin") and Lumora turns it into ordinary, editable steps you can undo.
+- Optional on-device AI models (tap-to-select, depth blur, person removal, sky, faces) that you install yourself - every model is licence-checked and SHA-256 verified.
+- Night rescue tuned against objective quality metrics.
+
+VIDEO EDITING
+- Multi-clip timeline with split, speed, per-clip volume, filters and looks.
+- Offline captions in Arabic and English (Whisper on-device): generate, retime, split, merge and restyle.
+- Export up to 4K with studio-quality colour.
+
+PRIVATE BY DESIGN
+- No accounts, no analytics, no tracking. Photos and videos never leave your device.
+- The only network use is an optional model download that you start yourself.
+- Full crash log stays on-device in Settings, under your control.
+
+Open source (MIT): audit every line.
