@@ -257,6 +257,28 @@ class VideoEditorController extends _$VideoEditorController {
     selectText(null);
   }
 
+  /// Retimes one caption by [deltaMs] (duration kept, never before 0).
+  void shiftCaption(String id, int deltaMs) => update((p) => p.copyWith(texts: shiftCaptionBy(p.texts, id, deltaMs)));
+
+  /// Merges a caption with the next caption of the same clip.
+  void mergeCaption(String id) => update((p) => p.copyWith(texts: mergeCaptionWithNext(p.texts, id)));
+
+  /// Splits a caption at [atMs] (timeline ms) on a word boundary.
+  void splitCaption(String id, int atMs) => update((p) => p.copyWith(texts: splitCaptionAt(p.texts, id, atMs)));
+
+  /// Restyles every caption overlay (font size, background); free texts
+  /// are untouched.
+  void styleCaptions({double? fontSize, int? backgroundColor, bool clearBackground = false}) => update(
+    (p) => p.copyWith(
+      texts: styleCaptionTexts(
+        p.texts,
+        fontSize: fontSize,
+        backgroundColor: backgroundColor,
+        clearBackground: clearBackground,
+      ),
+    ),
+  );
+
   void removeText(String id) {
     update((p) => p.copyWith(texts: p.texts.where((t) => t.id != id).toList()));
     selectText(null);

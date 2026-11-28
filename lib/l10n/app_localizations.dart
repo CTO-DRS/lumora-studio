@@ -2720,6 +2720,54 @@ abstract class AppLocalizations {
   /// **'Captions are burned into the exported video. Tap a line to edit it.'**
   String get captionsHint;
 
+  /// No description provided for @captionsCueActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Caption actions'**
+  String get captionsCueActions;
+
+  /// No description provided for @captionsShiftEarlier.
+  ///
+  /// In en, this message translates to:
+  /// **'250 ms earlier'**
+  String get captionsShiftEarlier;
+
+  /// No description provided for @captionsShiftLater.
+  ///
+  /// In en, this message translates to:
+  /// **'250 ms later'**
+  String get captionsShiftLater;
+
+  /// No description provided for @captionsSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Split at middle'**
+  String get captionsSplit;
+
+  /// No description provided for @captionsMergeNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge with next'**
+  String get captionsMergeNext;
+
+  /// No description provided for @captionsStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Caption style'**
+  String get captionsStyle;
+
+  /// No description provided for @captionsSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Size'**
+  String get captionsSize;
+
+  /// No description provided for @captionsBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get captionsBackground;
+
   /// No description provided for @captionsNeedClip.
   ///
   /// In en, this message translates to:

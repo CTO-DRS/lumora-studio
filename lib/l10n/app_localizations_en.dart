@@ -1372,6 +1372,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get captionsHint => 'Captions are burned into the exported video. Tap a line to edit it.';
 
   @override
+  String get captionsCueActions => 'Caption actions';
+
+  @override
+  String get captionsShiftEarlier => '250 ms earlier';
+
+  @override
+  String get captionsShiftLater => '250 ms later';
+
+  @override
+  String get captionsSplit => 'Split at middle';
+
+  @override
+  String get captionsMergeNext => 'Merge with next';
+
+  @override
+  String get captionsStyle => 'Caption style';
+
+  @override
+  String get captionsSize => 'Size';
+
+  @override
+  String get captionsBackground => 'Background';
+
+  @override
   String get captionsNeedClip => 'Add a clip first.';
 
   @override

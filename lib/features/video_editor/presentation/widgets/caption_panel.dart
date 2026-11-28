@@ -9,6 +9,7 @@ import 'package:lumora/features/ai/presentation/model_download_dialog.dart';
 import 'package:lumora/features/photo_editor/presentation/widgets/tool_panels.dart' show promptText;
 import 'package:lumora/features/video_editor/domain/caption_timeline.dart';
 import 'package:lumora/features/video_editor/domain/timeline_ops.dart';
+import 'package:lumora/features/video_editor/domain/video_project.dart';
 import 'package:lumora/features/video_editor/engine/caption_service.dart';
 import 'package:lumora/features/video_editor/presentation/caption_providers.dart';
 import 'package:lumora/features/video_editor/presentation/video_editor_controller.dart';
@@ -180,12 +181,42 @@ class _CaptionPanelState extends ConsumerState<CaptionPanel> {
                 final t = await promptText(context, title: l.editText, initial: c.text);
                 if (t != null && t.trim().isNotEmpty) ctrl.updateText(c.id, (x) => x.copyWith(text: t.trim()));
               },
-              trailing: IconButton(
-                tooltip: l.delete,
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () => ctrl.removeText(c.id),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  PopupMenuButton<String>(
+                    tooltip: l.captionsCueActions,
+                    icon: const Icon(Icons.more_vert, size: 20),
+                    onSelected: (v) {
+                      Haptics.selection();
+                      switch (v) {
+                        case 'earlier':
+                          ctrl.shiftCaption(c.id, -250);
+                        case 'later':
+                          ctrl.shiftCaption(c.id, 250);
+                        case 'split':
+                          ctrl.splitCaption(c.id, (c.startMs + c.endMs) ~/ 2);
+                        case 'merge':
+                          ctrl.mergeCaption(c.id);
+                      }
+                    },
+                    itemBuilder: (c2) => [
+                      PopupMenuItem(value: 'earlier', child: Text(l.captionsShiftEarlier)),
+                      PopupMenuItem(value: 'later', child: Text(l.captionsShiftLater)),
+                      PopupMenuItem(value: 'split', child: Text(l.captionsSplit)),
+                      PopupMenuItem(value: 'merge', child: Text(l.captionsMergeNext)),
+                    ],
+                  ),
+                  IconButton(
+                    tooltip: l.delete,
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () => ctrl.removeText(c.id),
+                  ),
+                ],
               ),
             ),
+          const Divider(),
+          _CaptionStyleRow(cues: cues),
           Wrap(
             alignment: WrapAlignment.center,
             children: [
@@ -202,6 +233,51 @@ class _CaptionPanelState extends ConsumerState<CaptionPanel> {
             ],
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Font size and background controls applied to every caption at once.
+class _CaptionStyleRow extends ConsumerWidget {
+  const _CaptionStyleRow({required this.cues});
+
+  final List<VideoText> cues;
+
+  static const _sizes = [0.04, 0.05, 0.06];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l10n;
+    final ctrl = ref.read(videoEditorControllerProvider.notifier);
+    final first = cues.first;
+    return Column(
+      children: [
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(l.captionsStyle, style: Theme.of(context).textTheme.titleSmall),
+        ),
+        Row(
+          children: [
+            Text(l.captionsSize),
+            const SizedBox(width: 8),
+            for (final size in _sizes)
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: 4),
+                child: ChoiceChip(
+                  label: Text(['S', 'M', 'L'][_sizes.indexOf(size)]),
+                  selected: (first.fontSize - size).abs() < 1e-6,
+                  onSelected: (_) => ctrl.styleCaptions(fontSize: size),
+                ),
+              ),
+            const Spacer(),
+            Text(l.captionsBackground),
+            Switch(
+              value: first.backgroundColor != null,
+              onChanged: (v) => ctrl.styleCaptions(backgroundColor: v ? 0xAA000000 : null, clearBackground: !v),
+            ),
+          ],
+        ),
       ],
     );
   }

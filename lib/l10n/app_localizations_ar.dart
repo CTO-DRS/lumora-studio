@@ -1373,6 +1373,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get captionsHint => 'تُدمج الترجمة في الفيديو المُصدَّر. اضغط على سطر لتعديله.';
 
   @override
+  String get captionsCueActions => 'خيارات السطر';
+
+  @override
+  String get captionsShiftEarlier => 'تقديم 250 مللي ثانية';
+
+  @override
+  String get captionsShiftLater => 'تأخير 250 مللي ثانية';
+
+  @override
+  String get captionsSplit => 'تقسيم من المنتصف';
+
+  @override
+  String get captionsMergeNext => 'دمج مع التالي';
+
+  @override
+  String get captionsStyle => 'نمط الترجمة';
+
+  @override
+  String get captionsSize => 'الحجم';
+
+  @override
+  String get captionsBackground => 'الخلفية';
+
+  @override
   String get captionsNeedClip => 'أضف مقطعًا أولًا.';
 
   @override
