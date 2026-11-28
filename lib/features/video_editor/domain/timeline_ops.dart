@@ -78,6 +78,24 @@ extension TimelineOps on VideoProject {
 
   VideoProject setSpeed(String id, double speed) => _update(id, (c) => c.copyWith(speed: speed.clamp(0.25, 4.0)));
 
+  /// Speed ramp: plays the timeline range [startMs]..[endMs] at [speed]
+  /// while the rest keeps its own speed. Built from two splits (ids
+  /// [idStart] and [idEnd]) plus a speed change on the clips inside the
+  /// range, so it is a pure project edit and undoes as one step.
+  VideoProject rampSpeed(int startMs, int endMs, double speed, {required String idStart, required String idEnd}) {
+    if (endMs - startMs < 100) return this;
+    var p = splitAt(startMs, newId: idStart).splitAt(endMs, newId: idEnd);
+    final starts = p.clipStarts;
+    final inside = <String>{
+      for (var i = 0; i < p.clips.length; i++)
+        if (starts[i] >= startMs - 100 && starts[i] + p.clips[i].durationMs <= endMs + 100) p.clips[i].id,
+    };
+    for (final id in inside) {
+      p = p.setSpeed(id, speed);
+    }
+    return p;
+  }
+
   VideoProject toggleReverse(String id) => _update(id, (c) => c.copyWith(reversed: !c.reversed));
 
   VideoProject rotateClip(String id) => _update(id, (c) => c.copyWith(quarterTurns: (c.quarterTurns + 1) % 4));

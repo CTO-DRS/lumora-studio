@@ -8,6 +8,7 @@ VideoClip _clip(String id, int ms, {bool audio = true}) =>
     VideoClip(id: id, path: '/v/$id.mp4', sourceDurationMs: ms, outMs: ms, hasAudio: audio);
 
 void main() {
+  _rampTests();
   group('Timeline ops', () {
     final p = VideoProject(clips: [_clip('a', 4000), _clip('b', 6000)]);
 
@@ -180,6 +181,37 @@ void main() {
         music: const AudioTrack(path: '/m.mp3'),
       );
       expect(VideoProject.fromJson(p.toJson()), p);
+    });
+  });
+}
+
+void _rampTests() {
+  group('Speed ramp', () {
+    final p = VideoProject(clips: [_clip('a', 10000)]);
+
+    test('middle range is sped up, edges keep speed', () {
+      final r = p.rampSpeed(2000, 6000, 2, idStart: 'm', idEnd: 'z');
+      expect(r.clips.map((c) => c.speed), [1, 2, 1]);
+      expect(r.clips.map((c) => c.durationMs), [2000, 2000, 4000]);
+      expect(r.totalDurationMs, 8000);
+    });
+
+    test('source range stays contiguous and complete', () {
+      final r = p.rampSpeed(2000, 6000, 2, idStart: 'm', idEnd: 'z');
+      expect(r.clips[0].outMs, r.clips[1].inMs);
+      expect(r.clips[1].outMs, r.clips[2].inMs);
+      expect(r.clips.first.inMs, 0);
+      expect(r.clips.last.outMs, 10000);
+    });
+
+    test('tiny or inverted ranges are no-ops', () {
+      expect(p.rampSpeed(3000, 3050, 2, idStart: 'm', idEnd: 'z'), p);
+      expect(p.rampSpeed(5000, 3000, 2, idStart: 'm', idEnd: 'z'), p);
+    });
+
+    test('speed is clamped to the supported range', () {
+      final r = p.rampSpeed(2000, 6000, 50, idStart: 'm', idEnd: 'z');
+      expect(r.clips[1].speed, 4);
     });
   });
 }

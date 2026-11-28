@@ -144,7 +144,7 @@ Numbering restarted at v0.1.0 (2026-11-26). Wave 2 (sections 3 to 6) is the imag
 - A2. W5 low-light: tune the model-free path against SSIM/PSNR fixtures; RAW linear-data hook once W2 export lands.
 - A3. W2 RAW: export path (16-bit TIFF/PNG and JPEG) and the published support matrix.
 - A4. W3 captions: caption editor (retime, merge, split), SRT/VTT export, burn-in styles with RTL shaping. **[device]**
-- A5. Video editor polish: crop handles **[device]**, speed ramps, per-clip audio, undo coverage.
+- A5. Video editor polish: crop handles **[device]**, speed ramps (domain op `rampSpeed` shipped, UI pending), per-clip audio, undo coverage.
 
 **Track B. Learned models, licence-gated**
 - B1. Low-light: Zero-DCE++ blocked (CC BY-NC), SCI blocked (no licence on the source repo). **Cleared 2026-11-28: MAXIM-2S LOL (Apache-2.0, verified from the repo LICENSE), SHA-256 pinned and mirrored on models-v1.5** — see docs/MODEL_PROVENANCE.md. Remaining: JAX→ONNX conversion + on-device tile inference before a ModelSpec entry; the tuned heuristic (A2) stays shipped until then.

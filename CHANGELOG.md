@@ -7,6 +7,7 @@ All notable changes to Lumora Studio. Format: [Keep a Changelog](https://keepach
 > **Version reset (2026-11-26):** at the owner's request the project's numbering restarts at **0.1.0** (pubspec `0.1.0+10`). Entries below this line that mention 1.x are history and stay as written; existing 1.x tags and releases are kept. The build number (`+10`) keeps rising so Android can still update over earlier installs. Future tags run from v0.1.0 upward.
 
 ### Added
+- Video: `rampSpeed` timeline op (play a range at a different speed via two splits + speed change; domain + unit tests only, no UI yet) (A5).
 - Projects page widget tests (empty state, list, search, no-match) using a faked project stream (A1).
 - **Subtitle writer + JSON fuzz (roadmap §6, closes the fuzz list)**: `subtitle_writer_fuzz_test.dart` gates the write side — 400 hostile tracks never make writeSrt/writeVtt throw or balloon, sanitised tracks round-trip through both SRT and VTT exactly (times and text), hostile JSON maps only ever raise bounded rejections, and valid tracks JSON-round-trip. It caught one real gap (see Fixed).
 - **Settings page widget tests (Track A1)**: sections and appearance controls render (storage/about groups reached by scrolling the lazy list), the theme segmented button and haptics switch drive the settings controller, and the language dropdown sets an explicit locale. Widget suite 75 -> 79.
