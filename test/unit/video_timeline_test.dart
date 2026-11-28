@@ -209,6 +209,17 @@ void _rampTests() {
       expect(p.rampSpeed(5000, 3000, 2, idStart: 'm', idEnd: 'z'), p);
     });
 
+
+    test('ramp exports as three concat segments with their own speed', () {
+      final r = p.rampSpeed(2000, 6000, 2, idStart: 'm', idEnd: 'z');
+      final args = const FfmpegCommandBuilder().build(r, '/out.mp4');
+      final graph = args[args.indexOf('-filter_complex') + 1];
+      expect(graph, contains('[vj1][v2]concat=n=2:v=1:a=0[vj2]'));
+      expect(graph, contains('trim=start=2.000:end=6.000'));
+      expect(graph, contains('setpts=PTS/2'));
+      expect(graph, contains('atempo=2'));
+    });
+
     test('speed is clamped to the supported range', () {
       final r = p.rampSpeed(2000, 6000, 50, idStart: 'm', idEnd: 'z');
       expect(r.clips[1].speed, 4);
