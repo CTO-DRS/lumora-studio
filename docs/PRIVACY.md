@@ -89,7 +89,7 @@ Everything you work on is processed locally and never leaves your phone:
 
 ## 3. The only network use: optional model downloads
 
-The core editor works fully **offline and needs no download at all**. The single exception is the **optional smart models** you install yourself (Settings › AI models) — e.g. tap-to-select, depth blur, person removal, face retouch, sky segmentation:
+The core editor works fully **offline and needs no download at all**. The single exception is the **optional smart models** you install yourself (Settings › AI models) — e.g. tap-to-select, depth blur, person removal, face retouch, sky segmentation, on-device captions (Whisper tiny):
 
 - Models are downloaded from pinned-revision URLs only (Hugging Face and our GitHub Releases mirror), and every model is verified against its **SHA-256** checksum before use.
 - No model is ever downloaded automatically or in the background; downloads start only when you pick one.
