@@ -118,6 +118,7 @@ M1 ships first because every later workstream inherits its speed. W2/W3 can run 
 - Every new model: pinned URL + SHA-256, licence check (no NC weights), measured latency + memory published in `docs/SMART_EDIT.md`, project mirror on `models-v1.5`.
 - Farm matrix ≥ 12 devices (3 tiers × 2 OS × 2 vendors), crash-free ≥ 99.8 %, thermal trace on the 10-minute session.
 - Fuzzing: DNG decoder, SRT/VTT writers, subtitle JSON; golden tests for 16-bit shaders and subtitle styling.
+  - Status 2026-11-28: fuzz gates done for DNG/lossless-JPEG, SRT/VTT parsers and writers, subtitle JSON, .cube LUTs and the saved-recipe loader. Golden tests done for caption overlay styling and the develop shader (8-bit render path); true 16-bit shader goldens wait on a 16-bit render path.
 
 ## 7. Risks & mitigations
 
