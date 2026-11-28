@@ -171,7 +171,13 @@ class SubtitleTrack {
         maxChars: maxCharsPerLine,
         maxLines: maxLines,
       );
-      cleaned.add(c.copyWith(startMs: start, endMs: end, text: wrapped.join('\n')));
+      // A cue whose text cleans to nothing is no caption at all — and an
+      // empty text line would corrupt the SRT/VTT block structure on
+      // export (the strict parser rejects it, so the file would not
+      // re-import). Found by subtitle_writer_fuzz_test.dart.
+      final text = wrapped.join('\n');
+      if (text.trim().isEmpty) continue;
+      cleaned.add(c.copyWith(startMs: start, endMs: end, text: text));
     }
     return SubtitleTrack(language: language, cues: cleaned, durationMs: durationMs);
   }
