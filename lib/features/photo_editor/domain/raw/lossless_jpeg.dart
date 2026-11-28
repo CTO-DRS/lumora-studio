@@ -110,7 +110,9 @@ class _BitReader {
       return;
     }
     final next = pos < end ? bytes[pos] : 0;
-    final what = next == 0xFF ? '0x${((next << 8) | (pos + 1 < end ? bytes[pos + 1] : 0)).toRadixString(16)}' : 'end of data';
+    final what = next == 0xFF
+        ? '0x${((next << 8) | (pos + 1 < end ? bytes[pos + 1] : 0)).toRadixString(16)}'
+        : 'end of data';
     throw LosslessJpegFormatException('expected restart marker, found $what');
   }
 }
@@ -203,12 +205,20 @@ class _Scan {
   int pos = 0;
 
   int u16() {
+    if (pos + 1 >= bytes.length) {
+      throw const LosslessJpegFormatException('truncated segment (u16)');
+    }
     final v = (bytes[pos] << 8) | bytes[pos + 1];
     pos += 2;
     return v;
   }
 
-  int u8() => bytes[pos++];
+  int u8() {
+    if (pos >= bytes.length) {
+      throw const LosslessJpegFormatException('truncated segment (u8)');
+    }
+    return bytes[pos++];
+  }
 
   /// Advances to the next real marker (FF followed by non-00, non-FF),
   /// returning it, or null at end of data.
@@ -335,15 +345,15 @@ _Sos _parseSos(_Scan scan) {
 
 /// The predictor lattice (T.81 §H.2.2 / §A.3.3), predictors 1-7.
 int _predict(int p, int ra, int rb, int rc) => switch (p) {
-      1 => ra,
-      2 => rb,
-      3 => rc,
-      4 => ra + rb - rc,
-      5 => ra + ((rb - rc) >> 1),
-      6 => rb + ((ra - rc) >> 1),
-      7 => (ra + rb) >> 1,
-      _ => throw LosslessJpegFormatException('predictor $p'),
-    };
+  1 => ra,
+  2 => rb,
+  3 => rc,
+  4 => ra + rb - rc,
+  5 => ra + ((rb - rc) >> 1),
+  6 => rb + ((ra - rc) >> 1),
+  7 => (ra + rb) >> 1,
+  _ => throw LosslessJpegFormatException('predictor $p'),
+};
 
 List<Uint16List> _decodeEntropy(_Scan scan, _Sof sof, _Sos sos, Map<int, _HuffmanTable> dhts, int restartInterval) {
   final width = sof.width;
@@ -366,9 +376,7 @@ List<Uint16List> _decodeEntropy(_Scan scan, _Sof sof, _Sos sos, Map<int, _Huffma
   // Per-component initial prediction and final shift (T.81: the encoded
   // sample holds value >> Pt, so the initial prediction is 2^(P-Pt-1) and
   // the reconstruction shifts back up).
-  final initValue = [
-    for (final c in sof.components) 1 << (sof.precision - 1 - c.pointTransform),
-  ];
+  final initValue = [for (final c in sof.components) 1 << (sof.precision - 1 - c.pointTransform)];
   final mask = (1 << sof.precision) - 1;
   final totalSamples = width * height;
   final mcuBudget = totalSamples * 2; // hang-guard
