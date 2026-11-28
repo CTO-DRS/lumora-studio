@@ -22,7 +22,7 @@ import 'dart:typed_data';
 
 /// User-facing knobs, all 0..1.
 class LowLightParams {
-  const LowLightParams({this.strength = 0.7, this.preserveDetail = 0.5, this.colourNoise = 0.6});
+  const LowLightParams({this.strength = 0.9, this.preserveDetail = 0.3, this.colourNoise = 0.8});
 
   /// How far toward the target brightness to lift, and how hard to denoise.
   final double strength;

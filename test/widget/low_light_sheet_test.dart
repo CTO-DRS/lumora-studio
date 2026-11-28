@@ -32,9 +32,9 @@ void main() {
     await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
     expect(applied, isNotNull);
-    expect(applied!.strength, closeTo(0.7, 1e-9));
-    expect(applied!.preserveDetail, closeTo(0.5, 1e-9));
-    expect(applied!.colourNoise, closeTo(0.6, 1e-9));
+    expect(applied!.strength, closeTo(0.9, 1e-9));
+    expect(applied!.preserveDetail, closeTo(0.3, 1e-9));
+    expect(applied!.colourNoise, closeTo(0.8, 1e-9));
     expect(find.byType(Slider), findsNothing);
   });
 }
