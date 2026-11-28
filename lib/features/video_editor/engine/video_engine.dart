@@ -347,7 +347,7 @@ class VideoEngine {
   /// Rasterises a text overlay as a full frame transparent PNG. Flutter's
   /// text stack gives correct Arabic shaping, bidi and emoji – something
   /// FFmpeg's drawtext cannot guarantee on mobile builds.
-  static Future<String> renderTextOverlay(VideoText t, int w, int h, String path) async {
+  static Future<String> renderTextOverlay(VideoText t, int w, int h, String path, {String? fontFamily}) async {
     final rec = ui.PictureRecorder();
     final canvas = Canvas(rec);
     final minDim = math.min(w, h).toDouble();
@@ -358,6 +358,9 @@ class VideoEngine {
           color: Color(t.color),
           fontSize: t.fontSize * minDim,
           fontWeight: t.bold ? FontWeight.w700 : FontWeight.w400,
+          // Null in production: the device's system font. Tests pass a
+          // bundled family so goldens are reproducible off-device.
+          fontFamily: fontFamily,
           shadows: const [Shadow(blurRadius: 6, color: Color(0x88000000), offset: Offset(0, 2))],
         ),
       ),
