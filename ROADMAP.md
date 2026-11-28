@@ -154,7 +154,7 @@ Numbering restarted at v0.1.0 (2026-11-26). Wave 2 (sections 3 to 6) is the imag
 - C1. Accessibility: TalkBack/VoiceOver labels on every control, 48 dp targets, contrast pass, RTL audit. **[device]**
 - C2. Performance: startup time, memory caps for 12 MP+ and RAW, export speed, budgets in section 5.
 - C3. Reliability: crash-free onboarding, project autosave and recovery, error log page, fuzz tests for importers.
-- C4. Localisation: AR/EN complete; review strings for the remaining languages.
+- C4. Localisation: AR/EN complete (the only shipped locales). Mechanical review 2026-11-28: 455 keys each side, placeholders match everywhere, no empty values, no untranslated Latin leftovers in the AR file. New languages are a post-v1.0 decision.
 - C5. Privacy: keep no accounts, no analytics. Update the privacy policy with each model.
 
 **Track D. Release**
