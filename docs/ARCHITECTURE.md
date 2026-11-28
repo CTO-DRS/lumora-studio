@@ -160,3 +160,10 @@ text ──normalise──▶ phrases ──▶ clauses ──▶ intents ──
 * Suggestions are `Preset` deltas, so the existing `PresetThumbnailCache` renders their live thumbnails and `Preset.apply` layers them on the user's edit.
 * Tap to select: `ObjectSelectPipeline` keeps the MobileSAM embedding of the current raster; taps (normalised to the output image) are mapped back through `buildInverseWarp` to source space; the mask overlay is warped forward the same way so it follows crop/rotation. Masks become `MaskKind.subject` local adjustments or feed the inpainting pipeline.
 * Depth: `DepthPipeline` caches one normalised depth map per raster; `depthBlurMask` / `depthNearMask` turn it into graded masks around the subject's depth (90th percentile).
+
+## Test layers
+
+* `test/unit` + `test/benchmark`: pure logic, fuzz sweeps (recipes, intent parser, subtitle writer/JSON) and perf gates.
+* `test/widget`: page-level widget tests. Real IO needs `tester.runAsync`; lazy lists need scrolling before later items exist.
+* `test/golden`: caption overlays and the develop shader. Goldens use a bundled Tajawal font loaded as `Roboto`; headless GPU renders are deterministic here. Regenerate with `LUMORA_UPDATE_GOLDENS=1`.
+* Not covered off-device: real GPU/driver behaviour, ONNX model quality, camera/RAW codecs. These are tracked in ROADMAP.md as device checks.
