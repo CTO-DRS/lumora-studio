@@ -146,7 +146,7 @@ Numbering restarted at v0.1.0 (2026-11-26). Wave 2 (sections 3 to 6) is the imag
 - A5. Video editor polish: crop handles **[device]**, speed ramps, per-clip audio, undo coverage.
 
 **Track B. Learned models, licence-gated**
-- B1. Low-light: Zero-DCE++ is blocked (the source repo is CC BY-NC 4.0, checked 2026-11-27). Find a model whose own card says Apache-2.0 or MIT, or train in-house on permissive data. Nothing ships without a verified licence and a pinned SHA-256 mirrored on models-v1.5.
+- B1. Low-light: Zero-DCE++ blocked (CC BY-NC), SCI blocked (no licence on the source repo). **Cleared 2026-11-28: MAXIM-2S LOL (Apache-2.0, verified from the repo LICENSE), SHA-256 pinned and mirrored on models-v1.5** — see docs/MODEL_PROVENANCE.md. Remaining: JAX→ONNX conversion + on-device tile inference before a ModelSpec entry; the tuned heuristic (A2) stays shipped until then.
 - B2. Face parsing and hair tint: blocked. Training sets such as CelebAMask-HQ are non-commercial. Landmark-built masks stay the shipped path.
 - B3. Runtime: LiteRT/NPU farm benchmarks, per-SoC allow-list. **[device]**
 
