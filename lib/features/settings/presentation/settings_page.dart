@@ -99,7 +99,7 @@ class SettingsPage extends ConsumerWidget {
                 underline: const SizedBox.shrink(),
                 items: [
                   for (final f in ExportFormat.values)
-                    DropdownMenuItem(value: f, child: Text(f.extension.toUpperCase())),
+                    DropdownMenuItem(value: f, child: Text(f.displayLabel)),
                 ],
                 onChanged: (v) => c.setExport(format: v),
               ),

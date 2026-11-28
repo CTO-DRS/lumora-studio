@@ -126,7 +126,7 @@ M1 ships first because every later workstream inherits its speed. W2/W3 can run 
 | NPU delegates crash on some SoCs/drivers | native kill | CPU default stays; per-SoC allow-list; crash-guarded auto-fallback with session blacklist; farm matrix |
 | Face-parsing weights licensing | legal | licence gate in registry review; ship only permissive weights; fallback = landmark-built masks (v1.4 path) |
 | Whisper Arabic dialects | wrong text | dialect-tolerant post-pass; benchmark on held-out dialect set; base model opt-in |
-| DNG variants (compressed/sensor-specific) | open failures | format support matrix published; graceful "unsupported RAW" message; preview-first fallback |
+| DNG variants (compressed/sensor-specific) | open failures | support matrix published (`docs/RAW_SUPPORT.md`, Track A3); graceful "unsupported RAW" message; preview-first fallback |
 | 16-bit memory blow-up | OOM | tiled processing, RGBA16F proxies, memory caps preserved |
 | Dual-format model maintenance | repo bloat | one registry contract; tflite added per-model only where the delegate wins on the farm |
 

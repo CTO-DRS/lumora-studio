@@ -216,7 +216,7 @@ class _BatchPageState extends ConsumerState<BatchPage> {
                     SegmentedButton<ExportFormat>(
                       segments: [
                         for (final f in ExportFormat.values)
-                          ButtonSegment(value: f, label: Text(f.extension.toUpperCase())),
+                          ButtonSegment(value: f, label: Text(f.displayLabel)),
                       ],
                       selected: {_format ?? settings.exportFormat},
                       onSelectionChanged: _running ? null : (v) => setState(() => _format = v.first),

@@ -8,6 +8,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image/image.dart' as img;
 import 'package:lumora/features/photo_editor/domain/edit_state.dart';
 import 'package:lumora/features/photo_editor/domain/geometry.dart';
+import 'package:lumora/features/photo_editor/domain/raw/png16_writer.dart';
 import 'package:lumora/features/photo_editor/domain/raw/tiff_writer.dart';
 import 'package:lumora/features/photo_editor/engine/finishing_renderer.dart';
 import 'package:lumora/features/photo_editor/engine/photo_renderer.dart';
@@ -22,10 +23,14 @@ enum ExportFormat {
   png('png'),
   webp('webp'),
   heic('heic'),
-  tiff('tif'); // 16-bit RGB — the W2 pro-export path
+  tiff('tif'), // 16-bit RGB — the W2 pro-export path
+  png16('png'); // 16-bit RGB PNG — same pro path, wider tool support
 
   const ExportFormat(this.extension);
   final String extension;
+
+  /// Chip/segment label ("JPG", "PNG", ..., "PNG 16").
+  String get displayLabel => this == ExportFormat.png16 ? 'PNG 16' : extension.toUpperCase();
 }
 
 class ExportOptions {
@@ -198,10 +203,15 @@ class ImageExporter {
       return switch (f) {
         ExportFormat.png => img.encodePng(image),
         ExportFormat.tiff => encodeTiff16(
-            Uint8List.fromList(image.getBytes(order: img.ChannelOrder.rgba)),
-            image.width,
-            image.height,
-          ),
+          Uint8List.fromList(image.getBytes(order: img.ChannelOrder.rgba)),
+          image.width,
+          image.height,
+        ),
+        ExportFormat.png16 => encodePng16(
+          Uint8List.fromList(image.getBytes(order: img.ChannelOrder.rgba)),
+          image.width,
+          image.height,
+        ),
         _ => img.encodeJpg(image, quality: quality),
       };
     });
@@ -211,6 +221,7 @@ class ImageExporter {
       case ExportFormat.jpeg:
       case ExportFormat.png:
       case ExportFormat.tiff:
+      case ExportFormat.png16:
         encoded = await encodeWith(options.format);
       case ExportFormat.webp:
       case ExportFormat.heic:

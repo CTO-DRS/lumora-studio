@@ -63,6 +63,17 @@ void main() {
     expect(r!.$1.format, ExportFormat.png);
   });
 
+  testWidgets('PNG 16 hides the quality slider and keeps the .png extension', (tester) async {
+    final r = await _run(tester, () async {
+      await tester.tap(find.text('PNG 16'));
+      await tester.pump();
+      expect(find.byType(Slider), findsNothing);
+      await tester.tap(find.text('Save to gallery'));
+    });
+    expect(r!.$1.format, ExportFormat.png16);
+    expect(r.$1.format.extension, 'png');
+  });
+
   testWidgets('TIFF also hides the quality slider', (tester) async {
     final r = await _run(tester, () async {
       await tester.tap(find.text('TIF'));

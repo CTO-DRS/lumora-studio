@@ -392,7 +392,7 @@ class _ExportSheetState extends State<ExportSheet> {
                       _social = size;
                       if (size != SocialSize.original) {
                         _quality = size.quality.toDouble();
-                        if (_format == ExportFormat.png) _format = ExportFormat.jpeg;
+                        if (_format == ExportFormat.png || _format == ExportFormat.png16) _format = ExportFormat.jpeg;
                       }
                     }),
                   ),
@@ -420,13 +420,11 @@ class _ExportSheetState extends State<ExportSheet> {
             Text(l.exportFormat, style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
             SegmentedButton<ExportFormat>(
-              segments: [
-                for (final f in ExportFormat.values) ButtonSegment(value: f, label: Text(f.extension.toUpperCase())),
-              ],
+              segments: [for (final f in ExportFormat.values) ButtonSegment(value: f, label: Text(f.displayLabel))],
               selected: {_format},
               onSelectionChanged: (v) => setState(() => _format = v.first),
             ),
-            if (_format != ExportFormat.png && _format != ExportFormat.tiff) ...[
+            if (_format != ExportFormat.png && _format != ExportFormat.png16 && _format != ExportFormat.tiff) ...[
               const SizedBox(height: 12),
               Text('${l.quality}: ${_quality.round()}'),
               Slider(
