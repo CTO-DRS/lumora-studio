@@ -151,7 +151,11 @@ void main() {
   float l = dot(clamp(c, 0.0, 1.0), kLuma);
   float shMask = pow(1.0 - smoothstep(0.0, 0.55, l), 1.6);
   float hiMask = pow(smoothstep(0.45, 1.0, l), 1.4);
-  float lumTarget = l + uTone.w * 0.45 * shMask * (uTone.w > 0.0 ? (1.0 - l) : l)
+  // The positive-shadows lift is gated by l/(l+0.05): without it the luma
+  // map goes non-monotonic at strong settings (deep shadows rendered
+  // brighter than mid shadows — caught by develop_shader_golden_test).
+  float shGate = l / (l + 0.05);
+  float lumTarget = l + uTone.w * 0.45 * shMask * (uTone.w > 0.0 ? (1.0 - l) * shGate : l)
       + uTone.z * 0.45 * hiMask * (uTone.z > 0.0 ? (1.0 - l) : l);
   c *= (l > 1e-4) ? lumTarget / l : 1.0;
 

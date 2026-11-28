@@ -53,7 +53,10 @@ void main() {
   float l = dot(clamp(c, 0.0, 1.0), kLuma);
   float shMask = pow(1.0 - smoothstep(0.0, 0.55, l), 1.6);
   float hiMask = pow(smoothstep(0.45, 1.0, l), 1.4);
-  float target = l + uTone.w * 0.45 * shMask * (1.0 - l) + uTone.z * 0.45 * hiMask * l;
+  // Same monotonic gate as develop.frag: keeps a hard shadows lift from
+  // reversing dark tone order (develop_shader_golden_test).
+  float shGate = l / (l + 0.05);
+  float target = l + uTone.w * 0.45 * shMask * (1.0 - l) * shGate + uTone.z * 0.45 * hiMask * l;
   c *= l > 1e-4 ? target / l : 1.0;
 
   vec3 cc = clamp(c, 0.0, 1.0);
