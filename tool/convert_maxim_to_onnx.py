@@ -1,7 +1,17 @@
+"""Convert the pinned MAXIM-2S LOL checkpoint (docs/MODEL_PROVENANCE.md) to ONNX.
+
+Pipeline: recover the flax param tree from the npz -> jax2tf (XLA disabled) ->
+frozen GraphDef -> tf2onnx (opset 17), fixed 256x256 fp32 tile. Verified against
+the JAX reference (max abs diff ~2e-6). Needs: jax, flax, tensorflow-cpu,
+tf2onnx and a checkout of google-research/maxim on sys.path (see MAXIM_PATH).
+
+Not part of the app build; run on a workstation when the artifact must be
+regenerated. The ONNX output is mirrored on the models-v1.5 release.
+"""
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import sys, collections, time
-sys.path.insert(0, '/tmp/maxim')
+sys.path.insert(0, os.environ.get('MAXIM_PATH', '/tmp/maxim'))
 t0=time.time()
 import numpy as np, jax.numpy as jnp, flax
 import tensorflow as tf
