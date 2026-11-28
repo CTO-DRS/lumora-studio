@@ -26,7 +26,8 @@ Nothing ships without all three. This file is the audit trail.
   - Mirror: `https://github.com/CTO-DRS/lumora-studio/releases/download/models-v1.5/maxim_2s_lol_256x256.onnx`
   - Conversion: `tool/convert_maxim_to_onnx.py` (jax2tf, XLA disabled → frozen GraphDef → tf2onnx). MAXIM pads inputs to multiples of 64, so 256×256 tiles need no internal padding.
   - Numerics: max abs diff 1.85e-6 / mean 2.24e-7 vs the JAX fp32 reference on a random 256×256 input — bit-faithful.
-  - Open: fp16 quantization (halves the download; the naive float16 pass produced mixed-type constants in LeakyRelu comparisons and needs an op-blocked retry or graph surgery), on-device tile/overlap evaluation, then a `ModelSpec` entry (task `lowLightEnhancement`). 61.9 MB exceeds the 50 MB model budget in ROADMAP §5 — fp16 (~31 MB) is the intended fix. The tuned heuristic pipeline (A2) stays the shipped path until then.
+  - **fp16 build (fits the 50 MB budget)**: `maxim_2s_lol_256x256_fp16.onnx`, 32,967,474 bytes, SHA-256 `63fd1d26a5192c1b863a8dcadf39a06cf0829ce197c639e2a9b7d39f0ef4ab18`, same mirror tag. The naive float16 pass left mixed-type constants around the LeakyRelu comparison chains, so `tool/quantize_maxim_fp16.py` adds a boundary-fix pass that tracks dtypes and inserts casts; verified vs the JAX reference (max abs diff 1.1e-3, mean 1.8e-4 — visually lossless).
+  - Open: on-device tile/overlap evaluation, then a `ModelSpec` entry (task `lowLightEnhancement`, fp16 artifact as the download, fp32 kept for reference). The tuned heuristic pipeline (A2) stays the shipped path until then.
 
 ## Hair tint / face parsing (ROADMAP Track B2)
 
